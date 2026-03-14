@@ -24,12 +24,12 @@
 <body class="p-4 md:p-12">
 
     <div id="captureArea" class="max-w-4xl mx-auto form-card bg-white border border-gray-100 text-slate-800">
-        <div class="brand-blue p-8 text-white flex justify-between items-center no-print text-white">
-            <div class="flex items-center gap-4 text-white">
+        <div class="brand-blue p-8 text-white flex justify-between items-center no-print">
+            <div class="flex items-center gap-4">
                 <div class="bg-white/10 p-3 rounded-xl font-extrabold text-2xl border border-white/20 text-center w-14">TB</div>
                 <div>
-                    <h1 class="text-2xl font-bold leading-tight">Work Order Dispatch</h1>
-                    <p class="text-slate-400 text-[10px] uppercase font-bold tracking-widest opacity-80 text-white">Certified Record of Authorization</p>
+                    <h1 class="text-2xl font-bold leading-tight text-white">Work Order Dispatch</h1>
+                    <p class="text-slate-400 text-[10px] uppercase font-bold tracking-widest opacity-80">Certified Record of Authorization</p>
                 </div>
             </div>
         </div>
@@ -73,11 +73,11 @@
                         <div class="flex gap-4 no-print">
                             <label class="flex-1">
                                 <input type="radio" name="status" value="Accepted" class="hidden" onchange="toggleDecision('Accepted')" checked>
-                                <div class="status-pill bg-emerald-50 text-emerald-700 border-emerald-200 p-4 rounded-xl text-center font-bold text-xs uppercase tracking-widest ring-emerald-500">Accept Task</div>
+                                <div class="status-pill bg-emerald-50 text-emerald-700 border-emerald-200 p-4 rounded-xl text-center font-bold text-xs uppercase tracking-widest ring-emerald-500">Accept Route</div>
                             </label>
                             <label class="flex-1">
                                 <input type="radio" name="status" value="Declined" class="hidden" onchange="toggleDecision('Declined')">
-                                <div class="status-pill bg-red-50 text-red-700 border-red-200 p-4 rounded-xl text-center font-bold text-xs uppercase tracking-widest ring-red-500">Decline Task</div>
+                                <div class="status-pill bg-red-50 text-red-700 border-red-200 p-4 rounded-xl text-center font-bold text-xs uppercase tracking-widest ring-red-500">Decline Route</div>
                             </label>
                         </div>
 
@@ -91,12 +91,18 @@
                     <div class="space-y-6">
                         <div id="acceptFields" class="space-y-6">
                             <div><label class="text-blue-600 font-black">Electronic Signature</label><input type="text" id="typed_sig" oninput="updateSigPreview()" placeholder="Full Legal Name" class="signature-font border-none focus:ring-0"></div>
-                            <div class="flex items-start gap-3 p-4 bg-slate-50 rounded-xl border border-slate-200"><input type="checkbox" id="legal_consent" class="mt-1 h-5 w-5 rounded border-gray-300 text-blue-600 cursor-pointer"><label for="legal_consent" class="normal-case font-medium text-[11px] text-slate-600 leading-tight cursor-pointer italic">I certify that I have reviewed the work order and authorize this task.</label></div>
+                            <div class="flex items-start gap-3 p-4 bg-slate-50 rounded-xl border border-slate-200"><input type="checkbox" id="legal_consent" class="mt-1 h-5 w-5 rounded border-gray-300 text-blue-600 cursor-pointer"><label for="legal_consent" class="normal-case font-medium text-[11px] text-slate-600 leading-tight cursor-pointer italic">I certify that I have reviewed the route details and authorize this assignment.</label></div>
                         </div>
 
                         <div id="declineFields" class="hidden space-y-4">
-                            <label class="text-red-600 font-black">Reason for Denial</label>
-                            <textarea id="decline_reason" rows="4" placeholder="Please specify why you are declining (e.g., schedule conflict, rate counter-offer)..."></textarea>
+                            <div>
+                                <label class="text-red-600 font-black">Counter Offer Amount ($)</label>
+                                <input type="number" id="counter_comp" placeholder="Optional Sugggested Price">
+                            </div>
+                            <div>
+                                <label class="text-red-600 font-black">Reason for Denial</label>
+                                <textarea id="decline_reason" rows="4" placeholder="Please specify why you are declining this route..."></textarea>
+                            </div>
                         </div>
 
                         <div class="text-right border-t pt-4"><label>Action Date</label><span id="dateDisplay" class="font-bold text-slate-800 text-sm"></span></div>
@@ -166,13 +172,10 @@
                 locs: document.getElementById('locations').value.split('\n').filter(l => l.trim().length > 2).join('|')
             };
             if (!d.de || !d.icn || !d.wo) return alert("Required fields missing.");
-
-            // BASE64 ENCODING FOR STABILITY
             const payload = btoa(unescape(encodeURIComponent(JSON.stringify(d))));
             const link = `${window.location.origin}${window.location.pathname}?data=${payload}`;
-            
             navigator.clipboard.writeText(link);
-            window.location.href = `mailto:${d.ice}?subject=Action Required: WO#${d.wo}&body=Review and respond here: ${link}`;
+            window.location.href = `mailto:${d.ice}?subject=Action Required: WO#${d.wo}&body=Review and respond to your route here: ${link}`;
             alert("Certified Link Copied!");
         }
 
@@ -209,6 +212,7 @@
             const status = document.querySelector('input[name="status"]:checked').value;
             const name = document.getElementById('typed_sig').value;
             const reason = document.getElementById('decline_reason').value;
+            const counter = document.getElementById('counter_comp').value;
 
             if (status === 'Accepted' && (!name || !document.getElementById('legal_consent').checked)) return alert("Review and signature required to accept.");
             if (status === 'Declined' && !reason) return alert("Please provide a reason for declining.");
@@ -225,9 +229,7 @@
             document.getElementById('audit_ua').innerText = `ENV: ${navigator.userAgent.substring(0, 40)}`;
 
             const formData = new FormData();
-            // FORM SPREE SUBJECT LINE
             formData.append('_subject', `WO ${window.payloadData.wo} ${status.toUpperCase()}`);
-            
             formData.append('Decision Status', status);
             formData.append('Work Order', window.payloadData.wo);
             formData.append('Contractor', window.payloadData.icn);
@@ -237,6 +239,7 @@
                 formData.append('Compensation', window.payloadData.comp);
             } else {
                 formData.append('Reason for Denial', reason);
+                if (counter) formData.append('Counter Offer ($)', counter);
             }
             
             formData.append('Verification ID', txID);
@@ -244,14 +247,12 @@
 
             try {
                 await fetch('https://formspree.io/f/meerlqll', { method: 'POST', body: formData, headers: {'Accept': 'application/json'} });
-                
                 if (status === 'Accepted') {
-                    await html2pdf().set({ margin: 0.5, filename: `WO_CERT_${window.payloadData.wo}.pdf`, jsPDF: { format: 'letter' } }).from(document.getElementById('captureArea')).save();
+                    await html2pdf().set({ margin: 0.5, filename: `WO_CERT_${window.woNum}.pdf`, jsPDF: { format: 'letter' } }).from(document.getElementById('captureArea')).save();
                 }
-                
                 document.getElementById('icMode').style.display = 'none';
                 document.getElementById('successView').classList.remove('hidden');
-                if (status === 'Declined') document.getElementById('success_msg').innerText = "Dispatcher notified of your denial.";
+                if (status === 'Declined') document.getElementById('success_msg').innerText = "Dispatcher notified of your denial and counter-offer.";
             } catch (e) { btn.disabled = false; alert("Submission failed."); }
         }
     </script>
