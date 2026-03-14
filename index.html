@@ -5,91 +5,118 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Work Order Dispatcher | Terraboost</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCDYgNIGcfWPxoux2EILXr60ZK0fZYJPR4&libraries=geometry"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@600&family=Inter:wght@400;700;800&display=swap" rel="stylesheet">
     <style>
         body { background-color: #f1f5f9; font-family: 'Inter', sans-serif; }
-        .brand-blue { background-color: #4477ce; }
+        .brand-blue { background: linear-gradient(135deg, #1e293b 0%, #334155 100%); }
         .form-card { border-radius: 12px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.08); }
-        #map { height: 350px; width: 100%; border-radius: 12px; border: 1px solid #e2e8f0; }
-        label { color: #334155; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; font-size: 0.7rem; display: block; margin-bottom: 4px; }
+        #map { height: 300px; width: 100%; border-radius: 12px; border: 1px solid #e2e8f0; }
+        label { color: #64748b; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; font-size: 0.65rem; display: block; margin-bottom: 4px; }
+        input, textarea { border: 1px solid #e2e8f0; border-radius: 8px !important; padding: 10px; font-size: 14px; width: 100%; background: #ffffff; }
+        .signature-font { font-family: 'Dancing Script', cursive; font-size: 2.5rem; color: #1e293b; border-bottom: 2px solid #cbd5e1; background: transparent; width: 100%; }
+        @media print { .no-print { display: none !important; } }
     </style>
 </head>
 <body class="p-4 md:p-12">
 
-    <div class="max-w-4xl mx-auto form-card bg-white border border-gray-100">
-        <div class="brand-blue p-6 text-white flex justify-between items-center">
-            <div class="flex items-center gap-4 text-white">
-                <div class="bg-white/20 p-2 rounded-lg font-bold text-xl border border-white/30 text-center w-12 text-white text-white">TB</div>
+    <div id="captureArea" class="max-w-4xl mx-auto form-card bg-white border border-gray-100">
+        <div class="brand-blue p-8 text-white flex justify-between items-center">
+            <div class="flex items-center gap-4">
+                <div class="bg-white/10 p-3 rounded-xl font-extrabold text-2xl border border-white/20 text-center w-14">TB</div>
                 <div>
-                    <h1 class="text-2xl font-bold leading-tight text-white">Work Order Dispatcher</h1>
-                    <p class="text-blue-100 text-[10px] uppercase font-bold tracking-widest opacity-80 text-white">Route Optimization & Modern Dispatch</p>
+                    <h1 class="text-2xl font-bold leading-tight text-white">Work Order Dispatch</h1>
+                    <p class="text-slate-400 text-[10px] uppercase font-bold tracking-widest opacity-80 text-white">Certified Route Authorization</p>
                 </div>
             </div>
         </div>
 
         <form id="dispatchForm" class="p-8 space-y-8">
             
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div>
-                    <label>Worker Name (IC)</label>
-                    <input type="text" id="ic_name" placeholder="Worker Name" required 
-                        class="w-full border border-gray-200 rounded-lg p-3 bg-gray-50 text-sm outline-none focus:ring-2 focus:ring-blue-500">
+            <div id="setupFields" class="space-y-6 no-print">
+                <h3 class="text-xs font-black text-blue-600 uppercase tracking-widest border-b border-blue-100 pb-3">1. Dispatch Configuration</h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div><label>Your Dispatch Email</label><input type="email" id="d_email" placeholder="logistics@terraboost.com"></div>
+                    <div><label>Worker Name (IC)</label><input type="text" id="ic_name_setup" placeholder="Full Name"></div>
+                    <div><label>Worker Email</label><input type="email" id="ic_email_setup" placeholder="worker@email.com"></div>
+                    <div><label>Work Order #</label><input type="text" id="task_num" placeholder="WO-0000"></div>
+                    <div><label>Compensation ($)</label><input type="number" id="comp" placeholder="0.00"></div>
+                    <div><label>Due Date</label><input type="date" id="due_date"></div>
                 </div>
-                <div>
-                    <label>Worker Email Address</label>
-                    <input type="email" id="ic_email" placeholder="worker@email.com" required 
-                        class="w-full border border-gray-200 rounded-lg p-3 bg-blue-50 text-sm border-blue-200 outline-none focus:ring-2 focus:ring-blue-500">
-                </div>
-                <div>
-                    <label>Work Order / Task #</label>
-                    <input type="text" id="task_num" placeholder="WO-0000" required 
-                        class="w-full border border-gray-200 rounded-lg p-3 bg-gray-50 text-sm outline-none focus:ring-2 focus:ring-blue-500">
-                </div>
-                <div>
-                    <label>Compensation ($)</label>
-                    <input type="number" id="comp" step="0.01" placeholder="0.00" 
-                        class="w-full border border-gray-200 rounded-lg p-3 bg-gray-50 text-sm outline-none focus:ring-2 focus:ring-blue-500">
-                </div>
-                <div>
-                    <label>Due Date</label>
-                    <input type="date" id="due_date" required 
-                        class="w-full border border-gray-200 rounded-lg p-3 bg-gray-50 text-sm outline-none focus:ring-2 focus:ring-blue-500">
-                </div>
-            </div>
 
-            <hr class="border-gray-100">
-
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
-                <div class="space-y-4">
-                    <label class="text-blue-600 font-black">Route Locations (One per line)</label>
-                    <textarea id="locations" rows="6" 
-                        placeholder="1. Start Address&#10;2. Stop A&#10;3. Stop B&#10;4. End Address" 
-                        class="w-full border border-gray-200 rounded-xl p-4 bg-slate-50 outline-none focus:ring-2 focus:ring-blue-500 font-mono text-xs text-black shadow-inner leading-relaxed"></textarea>
-                    
-                    <div class="bg-slate-900 rounded-2xl p-6 text-white shadow-xl flex justify-between items-center divide-x divide-slate-700">
-                        <div class="flex-1 pr-4">
-                            <p class="text-slate-400 text-[10px] uppercase font-black tracking-widest mb-1">Total Distance</p>
-                            <span id="mileage_display" class="text-4xl font-black text-emerald-400 leading-none">0.0</span>
-                            <span class="text-slate-500 text-xs font-bold ml-1 uppercase">mi</span>
-                        </div>
-                        <div class="flex-1 pl-6">
-                            <p class="text-slate-400 text-[10px] uppercase font-black tracking-widest mb-1">Drive Time</p>
-                            <span id="time_display" class="text-4xl font-black text-blue-400 leading-none">--</span>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+                    <div class="space-y-4">
+                        <label class="text-blue-600 font-black">Route Locations (One per line)</label>
+                        <textarea id="locations" rows="6" placeholder="1. Start Address&#10;2. End Address"></textarea>
+                        
+                        <div class="bg-slate-900 rounded-2xl p-6 text-white flex justify-between items-center">
+                            <div>
+                                <p class="text-slate-400 text-[10px] uppercase font-black tracking-widest">Total Miles</p>
+                                <span id="mileage_display" class="text-3xl font-black text-emerald-400">0.0</span>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-slate-400 text-[10px] uppercase font-black tracking-widest">Est. Time</p>
+                                <span id="time_display" class="text-3xl font-black text-blue-400">--</span>
+                            </div>
                         </div>
                     </div>
+                    <div><div id="map"></div></div>
                 </div>
 
-                <div>
-                    <div id="map"></div>
-                    <p id="status_msg" class="text-[9px] text-slate-400 italic text-center uppercase tracking-widest font-black mt-2 text-slate-400 font-bold">Awaiting entry...</p>
+                <button type="button" onclick="generateCertifiedLink()" class="w-full brand-blue text-white font-bold py-4 rounded-xl shadow-lg text-xs uppercase tracking-widest">
+                    🚀 Dispatch Certified Verification Link
+                </button>
+            </div>
+
+            <div id="icMode" class="hidden space-y-8">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-10">
+                    <div class="space-y-6">
+                        <h3 class="text-sm font-black text-slate-800 uppercase border-b pb-2">Work Order Review</h3>
+                        <div id="summaryZone" class="bg-slate-50 p-6 rounded-2xl border border-slate-100 space-y-4 text-sm text-slate-700">
+                            </div>
+                        <div id="disclosureText" class="p-4 bg-amber-50 rounded-xl border border-amber-100 text-[11px] text-amber-900 leading-relaxed font-medium">
+                            <strong>Legal Disclosure:</strong> By providing your digital signature, you formally accept this work order, the compensation listed, and the route logistics provided. 
+                        </div>
+                    </div>
+
+                    <div class="space-y-6">
+                        <div>
+                            <label class="text-blue-600 font-black">Electronic Signature (Type Full Name)</label>
+                            <input type="text" id="typed_sig" oninput="updateSigPreview()" placeholder="Full Name" class="signature-font border-none focus:ring-0">
+                        </div>
+
+                        <div class="flex items-start gap-3 p-4 bg-slate-50 rounded-xl border border-slate-200">
+                            <input type="checkbox" id="legal_consent" class="mt-1 h-5 w-5 rounded border-gray-300 text-blue-600 cursor-pointer">
+                            <label for="legal_consent" class="normal-case font-medium text-[11px] text-slate-600 leading-tight cursor-pointer italic">
+                                I certify that I have reviewed the route and work order details and formally authorize this task.
+                            </label>
+                        </div>
+
+                        <div class="text-right border-t pt-4">
+                            <label>Execution Date</label>
+                            <span id="dateDisplay" class="font-bold text-slate-800 text-sm"></span>
+                        </div>
+
+                        <button type="button" id="submitBtn" onclick="submitAuthorization()" class="w-full bg-blue-600 text-white font-bold py-5 rounded-xl shadow-lg text-xs uppercase tracking-widest hover:bg-blue-700">
+                            Finalize Work Order Authorization
+                        </button>
+                    </div>
                 </div>
             </div>
 
-            <div class="flex gap-4 pt-4">
-                <button type="button" onclick="location.reload()" class="w-1/3 bg-slate-100 text-slate-500 font-bold py-4 rounded-xl text-xs uppercase">Reset Form</button>
-                <button type="button" onclick="sendDispatch()" class="w-2/3 brand-blue text-white font-bold py-4 rounded-xl shadow-lg hover:bg-blue-700 text-xs uppercase tracking-widest">
-                    🚀 Send Dispatch Email
-                </button>
+            <div id="auditTrail" class="hidden mt-10 pt-6 border-t border-slate-100 space-y-2 text-[8px] text-slate-400 font-mono uppercase">
+                <p class="font-bold text-blue-600 text-[10px] mb-2">Digital Signature Verification Certificate</p>
+                <div class="grid grid-cols-2 gap-4">
+                    <div><p id="audit_id"></p><p id="audit_ts"></p></div>
+                    <div class="text-right"><p id="audit_ua"></p></div>
+                </div>
+            </div>
+
+            <div id="successView" class="hidden text-center py-12 space-y-4">
+                <div class="text-6xl text-slate-800">✅</div>
+                <h2 class="text-2xl font-bold uppercase text-slate-800">Verification Recorded</h2>
+                <p class="text-slate-500">Dispatch has been notified. Certified PDF saved.</p>
             </div>
         </form>
     </div>
@@ -99,9 +126,7 @@
         
         function initMap() {
             map = new google.maps.Map(document.getElementById('map'), { 
-                zoom: 4, 
-                center: { lat: 39.8, lng: -98.5 }, 
-                disableDefaultUI: true 
+                zoom: 4, center: { lat: 39.8, lng: -98.5 }, disableDefaultUI: true 
             });
             directionsService = new google.maps.DirectionsService();
             directionsRenderer = new google.maps.DirectionsRenderer({ map: map });
@@ -112,7 +137,6 @@
         function calculateRoute() {
             const lines = document.getElementById('locations').value.split('\n').filter(l => l.trim().length > 5);
             if (lines.length < 2) return;
-
             directionsService.route({
                 origin: lines[0],
                 destination: lines[lines.length - 1],
@@ -129,59 +153,103 @@
                     const h = Math.floor(seconds / 3600);
                     const m = Math.floor((seconds % 3600) / 60);
                     document.getElementById('time_display').innerText = h > 0 ? h + "h " + m + "m" : m + "m";
-                    document.getElementById('status_msg').innerText = "Route Optimized!";
                 }
             });
         }
 
-        function sendDispatch() {
-            const email = document.getElementById('ic_email').value;
-            const worker = document.getElementById('ic_name').value;
-            const wo = document.getElementById('task_num').value;
-            const mileage = document.getElementById('mileage_display').innerText;
-            const time = document.getElementById('time_display').innerText;
-            const comp = document.getElementById('comp').value;
-            const date = document.getElementById('due_date').value;
-            const addresses = document.getElementById('locations').value.split('\n').filter(a => a.trim().length > 2);
-            
-            if(!email || addresses.length < 2) { 
-                alert("Please ensure Worker Email and Locations are filled out."); 
-                return; 
-            }
-
-            // CLEAN GOOGLE MAPS URL
-            const mapUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(addresses[0])}&destination=${encodeURIComponent(addresses[addresses.length-1])}&waypoints=${encodeURIComponent(addresses.slice(1,-1).join('|'))}&travelmode=driving`;
-
-            // MODERNIZED EMAIL BODY
-            const subject = `DISPATCH: Work Order #${wo}`;
-            const body = 
-                `TERRABOOST MEDIA | DISPATCH SUMMARY\n` +
-                `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
-                `👤 WORKER: ${worker}\n` +
-                `🆔 ORDER #: ${wo}\n` +
-                `📅 DUE DATE: ${date}\n` +
-                `💰 COMPENSATION: $${comp}\n\n` +
-                `📍 ROUTE LOGISTICS\n` +
-                `──────────────────────────\n` +
-                `● Est. Total Distance: ${mileage} miles\n` +
-                `● Est. Drive Duration: ${time}\n\n` +
-                `📱 NAVIGATION (CLICK TO OPEN MAPS)\n` +
-                `──────────────────────────\n` +
-                `${mapUrl}\n\n` +
-                `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
-                `INSTRUCTIONS:\n` +
-                `1. Click the link above to open your optimized route.\n` +
-                `2. Follow the sequence as provided.\n` +
-                `3. Upload all required photos to Onfleet per stop.`;
-
-            // Copy to clipboard
-            navigator.clipboard.writeText(body);
-            
-            // Trigger Email
-            window.location.href = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+        function updateSigPreview() {
+            document.getElementById('sig_name_preview').innerText = document.getElementById('typed_sig').value || "the signatory";
         }
 
-        window.onload = initMap;
+        function runMapping() {
+            const params = new URLSearchParams(window.location.search);
+            const data = {
+                icn: params.get('icn'),
+                wo: params.get('wo'),
+                comp: params.get('comp'),
+                due: params.get('due'),
+                miles: params.get('mi'),
+                de: params.get('de')
+            };
+
+            document.getElementById('summaryZone').innerHTML = `
+                <div class="flex justify-between"><strong>Contractor:</strong> <span class="font-bold">${data.icn || 'N/A'}</span></div>
+                <div class="flex justify-between"><strong>Work Order ID:</strong> <span class="text-blue-600 font-bold underline">${data.wo || 'N/A'}</span></div>
+                <div class="flex justify-between"><strong>Due Date:</strong> <span>${data.due || 'N/A'}</span></div>
+                <div class="flex justify-between border-t pt-2 mt-2"><strong>Mileage:</strong> <span>${data.miles || '0'} Miles</span></div>
+                <div class="flex justify-between"><strong>Compensation:</strong> <span class="text-emerald-600 font-black">$${data.comp || '0.00'}</span></div>
+            `;
+            return data;
+        }
+
+        window.onload = () => {
+            initMap();
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('mode') === 'sign') {
+                document.getElementById('setupFields').remove();
+                document.getElementById('icMode').classList.remove('hidden');
+                document.getElementById('dateDisplay').innerText = new Date().toLocaleDateString();
+                runMapping();
+            }
+        };
+
+        function generateCertifiedLink() {
+            const dEmail = document.getElementById('d_email').value;
+            const icn = document.getElementById('ic_name_setup').value;
+            const ice = document.getElementById('ic_email_setup').value;
+            const wo = document.getElementById('task_num').value;
+            const mi = document.getElementById('mileage_display').innerText;
+
+            if (!dEmail || !icn || !wo) return alert("All dispatch fields are required.");
+
+            const baseUrl = window.location.href.split('?')[0];
+            const link = `${baseUrl}?mode=sign&icn=${encodeURIComponent(icn)}&wo=${encodeURIComponent(wo)}&comp=${document.getElementById('comp').value}&due=${document.getElementById('due_date').value}&mi=${mi}&de=${encodeURIComponent(dEmail)}`;
+            
+            navigator.clipboard.writeText(link);
+            window.location.href = `mailto:${ice}?subject=Action Required: Work Order Verification WO#${wo}&body=Please review and authorize your dispatch here: ${link}`;
+            alert("Verification Link Copied!");
+        }
+
+        async function submitAuthorization() {
+            const name = document.getElementById('typed_sig').value;
+            const consent = document.getElementById('legal_consent').checked;
+            if (!name || !consent) return alert("Signature and consent required.");
+
+            const btn = document.getElementById('submitBtn');
+            btn.disabled = true; btn.innerText = "Securing Certificate...";
+
+            const params = new URLSearchParams(window.location.search);
+            const ts = new Date().toISOString();
+            const txID = 'CERT-WO-' + Math.random().toString(36).substr(2, 6).toUpperCase();
+
+            document.getElementById('auditTrail').classList.remove('hidden');
+            document.getElementById('audit_id').innerText = `ID: ${txID}`;
+            document.getElementById('audit_ts').innerText = `TS: ${ts}`;
+            document.getElementById('audit_ua').innerText = `ENV: ${navigator.userAgent.substring(0, 40)}...`;
+
+            const formData = new FormData();
+            formData.append('Work Order', params.get('wo'));
+            formData.append('Contractor', params.get('icn'));
+            formData.append('Compensation', params.get('comp'));
+            formData.append('Signatory', name);
+            formData.append('Verification ID', txID);
+            formData.append('_replyto', params.get('de'));
+
+            try {
+                const response = await fetch('https://formspree.io/f/xgonzegv', { 
+                    method: 'POST', body: formData, headers: {'Accept': 'application/json'} 
+                });
+
+                if (response.ok) {
+                    html2pdf().set({ margin: 0.5, filename: `WO_AUTH_${params.get('wo')}.pdf`, jsPDF: { format: 'letter' } })
+                    .from(document.getElementById('captureArea')).save();
+                    document.getElementById('icMode').style.display = 'none';
+                    document.getElementById('successView').classList.remove('hidden');
+                }
+            } catch (error) {
+                alert("Error."); btn.disabled = false;
+            }
+        }
     </script>
 </body>
 </html>
