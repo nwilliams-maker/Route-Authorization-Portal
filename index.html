@@ -199,20 +199,49 @@
         }
 
         function generateCertifiedLink() {
-            const d = {
-                icn: document.getElementById('ic_name_setup').value,
-                ice: document.getElementById('ic_email_setup').value,
-                wo: document.getElementById('task_num').value,
-                comp: document.getElementById('comp').value,
-                mi: document.getElementById('mileage_display').innerText,
-                time: document.getElementById('time_display').innerText,
-                locs: document.getElementById('locations').value.split('\n').filter(l => l.trim().length > 2).join('|')
-            };
-            const payload = btoa(unescape(encodeURIComponent(JSON.stringify(d))));
-            const link = `${window.location.origin}${window.location.pathname}?data=${payload}`;
-            navigator.clipboard.writeText(link);
-            alert("Authorization Link Copied!");
-        }
+    const d = {
+        icn: document.getElementById('ic_name_setup').value,
+        ice: document.getElementById('ic_email_setup').value,
+        wo: document.getElementById('task_num').value,
+        comp: document.getElementById('comp').value,
+        mi: document.getElementById('mileage_display').innerText,
+        time: document.getElementById('time_display').innerText,
+        locs: document.getElementById('locations').value.split('\n').filter(l => l.trim().length > 2).join('|')
+    };
+
+    // Validation
+    if (!d.ice || !d.icn || d.mi === "0.0") {
+        return alert("Missing Data: Please ensure Email, Name, and Locations are filled and calculated.");
+    }
+
+    // 1. Generate the payload and link
+    const payload = btoa(unescape(encodeURIComponent(JSON.stringify(d))));
+    const link = `${window.location.origin}${window.location.pathname}?data=${payload}`;
+
+    // 2. Copy to clipboard immediately as a backup
+    navigator.clipboard.writeText(link).then(() => {
+        console.log("Link copied to clipboard successfully.");
+    });
+
+    // 3. Prepare Email
+    const subject = encodeURIComponent(`Action Required: Terraboost Route Request | WO #${d.wo}`);
+    const body = encodeURIComponent(
+        `Dear ${d.icn},\n\n` +
+        `An optimized route for WO #${d.wo} is ready for your review.\n\n` +
+        `Please click the link below to authorize the route and compensation.\n\n` +
+        `REVIEW LINK:\n${link}\n\n` +
+        `Regards,\nTerraboost Media Dispatch`
+    );
+
+    // 4. Trigger the Mail Window
+    const mailtoLink = `mailto:${d.ice}?subject=${subject}&body=${body}`;
+    
+    // Attempt to open the mail client
+    window.location.href = mailtoLink;
+
+    // 5. Visual confirmation
+    alert("Dispatcher Link Copied to Clipboard!\n\nEmail client should open automatically. If not, paste the link into a manual email to: " + d.ice);
+}
 
         function clearRoute() {
             document.getElementById('locations').value = "";
