@@ -3,161 +3,171 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Work Order Dispatch | Terraboost</title>
+    <title>Work Order Dispatch | Terraboost Media</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCDYgNIGcfWPxoux2EILXr60ZK0fZYJPR4&libraries=geometry"></script>
     <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@600&family=Inter:wght@400;700;800&display=swap" rel="stylesheet">
     <style>
-        body { background-color: #f1f5f9; font-family: 'Inter', sans-serif; }
-        .brand-blue { background: linear-gradient(135deg, #1e293b 0%, #334155 100%); }
-        .form-card { border-radius: 12px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.08); }
-        #map { height: 300px; width: 100%; border-radius: 12px; border: 1px solid #e2e8f0; }
-        label { color: #64748b; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; font-size: 0.65rem; display: block; margin-bottom: 4px; }
-        input, textarea, select { border: 1px solid #e2e8f0; border-radius: 8px !important; padding: 10px; font-size: 14px; width: 100%; background: #ffffff; }
-        input:required { border-left: 4px solid #3b82f6; }
-        .signature-font { font-family: 'Dancing Script', cursive; font-size: 2.5rem; color: #1e293b; border-bottom: 2px solid #cbd5e1; background: transparent; width: 100%; }
-        .status-pill { transition: all 0.2s; cursor: pointer; border: 2px solid transparent; }
-        input[type="radio"]:checked + .status-pill { border-color: currentColor; transform: scale(1.05); ring: 2px; ring-offset: 2px; }
+        body { background-color: #f8fafc; font-family: 'Inter', sans-serif; }
+        .brand-gradient { background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); }
+        .form-card { border-radius: 16px; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,0.1); }
+        #map { height: 400px; width: 100%; border-radius: 12px; border: 1px solid #e2e8f0; }
+        label { color: #475569; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; font-size: 0.7rem; display: block; margin-bottom: 6px; }
+        input, textarea { border: 1px solid #cbd5e1; border-radius: 10px !important; padding: 12px; font-size: 14px; width: 100%; background: #ffffff; }
+        .signature-font { font-family: 'Dancing Script', cursive; font-size: 2.8rem; color: #0f172a; border-bottom: 2px solid #94a3b8; background: transparent; width: 100%; }
+        .status-pill { transition: all 0.2s; cursor: pointer; border: 2px solid #e2e8f0; }
+        input[type="radio"]:checked + .status-pill { border-color: currentColor; transform: translateY(-2px); }
         @media print { .no-print { display: none !important; } }
     </style>
 </head>
-<body class="p-4 md:p-12">
+<body class="p-4 md:p-10">
 
-    <div id="captureArea" class="max-w-4xl mx-auto form-card bg-white border border-gray-100 text-slate-800">
-        <div class="brand-blue p-8 text-white flex justify-between items-center no-print text-white">
-            <div class="flex items-center gap-4 text-white">
-                <div class="bg-white/10 p-3 rounded-xl font-extrabold text-2xl border border-white/20 text-center w-14">TB</div>
+    <div id="captureArea" class="max-w-5xl mx-auto form-card bg-white border border-slate-200">
+        <div class="brand-gradient p-10 text-white flex justify-between items-center no-print">
+            <div class="flex items-center gap-6">
+                <div class="bg-white p-2 rounded-lg"><div class="bg-slate-900 text-white font-black text-3xl px-4 py-2 rounded">TBM</div></div>
                 <div>
-                    <h1 class="text-2xl font-bold leading-tight">Work Order Dispatch</h1>
-                    <p class="text-slate-400 text-[10px] uppercase font-bold tracking-widest opacity-80 text-white">Certified Record of Authorization</p>
+                    <h1 class="text-3xl font-extrabold tracking-tight text-white">Terraboost Media</h1>
+                    <p class="text-blue-400 text-xs uppercase font-black tracking-widest opacity-90">Route Authorization</p>
                 </div>
             </div>
         </div>
 
-        <form id="dispatchForm" class="p-8 space-y-8">
-            
-            <div id="setupFields" class="space-y-6">
-                <h3 class="text-xs font-black text-blue-600 uppercase tracking-widest border-b border-blue-100 pb-3">1. Dispatch Configuration</h3>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div><label>Dispatcher Email</label><input type="email" id="d_email" placeholder="logistics@terraboost.com" required></div>
-                    <div><label>Contractor Name (IC)</label><input type="text" id="ic_name_setup" placeholder="Full Name" required></div>
-                    <div><label>Contractor Email</label><input type="email" id="ic_email_setup" placeholder="worker@email.com" required></div>
-                    <div><label>Work Order #</label><input type="text" id="task_num" placeholder="WO-0000" required></div>
-                    <div><label>Compensation ($)</label><input type="number" id="comp" placeholder="0.00" required></div>
-                    <div><label>Due Date (Mandatory)</label><input type="date" id="due_date" required></div>
+        <form id="dispatchForm" class="p-8 md:p-12 space-y-10">
+            <div id="setupFields" class="space-y-8">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    <div><label>Dispatcher Email</label><input type="email" id="d_email" placeholder="installteam@terraboost.biz" required></div>
+                    <div><label>Contractor Name</label><input type="text" id="ic_name_setup" required></div>
+                    <div><label>Contractor Email</label><input type="email" id="ic_email_setup" required></div>
+                    <div><label>Work Order #</label><input type="text" id="task_num" required></div>
+                    <div><label>Compensation ($)</label><input type="number" id="comp" required></div>
+                    <div><label>Due Date</label><input type="date" id="due_date" required></div>
                 </div>
 
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start border-t pt-6 mt-6">
-                    <div class="space-y-4">
-                        <label class="text-blue-600 font-black">Route Locations</label>
-                        <textarea id="locations" rows="6" placeholder="Addresses here..." oninput="calculateRoute()"></textarea>
-                        
-                        <div class="bg-slate-900 rounded-2xl p-6 text-white flex justify-between items-center shadow-xl">
-                            <div><p class="text-slate-400 text-[10px] uppercase font-black tracking-widest">Mileage</p><span id="mileage_display" class="text-3xl font-black text-emerald-400">0.0</span></div>
-                            <div class="text-right"><p class="text-slate-400 text-[10px] uppercase font-black tracking-widest">Drive Time</p><span id="time_display" class="text-3xl font-black text-blue-400">--</span></div>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-10 border-t pt-10">
+                    <div class="space-y-6">
+                        <div class="flex justify-between items-center">
+                            <label class="text-blue-600 font-black">Route Locations <span id="calcStatus" class="text-[9px] text-slate-400 italic"></span></label>
+                            <button type="button" onclick="clearRoute()" class="text-[10px] bg-red-50 text-red-600 font-bold px-3 py-1 rounded hover:bg-red-100 transition-colors uppercase tracking-tighter border border-red-200">Clear Route</button>
+                        </div>
+                        <textarea id="locations" rows="12" placeholder="Paste addresses here" oninput="calculateLargeRoute()"></textarea>
+                        <div class="bg-slate-900 rounded-3xl p-8 text-white flex justify-between items-center shadow-2xl">
+                            <div><p class="text-slate-400 text-[10px] uppercase font-black tracking-widest">Distance</p><span id="mileage_display" class="text-4xl font-black text-emerald-400">0.0</span><span class="text-emerald-400 font-bold text-xs ml-1">MI</span></div>
+                            <div class="text-right"><p class="text-slate-400 text-[10px] uppercase font-black tracking-widest">Drive Time</p><span id="time_display" class="text-4xl font-black text-blue-400">--</span></div>
                         </div>
                     </div>
                     <div><div id="map"></div></div>
                 </div>
-
-                <button type="button" onclick="generateCertifiedLink()" class="w-full brand-blue text-white font-bold py-4 rounded-xl shadow-lg text-xs uppercase tracking-widest hover:opacity-90 transition-all">
-                    🚀 Generate & Copy Certified Link
-                </button>
+                <button type="button" onclick="generateCertifiedLink()" class="w-full brand-gradient text-white font-black py-5 rounded-2xl shadow-xl text-xs uppercase tracking-widest">Generate Authorization Link</button>
             </div>
 
-            <div id="icMode" class="hidden space-y-8">
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-10">
-                    <div class="space-y-6">
-                        <h3 class="text-sm font-black text-slate-800 uppercase border-b pb-2">Work Order Authorization</h3>
-                        
-                        <div class="flex gap-4 no-print">
-                            <label class="flex-1">
-                                <input type="radio" name="status" value="Accepted" class="hidden" onchange="toggleDecision('Accepted')" checked>
-                                <div class="status-pill bg-emerald-50 text-emerald-700 border-emerald-200 p-4 rounded-xl text-center font-bold text-xs uppercase tracking-widest ring-emerald-500">Accept Route</div>
-                            </label>
-                            <label class="flex-1">
-                                <input type="radio" name="status" value="Declined" class="hidden" onchange="toggleDecision('Declined')">
-                                <div class="status-pill bg-red-50 text-red-700 border-red-200 p-4 rounded-xl text-center font-bold text-xs uppercase tracking-widest ring-red-500">Decline Route</div>
-                            </label>
+            <div id="icMode" class="hidden space-y-10">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
+                    <div class="space-y-8">
+                        <h3 class="text-sm font-black text-slate-800 uppercase border-b pb-4">Decision</h3>
+                        <div class="flex gap-6 no-print">
+                            <label class="flex-1 text-emerald-700 font-bold"><input type="radio" name="status" value="Accepted" class="hidden" onchange="toggleDecision('Accepted')" checked><div class="status-pill bg-emerald-50 p-5 rounded-2xl text-center font-black text-xs uppercase tracking-widest">Accept</div></label>
+                            <label class="flex-1 text-red-700 font-bold"><input type="radio" name="status" value="Declined" class="hidden" onchange="toggleDecision('Declined')"><div class="status-pill bg-red-50 p-5 rounded-2xl text-center font-black text-xs uppercase tracking-widest">Decline</div></label>
                         </div>
-
-                        <button type="button" onclick="viewRoute()" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-black py-4 rounded-xl text-[10px] uppercase tracking-widest no-print">
-                            View Optimized Route
-                        </button>
-
-                        <div id="summaryZone" class="bg-slate-50 p-6 rounded-2xl border border-slate-100 space-y-3 text-sm text-slate-700 font-medium"></div>
+                        <button type="button" onclick="viewRoute()" class="w-full bg-slate-800 text-white font-black py-5 rounded-2xl flex items-center justify-center gap-4">🗺️ VIEW NAVIGATION</button>
+                        <div id="summaryZone" class="bg-slate-50 p-8 rounded-3xl border space-y-4 text-sm"></div>
                     </div>
-
-                    <div class="space-y-6">
-                        <div id="acceptFields" class="space-y-6">
-                            <div><label class="text-blue-600 font-black">Electronic Signature</label><input type="text" id="typed_sig" oninput="updateSigPreview()" placeholder="Full Legal Name" class="signature-font border-none focus:ring-0"></div>
-                            <div class="flex items-start gap-3 p-4 bg-slate-50 rounded-xl border border-slate-200"><input type="checkbox" id="legal_consent" class="mt-1 h-5 w-5 rounded border-gray-300 text-blue-600 cursor-pointer"><label for="legal_consent" class="normal-case font-medium text-[11px] text-slate-600 leading-tight cursor-pointer italic">I certify that I have reviewed the route details and authorize this assignment.</label></div>
+                    <div class="space-y-8 bg-white p-8 rounded-3xl border shadow-sm">
+                        <div id="acceptFields" class="space-y-8">
+                            <div><label class="text-blue-600 font-black">Signature</label><input type="text" id="typed_sig" oninput="updateSigPreview()" class="signature-font focus:ring-0 border-none outline-none"></div>
+                            <label class="flex items-start gap-4 text-xs italic"><input type="checkbox" id="legal_consent" class="mt-1"> I authorize this route at the rate authorized in this form.</label>
                         </div>
-
                         <div id="declineFields" class="hidden space-y-4">
-                            <div class="grid grid-cols-2 gap-4">
-                                <div><label class="text-red-600 font-black">Counter Amount ($)</label><input type="number" id="counter_comp" placeholder="Price"></div>
-                                <div><label class="text-red-600 font-black">Offer Valid Until</label><input type="time" id="counter_deadline"></div>
-                            </div>
-                            <div><label class="text-red-600 font-black">Reason for Denial</label><textarea id="decline_reason" rows="4" placeholder="Brief explanation..."></textarea></div>
+                            <label class="text-red-600 font-black">Counter Offer ($)</label><input type="number" id="counter_comp">
+                            <label class="text-red-600 font-black">Reason for Rejection</label><textarea id="decline_reason"></textarea>
                         </div>
-
-                        <div class="text-right border-t pt-4"><label>Action Date</label><span id="dateDisplay" class="font-bold text-slate-800 text-sm"></span></div>
-                        <button type="button" id="submitBtn" onclick="submitAuthorization()" class="w-full bg-blue-600 text-white font-bold py-5 rounded-xl shadow-lg text-xs uppercase tracking-widest transition-colors">Submit Decision</button>
+                        <button type="button" id="submitBtn" onclick="submitAuthorization()" class="w-full bg-blue-600 text-white font-black py-5 rounded-2xl uppercase tracking-widest">Submit Decision</button>
                     </div>
                 </div>
             </div>
 
-            <div id="auditTrail" class="hidden mt-10 pt-6 border-t border-slate-100 space-y-2 text-[8px] text-slate-400 font-mono uppercase">
-                <p class="font-bold text-blue-600 text-[10px] mb-2">Verification Certificate</p>
-                <div class="grid grid-cols-2 gap-4"><div><p id="audit_id"></p><p id="audit_ts"></p></div><div class="text-right"><p id="audit_ua"></p></div></div>
+            <div id="auditTrail" class="hidden mt-12 pt-8 border-t text-[9px] text-slate-400 font-mono uppercase tracking-tighter">
+                <div class="grid grid-cols-2 gap-8">
+                    <div><p id="audit_id"></p><p id="audit_ts"></p></div>
+                    <div class="text-right"><p id="audit_ua"></p></div>
+                </div>
             </div>
 
-            <div id="successView" class="hidden text-center py-12 space-y-4">
-                <div class="text-6xl text-slate-800">✅</div>
-                <h2 class="text-2xl font-bold uppercase tracking-tight">Response Recorded</h2>
-                <p id="success_msg" class="text-slate-500">The dispatcher has been notified. A confirmation receipt has been sent.</p>
+            <div id="successView" class="hidden text-center py-20 space-y-6">
+                <div class="text-6xl">✅</div>
+                <h2 class="text-3xl font-black uppercase text-slate-900 tracking-tight">Response Recorded</h2>
+                <p class="text-slate-500">The TBM dispatch team has been notified. Record generated.</p>
             </div>
         </form>
     </div>
 
     <script>
         let map, directionsService, directionsRenderer;
+        
         function initMap() {
-            map = new google.maps.Map(document.getElementById('map'), { zoom: 4, center: { lat: 39.8, lng: -98.5 }, disableDefaultUI: true });
+            if (typeof google === 'undefined') return;
+            map = new google.maps.Map(document.getElementById('map'), { 
+                zoom: 4, 
+                center: { lat: 39.8, lng: -98.5 }, 
+                disableDefaultUI: true 
+            });
             directionsService = new google.maps.DirectionsService();
             directionsRenderer = new google.maps.DirectionsRenderer({ map: map });
         }
 
-        function calculateRoute() {
-            const lines = document.getElementById('locations').value.split('\n').filter(l => l.trim().length > 5);
-            if (lines.length < 2) return;
-            directionsService.route({
-                origin: lines[0], destination: lines[lines.length - 1],
-                waypoints: lines.slice(1, -1).map(loc => ({ location: loc, stopover: true })),
-                optimizeWaypoints: true, travelMode: google.maps.TravelMode.DRIVING, unitSystem: google.maps.UnitSystem.IMPERIAL
-            }, (result, status) => {
-                if (status === "OK") {
-                    directionsRenderer.setDirections(result);
-                    let meters = 0; result.routes[0].legs.forEach(leg => { meters += leg.distance.value; });
-                    document.getElementById('mileage_display').innerText = (meters * 0.000621371).toFixed(1);
-                    document.getElementById('time_display').innerText = result.routes[0].legs[0].duration.text;
-                }
-            });
+        function clearRoute() {
+            document.getElementById('locations').value = "";
+            document.getElementById('mileage_display').innerText = "0.0";
+            document.getElementById('time_display').innerText = "--";
+            document.getElementById('calcStatus').innerText = "Cleared";
+            if (directionsRenderer) {
+                directionsRenderer.setDirections({routes: []});
+            }
         }
 
-        function toggleDecision(choice) {
-            const btn = document.getElementById('submitBtn');
-            if (choice === 'Accepted') {
-                document.getElementById('acceptFields').classList.remove('hidden');
-                document.getElementById('declineFields').classList.add('hidden');
-                btn.className = "w-full bg-blue-600 text-white font-bold py-5 rounded-xl shadow-lg text-xs uppercase tracking-widest transition-colors";
-            } else {
-                document.getElementById('acceptFields').classList.add('hidden');
-                document.getElementById('declineFields').classList.remove('hidden');
-                btn.className = "w-full bg-red-600 text-white font-bold py-5 rounded-xl shadow-lg text-xs uppercase tracking-widest transition-colors";
-            }
+        let throttle;
+        async function calculateLargeRoute() {
+            clearTimeout(throttle);
+            const statusLabel = document.getElementById('calcStatus');
+            statusLabel.innerText = "Analyzing batch flow...";
+            
+            throttle = setTimeout(async () => {
+                const lines = document.getElementById('locations').value.split('\n').filter(l => l.trim().length > 5);
+                if (lines.length < 2) return;
+                
+                let totalM = 0, totalS = 0;
+                for (let i = 0; i < lines.length - 1; i += 10) {
+                    const chunk = lines.slice(i, i + 11);
+                    const req = {
+                        origin: chunk[0],
+                        destination: chunk[chunk.length-1],
+                        waypoints: chunk.slice(1,-1).map(l => ({location: l, stopover: true})),
+                        optimizeWaypoints: true,
+                        travelMode: 'DRIVING'
+                    };
+                    await new Promise(r => directionsService.route(req, (res, stat) => {
+                        if (stat === 'OK') {
+                            if (i === 0) directionsRenderer.setDirections(res);
+                            res.routes[0].legs.forEach(leg => { 
+                                totalM += leg.distance.value; 
+                                totalS += leg.duration.value; 
+                            });
+                        }
+                        setTimeout(r, 400);
+                    }));
+                }
+                document.getElementById('mileage_display').innerText = (totalM * 0.000621371).toFixed(1);
+                const h = Math.floor(totalS / 3600), m = Math.floor((totalS % 3600) / 60);
+                document.getElementById('time_display').innerText = h > 0 ? h+"h "+m+"m" : m+"m";
+                statusLabel.innerText = "Perfect Route Finalized";
+            }, 1200);
+        }
+
+        function toggleDecision(c) {
+            document.getElementById('acceptFields').classList.toggle('hidden', c === 'Declined');
+            document.getElementById('declineFields').classList.toggle('hidden', c === 'Accepted');
+            document.getElementById('submitBtn').className = c === 'Accepted' ? "w-full bg-blue-600 text-white font-black py-5 rounded-2xl" : "w-full bg-red-600 text-white font-black py-5 rounded-2xl";
         }
 
         function generateCertifiedLink() {
@@ -168,119 +178,99 @@
                 wo: document.getElementById('task_num').value,
                 comp: document.getElementById('comp').value,
                 mi: document.getElementById('mileage_display').innerText,
+                time: document.getElementById('time_display').innerText,
                 due: document.getElementById('due_date').value,
                 locs: document.getElementById('locations').value.split('\n').filter(l => l.trim().length > 2).join('|')
             };
 
-            // STRICT VALIDATION
-            if (!d.de || !d.icn || !d.ice || !d.wo || !d.comp || !d.due || d.locs.split('|').length < 2) {
-                return alert("ERROR: All configuration fields, including the Due Date and Route Locations, must be completed.");
-            }
-            
+            if (!d.de || !d.icn || !d.wo || !d.due) return alert("Required fields missing.");
+
             const payload = btoa(unescape(encodeURIComponent(JSON.stringify(d))));
             const link = `${window.location.origin}${window.location.pathname}?data=${payload}`;
             
             navigator.clipboard.writeText(link);
-
-            const subject = encodeURIComponent(`Action Required: Route Authorization [WO #${d.wo}]`);
+            
+            const subject = encodeURIComponent(`Action Required: Work Order Request #${d.wo}`);
             const body = encodeURIComponent(
-                `Hello ${d.icn},\n\n` +
-                `A new Work Order has been dispatched to you. Please review the route details and authorize the assignment using our secure verification portal.\n\n` +
+                `Dear ${d.icn},\n\n` +
+                `A professionally optimized route has been finalized for your upcoming TBM assignment request.\n\n` +
                 `WORK ORDER SUMMARY:\n` +
-                `• Work Order #: ${d.wo}\n` +
-                `• Route Mileage: ${d.mi} Miles\n` +
-                `• Compensation: $${d.comp}\n` +
+                `• WO ID: ${d.wo}\n` +
+                `• Miles: ${d.mi}\n` +
+                `• Time: ${d.time}\n` +
+                `• Comp: $${d.comp}\n` +
                 `• Due Date: ${d.due}\n\n` +
-                `Please click the link below to view the optimized route and provide your digital signature:\n` +
-                `${link}\n\n` +
-                `Regards,\n\n` +
-                `Logistics Dispatch`
+                `Review & Formally Authorize Here:\n${link}\n\n` +
+                `Regards,\nDispatch | Terraboost Media`
             );
 
             window.location.href = `mailto:${d.ice}?subject=${subject}&body=${body}`;
-            alert("Certified Link Copied!");
+            alert("TBM Dispatch Link Copied to Clipboard!");
         }
 
         window.onload = () => {
             initMap();
             const params = new URLSearchParams(window.location.search);
-            const rawData = params.get('data');
-            if (rawData) {
+            const raw = params.get('data');
+            if (raw) {
                 try {
-                    const d = JSON.parse(decodeURIComponent(escape(atob(rawData))));
-                    document.getElementById('setupFields').remove();
+                    const d = JSON.parse(decodeURIComponent(escape(atob(raw))));
+                    const setup = document.getElementById('setupFields');
+                    if (setup) setup.remove();
+                    
                     document.getElementById('icMode').classList.remove('hidden');
                     document.getElementById('dateDisplay').innerText = new Date().toLocaleDateString();
                     document.getElementById('summaryZone').innerHTML = `
-                        <div class="flex justify-between border-b pb-2"><strong>Contractor:</strong> <span>${d.icn}</span></div>
-                        <div class="flex justify-between text-blue-600"><strong>Work Order #:</strong> <span class="font-bold">${d.wo}</span></div>
+                        <div class="flex justify-between font-bold border-b pb-2"><strong>Contractor:</strong> <span>${d.icn}</span></div>
+                        <div class="flex justify-between text-blue-600 font-black"><strong>WO #:</strong> <span>${d.wo}</span></div>
                         <div class="flex justify-between"><strong>Mileage:</strong> <span>${d.mi} Miles</span></div>
-                        <div class="flex justify-between"><strong>Due Date:</strong> <span class="text-slate-900">${d.due}</span></div>
-                        <div class="flex justify-between border-t pt-2 mt-2"><strong>Compensation:</strong> <span class="text-emerald-600 font-black">$${d.comp}</span></div>
+                        <div class="flex justify-between text-slate-500 italic"><strong>Time:</strong> <span>${d.time}</span></div>
+                        <div class="flex justify-between"><strong>Due:</strong> <span>${d.due}</span></div>
+                        <div class="flex justify-between border-t pt-2 mt-2"><strong>Compensation:</strong> <span class="text-emerald-600 font-black text-xl">$${d.comp}</span></div>
                     `;
                     window.payloadData = d;
-                } catch(e) { console.error("Data decode error"); }
+                } catch(e) { console.error("Data error"); }
             }
         };
 
         function viewRoute() {
             const stops = window.payloadData.locs.split('|');
-            const url = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(stops[0])}&destination=${encodeURIComponent(stops[stops.length-1])}&waypoints=${encodeURIComponent(stops.slice(1,-1).join('|'))}&travelmode=driving`;
-            window.open(url, '_blank');
+            const origin = encodeURIComponent(stops[0]);
+            const dest = encodeURIComponent(stops[stops.length-1]);
+            const waypoints = encodeURIComponent(stops.slice(1,-1).join('|'));
+            window.open(`https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${dest}&waypoints=${waypoints}`, '_blank');
         }
-
-        function updateSigPreview() { document.getElementById('sig_name_preview').innerText = document.getElementById('typed_sig').value || "the signatory"; }
 
         async function submitAuthorization() {
             const status = document.querySelector('input[name="status"]:checked').value;
-            const name = document.getElementById('typed_sig').value;
-            const reason = document.getElementById('decline_reason').value;
-            const counter = document.getElementById('counter_comp').value;
-            const deadline = document.getElementById('counter_deadline').value;
-
-            if (status === 'Accepted' && (!name || !document.getElementById('legal_consent').checked)) return alert("Signature required to accept.");
-            if (status === 'Declined' && !reason) return alert("Please provide a reason.");
-
-            const btn = document.getElementById('submitBtn');
-            btn.disabled = true; btn.innerText = "Processing...";
-
-            const ts = new Date().toISOString();
-            const txID = `CERT-${window.payloadData.wo}-${Math.random().toString(36).substr(2, 4).toUpperCase()}`;
-
-            document.getElementById('auditTrail').classList.remove('hidden');
-            document.getElementById('audit_id').innerText = `ID: ${txID}`;
-            document.getElementById('audit_ts').innerText = `TS: ${ts}`;
-            document.getElementById('audit_ua').innerText = `ENV: ${navigator.userAgent.substring(0, 40)}`;
-
+            const txID = `TBM-${window.payloadData.wo}-${Math.random().toString(36).substr(2, 4).toUpperCase()}`;
             const formData = new FormData();
-            formData.append('_subject', `WO ${window.payloadData.wo} ${status.toUpperCase()}`);
-            formData.append('Summary', `Route ${status} by ${window.payloadData.icn}`);
-            formData.append('Work Order', window.payloadData.wo);
+            
+            formData.append('_subject', `WO ${window.payloadData.wo} ${status.toUpperCase()} | Terraboost Media`);
+            formData.append('Status', status);
             formData.append('Contractor', window.payloadData.icn);
-            formData.append('Original Comp', `$${window.payloadData.comp}`);
-            formData.append('Original Due Date', window.payloadData.due);
+            formData.append('WO', window.payloadData.wo);
+            formData.append('Verification ID', txID);
             
-            if (status === 'Accepted') {
-                formData.append('Decision', 'ACCEPTED');
-                formData.append('Signature', name);
-            } else {
-                formData.append('Decision', 'DECLINED');
-                formData.append('Reason', reason);
-                if (counter) formData.append('Counter Offer', `$${counter}`);
-                if (deadline) formData.append('Offer Deadline', deadline);
+            if (status === 'Declined') {
+                formData.append('Reason', document.getElementById('decline_reason').value);
+                formData.append('Counter Offer', `$${document.getElementById('counter_comp').value || '0'}`);
             }
-            
-            formData.append('Audit ID', txID);
-            formData.append('_replyto', window.payloadData.ice);
 
             try {
-                await fetch('https://formspree.io/f/meerlqll', { method: 'POST', body: formData, headers: {'Accept': 'application/json'} });
+                await fetch('https://formspree.io/f/meerlqll', { 
+                    method: 'POST', 
+                    body: formData, 
+                    headers: {'Accept': 'application/json'} 
+                });
+                
                 if (status === 'Accepted') {
-                    await html2pdf().set({ margin: 0.5, filename: `WO_CERT_${window.payloadData.wo}.pdf`, jsPDF: { format: 'letter' } }).from(document.getElementById('captureArea')).save();
+                    await html2pdf().set({ margin: 0.5, filename: `TBM_CERT_${window.payloadData.wo}.pdf` }).from(document.getElementById('captureArea')).save();
                 }
+                
                 document.getElementById('icMode').style.display = 'none';
                 document.getElementById('successView').classList.remove('hidden');
-            } catch (e) { btn.disabled = false; alert("Submission failed."); }
+            } catch (e) { alert("Error submitting. Please try again."); }
         }
     </script>
 </body>
