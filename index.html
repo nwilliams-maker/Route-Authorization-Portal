@@ -25,7 +25,7 @@
 <body class="p-4 md:p-12">
 
     <div id="captureArea" class="max-w-4xl mx-auto form-card bg-white border border-gray-100 text-slate-800">
-        <div class="brand-blue p-8 text-white flex justify-between items-center no-print text-white">
+        <div class="brand-blue p-8 text-white flex justify-between items-center no-print">
             <div class="flex items-center gap-4 text-white">
                 <div class="bg-white/10 p-3 rounded-xl font-extrabold text-2xl border border-white/20 text-center w-14">TB</div>
                 <div>
@@ -54,14 +54,14 @@
                         <textarea id="locations" rows="6" placeholder="Addresses here..." oninput="calculateRoute()"></textarea>
                         
                         <div class="bg-slate-900 rounded-2xl p-6 text-white flex justify-between items-center shadow-xl">
-                            <div><p class="text-slate-400 text-[10px] uppercase font-black tracking-widest">Mileage</p><span id="mileage_display" class="text-3xl font-black text-emerald-400">0.0</span></div>
-                            <div class="text-right"><p class="text-slate-400 text-[10px] uppercase font-black tracking-widest">Drive Time</p><span id="time_display" class="text-3xl font-black text-blue-400">--</span></div>
+                            <div><p class="text-slate-400 text-[10px] uppercase font-black tracking-widest">Total Mileage</p><span id="mileage_display" class="text-3xl font-black text-emerald-400">0.0</span></div>
+                            <div class="text-right"><p class="text-slate-400 text-[10px] uppercase font-black tracking-widest">Total Drive Time</p><span id="time_display" class="text-3xl font-black text-blue-400">--</span></div>
                         </div>
                     </div>
                     <div><div id="map"></div></div>
                 </div>
 
-                <button type="button" onclick="generateCertifiedLink()" class="w-full brand-blue text-white font-bold py-4 rounded-xl shadow-lg text-xs uppercase tracking-widest hover:opacity-90 transition-all">
+                <button type="button" onclick="generateCertifiedLink()" class="w-full brand-blue text-white font-bold py-4 rounded-xl shadow-lg text-xs uppercase tracking-widest hover:opacity-90">
                     🚀 Generate & Copy Certified Link
                 </button>
             </div>
@@ -130,6 +130,8 @@
             directionsRenderer = new google.maps.DirectionsRenderer({ map: map });
         }
 
+        document.getElementById('locations').addEventListener('input', calculateRoute);
+
         function calculateRoute() {
             const lines = document.getElementById('locations').value.split('\n').filter(l => l.trim().length > 5);
             if (lines.length < 2) return;
@@ -140,9 +142,22 @@
             }, (result, status) => {
                 if (status === "OK") {
                     directionsRenderer.setDirections(result);
-                    let meters = 0; result.routes[0].legs.forEach(leg => { meters += leg.distance.value; });
-                    document.getElementById('mileage_display').innerText = (meters * 0.000621371).toFixed(1);
-                    document.getElementById('time_display').innerText = result.routes[0].legs[0].duration.text;
+                    let totalMeters = 0;
+                    let totalSeconds = 0;
+                    
+                    // FIXED: Loop through all legs to get total duration and distance
+                    result.routes[0].legs.forEach(leg => { 
+                        totalMeters += leg.distance.value; 
+                        totalSeconds += leg.duration.value;
+                    });
+
+                    // Distance formatting
+                    document.getElementById('mileage_display').innerText = (totalMeters * 0.000621371).toFixed(1);
+                    
+                    // Time formatting (Hours and Minutes)
+                    const hours = Math.floor(totalSeconds / 3600);
+                    const minutes = Math.floor((totalSeconds % 3600) / 60);
+                    document.getElementById('time_display').innerText = hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
                 }
             });
         }
@@ -168,33 +183,30 @@
                 wo: document.getElementById('task_num').value,
                 comp: document.getElementById('comp').value,
                 mi: document.getElementById('mileage_display').innerText,
+                time: document.getElementById('time_display').innerText,
                 due: document.getElementById('due_date').value,
                 locs: document.getElementById('locations').value.split('\n').filter(l => l.trim().length > 2).join('|')
             };
 
-            // STRICT VALIDATION
-            if (!d.de || !d.icn || !d.ice || !d.wo || !d.comp || !d.due || d.locs.split('|').length < 2) {
-                return alert("ERROR: All configuration fields, including the Due Date and Route Locations, must be completed.");
+            if (!d.de || !d.icn || !d.wo || !d.comp || !d.due) {
+                return alert("Required configuration fields are missing.");
             }
             
             const payload = btoa(unescape(encodeURIComponent(JSON.stringify(d))));
             const link = `${window.location.origin}${window.location.pathname}?data=${payload}`;
             
             navigator.clipboard.writeText(link);
-
             const subject = encodeURIComponent(`Action Required: Route Authorization [WO #${d.wo}]`);
             const body = encodeURIComponent(
                 `Hello ${d.icn},\n\n` +
-                `A new Work Order has been dispatched to you. Please review the route details and authorize the assignment using our secure verification portal.\n\n` +
-                `WORK ORDER SUMMARY:\n` +
+                `A new Work Order has been dispatched to you. Please review the route details and authorize the assignment using our secure portal.\n\n` +
                 `• Work Order #: ${d.wo}\n` +
                 `• Route Mileage: ${d.mi} Miles\n` +
+                `• Estimated Drive Time: ${d.time}\n` +
                 `• Compensation: $${d.comp}\n` +
                 `• Due Date: ${d.due}\n\n` +
-                `Please click the link below to view the optimized route and provide your digital signature:\n` +
                 `${link}\n\n` +
-                `Regards,\n\n` +
-                `Logistics Dispatch`
+                `Regards,\n\nLogistics Dispatch`
             );
 
             window.location.href = `mailto:${d.ice}?subject=${subject}&body=${body}`;
@@ -215,11 +227,12 @@
                         <div class="flex justify-between border-b pb-2"><strong>Contractor:</strong> <span>${d.icn}</span></div>
                         <div class="flex justify-between text-blue-600"><strong>Work Order #:</strong> <span class="font-bold">${d.wo}</span></div>
                         <div class="flex justify-between"><strong>Mileage:</strong> <span>${d.mi} Miles</span></div>
-                        <div class="flex justify-between"><strong>Due Date:</strong> <span class="text-slate-900">${d.due}</span></div>
+                        <div class="flex justify-between text-slate-500"><strong>Est. Drive Time:</strong> <span>${d.time || 'N/A'}</span></div>
+                        <div class="flex justify-between"><strong>Due Date:</strong> <span>${d.due}</span></div>
                         <div class="flex justify-between border-t pt-2 mt-2"><strong>Compensation:</strong> <span class="text-emerald-600 font-black">$${d.comp}</span></div>
                     `;
                     window.payloadData = d;
-                } catch(e) { console.error("Data decode error"); }
+                } catch(e) { console.error("Data error"); }
             }
         };
 
@@ -258,7 +271,8 @@
             formData.append('Work Order', window.payloadData.wo);
             formData.append('Contractor', window.payloadData.icn);
             formData.append('Original Comp', `$${window.payloadData.comp}`);
-            formData.append('Original Due Date', window.payloadData.due);
+            formData.append('Mileage', `${window.payloadData.mi} mi`);
+            formData.append('Drive Time', window.payloadData.time);
             
             if (status === 'Accepted') {
                 formData.append('Decision', 'ACCEPTED');
