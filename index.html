@@ -204,8 +204,17 @@
             
             navigator.clipboard.writeText(link);
             
-            const subject = encodeURIComponent(`URGENT: Route Authorization | WO #${d.wo}`);
-            const body = encodeURIComponent(`Dear ${d.icn},\n\nReview and formally authorize your optimized TBM route here:\n\n${link}\n\nRegards,\nTerraboost Media Logistics`);
+            const subject = encodeURIComponent(`Action Required: Route Request| WO #${d.wo}`);
+            const body = encodeURIComponent(`Dear ${d.icn},\n
+            `A professionally optimized route has been finalized for your upcoming TBM assignment request.\n\n` +
+            
+                `WORK ORDER SUMMARY:\n` +
+                `• WO ID: ${d.wo}\n` +
+                `• Due Date: ${d.due}\n\n` +
+                
+            \nReview and formally authorize your optimized TBM route here:
+            
+            \n\n${link}\n\nRegards,\nTerraboost Media Dispatch`);
 
             window.location.href = `mailto:${d.ice}?subject=${subject}&body=${body}`;
             alert("TBM Dispatch Link Copied!");
