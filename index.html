@@ -15,12 +15,11 @@
         label { color: #475569; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; font-size: 0.7rem; display: block; margin-bottom: 6px; }
         input, textarea { border: 1px solid #cbd5e1; border-radius: 10px !important; padding: 12px; font-size: 14px; width: 100%; background: #ffffff; }
         .signature-font { font-family: 'Dancing Script', cursive; font-size: 3rem; color: #0f172a; border-bottom: 2px solid #94a3b8; background: transparent; width: 100%; padding: 0; height: auto; line-height: 1; }
-        .status-pill { transition: all 0.2s; cursor: pointer; border: 2px solid #e2e8f0; }
-        input[type="radio"]:checked + .status-pill { border-color: currentColor; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
         .spinner { border: 3px solid rgba(255,255,255,0.3); border-radius: 50%; border-top: 3px solid #3b82f6; width: 30px; height: 30px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .status-pill { border: 2px solid #e2e8f0; transition: all 0.2s; cursor: pointer; }
+        input[type="radio"]:checked + .status-pill { border-color: currentColor; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
         @media print { .no-print { display: none !important; } }
-        .copy-success { border-color: #10b981 !important; color: #10b981 !important; background-color: #f0fdf4 !important; }
     </style>
 </head>
 <body class="p-4 md:p-10">
@@ -36,6 +35,7 @@
                     <p class="text-blue-400 text-xs uppercase font-black tracking-[0.2em] opacity-90">Route Authorization Portal</p>
                 </div>
             </div>
+            <button type="button" onclick="clearFullForm()" class="text-[10px] text-red-400 font-bold border border-red-900/30 px-3 py-1 rounded hover:bg-red-500/10 transition-all">Reset Form</button>
         </div>
 
         <form id="dispatchForm" class="p-8 md:p-12 space-y-10">
@@ -43,27 +43,29 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                     <div><label>Dispatcher Email</label><input type="email" id="d_email" placeholder="installteam@terraboost.biz"></div>
                     <div><label>Contractor Email</label><input type="email" id="ic_email_setup" placeholder="Enter email..." onblur="lookupContractor(this.value)"></div>
-                    <div><label>Contractor Name</label><input type="text" id="ic_name_setup" placeholder="Auto-filled"></div>
+                    <div><label>Contractor Name</label><input type="text" id="ic_name_setup" placeholder="Auto-filled" oninput="handleManualEdit()"></div>
                     <div><label>Work Order #</label><input type="text" id="task_num" placeholder="TBM-XXXXX"></div>
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div class="md:col-span-2">
-                        <label>Contractor Start/End Address</label>
-                        <input type="text" id="ic_address" placeholder="Auto-fills from DB or type manually" onchange="autoInjectContractorAddress(this.value)">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                    <div class="md:col-span-2 relative">
+                        <label>Contractor Home Address</label>
+                        <div class="flex gap-2">
+                            <input type="text" id="ic_address" class="flex-grow" placeholder="Address..." oninput="handleManualEdit()" onchange="calculateLargeRoute()">
+                            <button type="button" id="saveBtn" onclick="saveToDatabase()" disabled class="opacity-30 grayscale cursor-not-allowed bg-emerald-600 text-white px-3 py-1 rounded-lg text-[9px] font-black uppercase transition-all">Save</button>
+                        </div>
                     </div>
                     <div><label>Compensation ($)</label><input type="number" id="comp" placeholder="0.00"></div>
+                    <div><label>Due Date</label><input type="date" id="due_date"></div>
                 </div>
 
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-10 items-start border-t border-slate-100 pt-10">
                     <div class="space-y-6">
-                        <label class="text-blue-600 font-black tracking-widest">Route Locations</label>
+                        <label class="text-blue-600 font-black tracking-widest uppercase text-[10px]">Job Locations</label>
                         <textarea id="locations" rows="10" class="font-mono text-xs" placeholder="Paste stops here..." oninput="calculateLargeRoute()"></textarea>
                         
                         <div class="bg-slate-900 rounded-3xl p-8 text-white flex justify-between items-center shadow-2xl relative">
-                            <div id="loaderOverlay" class="absolute inset-0 bg-slate-900/90 hidden flex-col items-center justify-center gap-2">
-                                <div class="spinner"></div>
-                            </div>
+                            <div id="loaderOverlay" class="absolute inset-0 bg-slate-900/90 hidden flex-col items-center justify-center gap-2"><div class="spinner"></div></div>
                             <div><p class="text-slate-400 text-[10px] uppercase font-black tracking-widest">Mileage</p><span id="mileage_display" class="text-4xl font-black text-emerald-400">0.0</span></div>
                             <div class="text-right"><p class="text-slate-400 text-[10px] uppercase font-black tracking-widest text-white">Est. Time</p><span id="time_display" class="text-4xl font-black text-blue-400">--</span></div>
                         </div>
@@ -71,32 +73,54 @@
                     <div><div id="map"></div></div>
                 </div>
 
-                <button type="button" onclick="generateCertifiedLink()" class="w-full brand-gradient text-white font-black py-6 rounded-2xl shadow-xl text-xs uppercase tracking-[0.2em]">Generate Authorization Link</button>
+                <button type="button" onclick="generateCertifiedLink()" class="w-full brand-gradient text-white font-black py-6 rounded-2xl shadow-xl text-xs uppercase tracking-[0.2em] hover:scale-[1.01] transition-all">Generate Authorization Link</button>
             </div>
 
             <div id="icMode" class="hidden space-y-10">
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
                     <div class="space-y-8">
-                        <h3 class="text-sm font-black text-slate-800 uppercase tracking-widest border-b pb-4">Route Authorization</h3>
-                        <div class="space-y-4 no-print">
-                            <button type="button" onclick="viewRoute(11)" class="w-full bg-slate-800 text-white font-black py-5 rounded-2xl shadow-lg uppercase tracking-widest text-xs">View Route Preview</button>
-                            <button type="button" id="copyBtn" onclick="copyMapUrl()" class="w-full bg-white border-2 border-slate-200 text-slate-600 font-black py-4 rounded-xl text-[10px] uppercase tracking-[0.15em]">Copy Browser Link (Full Route)</button>
+                        <h3 class="text-sm font-black text-slate-800 uppercase tracking-widest border-b pb-4">Authorization Details</h3>
+                        <div class="space-y-6 no-print">
+                            <div>
+                                <button type="button" onclick="viewRoute(11)" class="w-full bg-slate-800 text-white font-black py-5 rounded-2xl shadow-lg uppercase tracking-widest text-xs">View Route Preview</button>
+                                <p class="text-[10px] text-slate-400 mt-2 text-center">* Preview shows the first 10 locations to verify the area.</p>
+                            </div>
+                            <div>
+                                <button type="button" id="copyBtn" onclick="copyMapUrl()" class="w-full bg-white border-2 border-slate-200 text-slate-600 font-black py-4 rounded-xl text-[10px] uppercase tracking-[0.15em]">Copy Browser Link (Full Route)</button>
+                                <p class="text-[10px] text-slate-400 mt-2 text-center">* Supports the full optimized sequence (up to 25 stops).</p>
+                            </div>
                         </div>
-                        <div id="summaryZone" class="bg-slate-50 p-8 rounded-3xl border border-slate-100 space-y-4 shadow-sm text-sm"></div>
+                        <div id="summaryZone" class="bg-slate-50 p-8 rounded-3xl border border-slate-100 shadow-sm text-sm"></div>
                     </div>
 
                     <div class="space-y-8 bg-white p-8 rounded-3xl border border-slate-100 shadow-sm">
-                        <div>
-                            <label class="text-blue-600 font-black mb-4">Contractor Electronic Signature</label>
-                            <input type="text" id="typed_sig" placeholder="Type Legal Name" class="signature-font border-none outline-none focus:ring-0" oninput="updateLiveSignature(this.value)">
-                        </div>
-                        <div class="flex items-start gap-4 p-5 bg-blue-50/50 rounded-2xl border border-blue-100">
-                            <input type="checkbox" id="legal_consent" class="mt-1 h-6 w-6">
-                            <label for="legal_consent" class="normal-case font-bold text-[11px] text-slate-700 leading-relaxed">
-                                I, <span id="live_sig_text" class="text-blue-800 font-black italic border-b-2 border-blue-200 px-1">________________</span>, hereby certify that I have reviewed the interchangeable optimized route and compensation. By signing, I authorize the work order and agree to the terms.
+                        <div class="grid grid-cols-2 gap-4">
+                            <label class="relative">
+                                <input type="radio" name="ic_decision" value="Accepted" class="sr-only" checked onchange="toggleDecisionView()">
+                                <div class="status-pill text-center py-4 rounded-xl text-emerald-600 font-black text-[10px] uppercase tracking-widest">Accept</div>
+                            </label>
+                            <label class="relative">
+                                <input type="radio" name="ic_decision" value="Declined" class="sr-only" onchange="toggleDecisionView()">
+                                <div class="status-pill text-center py-4 rounded-xl text-red-600 font-black text-[10px] uppercase tracking-widest">Decline</div>
                             </label>
                         </div>
-                        <button type="button" onclick="submitAuthorization()" class="bg-blue-600 text-white font-black px-12 py-5 rounded-2xl shadow-xl text-xs uppercase tracking-widest w-full">Submit Authorization</button>
+
+                        <div id="reason_block" class="hidden animate-in fade-in slide-in-from-top-2 space-y-6">
+                            <div><label>Counter Offer ($)</label><input type="number" id="ic_counter_val" placeholder="0.00"></div>
+                            <div><label>Reason for Decline</label><textarea id="ic_notes" rows="3" placeholder="Provide details..."></textarea></div>
+                        </div>
+
+                        <div id="signature_block">
+                            <label class="text-blue-600 font-black mb-4 uppercase text-[10px]">Contractor Electronic Signature</label>
+                            <input type="text" id="typed_sig" placeholder="Type Legal Name" class="signature-font border-none outline-none focus:ring-0" oninput="updateLiveSignature(this.value)">
+                            <div class="flex items-start gap-4 p-5 bg-blue-50/50 rounded-2xl border border-blue-100 mt-6">
+                                <input type="checkbox" id="legal_consent" class="mt-1 h-6 w-6">
+                                <label for="legal_consent" class="normal-case font-bold text-[11px] text-slate-700 leading-relaxed">
+                                    I, <span id="live_sig_text" class="text-blue-800 font-black italic border-b-2 border-blue-200 px-1">________________</span>, hereby certify that I have reviewed the route and compensation. By signing, I authorize the work order and agree to the terms.
+                                </label>
+                            </div>
+                        </div>
+                        <button type="button" id="submitBtn" onclick="submitToFormspree()" class="bg-blue-600 text-white font-black px-12 py-5 rounded-2xl shadow-xl text-xs uppercase tracking-widest w-full transition-all hover:bg-blue-700">Submit Response</button>
                     </div>
                 </div>
             </div>
@@ -107,14 +131,21 @@
 
     <script>
         let map, directionsService, directionsRenderer, inputTimer;
-        // WebApp URL for lookup
         const webAppUrl = "https://script.google.com/macros/s/AKfycby0ksbaRk8DV2nNkMs6pTI_4NGsR7GQjBxzD7l_m6pF5rvK6FVVd5HKnvNxcSBCHVFJ/exec"; 
+        const formspreeUrl = "https://formspree.io/f/meerlqll"; 
 
         function initMap() {
             if (typeof google === 'undefined') return;
             map = new google.maps.Map(document.getElementById('map'), { zoom: 4, center: { lat: 39.8, lng: -98.5 }, disableDefaultUI: true });
             directionsService = new google.maps.DirectionsService();
             directionsRenderer = new google.maps.DirectionsRenderer({ map: map });
+        }
+
+        function handleManualEdit() {
+            const btn = document.getElementById('saveBtn');
+            btn.disabled = false;
+            btn.classList.remove('opacity-30', 'grayscale', 'cursor-not-allowed');
+            btn.classList.add('opacity-100');
         }
 
         async function lookupContractor(email) {
@@ -125,48 +156,63 @@
                 if (data && !data.error) {
                     document.getElementById('ic_name_setup').value = data.name;
                     document.getElementById('ic_address').value = data.address;
-                    autoInjectContractorAddress(data.address);
+                    calculateLargeRoute();
+                    document.getElementById('saveBtn').disabled = true;
+                    document.getElementById('saveBtn').classList.add('opacity-30', 'grayscale');
                 }
             } catch (e) { console.error("Lookup failed", e); }
         }
 
-        function autoInjectContractorAddress(addr) {
-            if (!addr || addr.trim().length < 5) return;
-            const locField = document.getElementById('locations');
-            let current = locField.value.split('\n').filter(l => l.trim().length > 5);
-            // Remove previous instances of the home address to prevent duplicates
-            current = current.filter(l => l.toLowerCase().trim() !== addr.toLowerCase().trim());
-            // Wrap the route with the home address at start and end
-            locField.value = [addr.trim(), ...current, addr.trim()].join('\n');
-            calculateLargeRoute();
+        async function saveToDatabase() {
+            const payload = {
+                email: document.getElementById('ic_email_setup').value,
+                name: document.getElementById('ic_name_setup').value,
+                address: document.getElementById('ic_address').value
+            };
+            try {
+                await fetch(webAppUrl, { method: 'POST', mode: 'no-cors', body: JSON.stringify(payload) });
+                alert("Database Updated");
+                document.getElementById('saveBtn').disabled = true;
+                document.getElementById('saveBtn').classList.add('opacity-30', 'grayscale');
+            } catch (e) { alert("Save failed"); }
         }
 
         function calculateLargeRoute() {
             clearTimeout(inputTimer);
             const loader = document.getElementById('loaderOverlay');
-            inputTimer = setTimeout(async () => {
-                const lines = document.getElementById('locations').value.split('\n').filter(l => l.trim().length > 5);
-                if (lines.length < 2) return;
+            const home = document.getElementById('ic_address').value.trim();
+            const stops = document.getElementById('locations').value.split('\n').filter(l => l.trim().length > 5);
+            inputTimer = setTimeout(() => {
+                if (stops.length === 0 || !home) return;
                 loader.classList.remove('hidden'); loader.classList.add('flex');
-                
                 directionsService.route({
-                    origin: lines[0],
-                    destination: lines[lines.length-1],
-                    waypoints: lines.slice(1,-1).map(l => ({location: l, stopover: true})),
-                    optimizeWaypoints: true,
-                    travelMode: google.maps.TravelMode.DRIVING
+                    origin: home, destination: home,
+                    waypoints: stops.map(l => ({location: l, stopover: true})),
+                    optimizeWaypoints: true, travelMode: google.maps.TravelMode.DRIVING
                 }, (result, status) => {
                     if (status === 'OK') {
                         directionsRenderer.setDirections(result);
                         let m = 0, s = 0;
                         result.routes[0].legs.forEach(leg => { m += leg.distance.value; s += leg.duration.value; });
                         document.getElementById('mileage_display').innerText = (m * 0.000621371).toFixed(1);
-                        const hrs = Math.floor(s / 3600), mins = Math.floor((s % 3600) / 60);
+                        const hrs = Math.floor(s/3600), mins = Math.floor((s%3600)/60);
                         document.getElementById('time_display').innerText = hrs > 0 ? hrs+"h "+mins+"m" : mins+"m";
+                        window.optimizedSequence = [home, ...result.routes[0].waypoint_order.map(i => stops[i]), home];
                     }
                     loader.classList.add('hidden');
                 });
             }, 800);
+        }
+
+        function toggleDecisionView() {
+            const decision = document.querySelector('input[name="ic_decision"]:checked').value;
+            const block = document.getElementById('reason_block');
+            const sig = document.getElementById('signature_block');
+            if (decision === 'Accepted') {
+                block.classList.add('hidden'); sig.classList.remove('hidden');
+            } else {
+                block.classList.remove('hidden'); sig.classList.add('hidden');
+            }
         }
 
         function buildMapsUrl(limit) {
@@ -175,7 +221,7 @@
             const origin = encodeURIComponent(stops[0]);
             const dest = encodeURIComponent(stops[stops.length-1]);
             const waypoints = stops.slice(1, -1).map(w => encodeURIComponent(w)).join('/');
-            return `http://googleusercontent.com/maps.google.com/8{origin}/${waypoints}/${dest}/data=!4m2!4m1!3e0`;
+            return `https://www.google.com/maps/dir/${origin}/${waypoints}/${dest}/data=!4m2!4m1!3e0`;
         }
 
         function viewRoute(limit) {
@@ -188,12 +234,8 @@
             if (url) {
                 navigator.clipboard.writeText(url);
                 const btn = document.getElementById('copyBtn');
-                btn.classList.add('copy-success');
-                document.getElementById('copyText').innerText = "Link Copied!";
-                setTimeout(() => {
-                    btn.classList.remove('copy-success');
-                    document.getElementById('copyText').innerText = "Copy Browser Link (Full Route)";
-                }, 3000);
+                btn.classList.add('border-emerald-500', 'text-emerald-600');
+                setTimeout(() => btn.classList.remove('border-emerald-500', 'text-emerald-600'), 2000);
             }
         }
 
@@ -202,70 +244,119 @@
         }
 
         function generateCertifiedLink() {
+            const rawDate = document.getElementById('due_date').value;
+            let displayDate = 'N/A';
+            if (rawDate) {
+                const p = rawDate.split('-');
+                displayDate = `${p[1]}/${p[2]}/${p[0]}`;
+            }
+
             const d = {
                 icn: document.getElementById('ic_name_setup').value,
                 ice: document.getElementById('ic_email_setup').value,
                 wo: document.getElementById('task_num').value,
+                due: rawDate,
                 comp: document.getElementById('comp').value,
                 mi: document.getElementById('mileage_display').innerText,
                 time: document.getElementById('time_display').innerText,
-                locs: document.getElementById('locations').value.split('\n').filter(l => l.trim().length > 2).join('|')
+                locs: window.optimizedSequence ? window.optimizedSequence.join('|') : ""
             };
-
-            if (!d.ice || !d.icn || d.mi === "0.0") {
-                return alert("Missing Data: Please ensure Email, Name, and Locations are filled and calculated.");
-            }
-
+            
+            if (!d.ice || d.mi === "0.0") return alert("Missing data.");
+            
             const payload = btoa(unescape(encodeURIComponent(JSON.stringify(d))));
             const link = `${window.location.origin}${window.location.pathname}?data=${payload}`;
-
             navigator.clipboard.writeText(link);
 
+            // EMAIL PREPARATION
             const subject = encodeURIComponent(`Action Required: Terraboost Route Request | WO #${d.wo}`);
             const body = encodeURIComponent(
                 `Dear ${d.icn},\n\n` +
                 `An optimized route for WO #${d.wo} is ready for your review.\n\n` +
+                `ROUTE DETAILS:\n` +
+                `• Work Order: #${d.wo}\n` +
+                `• Due Date: ${displayDate}\n` +
+                `• Compensation: $${d.comp}\n` +
+                `• Round-Trip Mileage: ${d.mi} Miles\n\n` +
                 `Please click the link below to authorize the route and compensation.\n\n` +
                 `REVIEW LINK:\n${link}\n\n` +
                 `Regards,\nTerraboost Media Dispatch`
             );
 
-            const mailtoLink = `mailto:${d.ice}?subject=${subject}&body=${body}`;
-            window.location.href = mailtoLink;
-
-            alert("Dispatcher Link Copied to Clipboard!\n\nEmail client should open automatically.");
+            window.location.href = `mailto:${d.ice}?subject=${subject}&body=${body}`;
+            alert("Authorization Link Copied!");
         }
 
-        function clearRoute() {
+        async function submitToFormspree() {
+            const decision = document.querySelector('input[name="ic_decision"]:checked').value;
+            const sig = document.getElementById('typed_sig').value;
+            const consent = document.getElementById('legal_consent').checked;
+            const notes = document.getElementById('ic_notes').value;
+            const counter = document.getElementById('ic_counter_val').value;
+            if (decision === 'Accepted' && (!sig || !consent)) return alert("Signature required.");
+            const btn = document.getElementById('submitBtn');
+            btn.disabled = true; btn.innerText = "Sending...";
+            const formData = {
+                "Decision": decision, "Contractor": window.payloadData.icn, "Work Order": window.payloadData.wo,
+                "Due Date": window.payloadData.due, "Mileage": window.payloadData.mi, "Time": window.payloadData.time,
+                "Orig Comp": `$${window.payloadData.comp}`, "Counter": counter ? `$${counter}` : "N/A",
+                "Signature": sig, "Notes": notes,
+                "_subject": `${decision}: WO #${window.payloadData.wo} (${window.payloadData.icn})`,
+                "_replyto": window.payloadData.ice
+            };
+            try {
+                const response = await fetch(formspreeUrl, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                    body: JSON.stringify(formData)
+                });
+                if (response.ok) {
+                    document.getElementById('icMode').classList.add('hidden');
+                    document.getElementById('successView').classList.remove('hidden');
+                }
+            } catch (e) { alert("Submission failed."); btn.disabled = false; btn.innerText = "Submit Response"; }
+        }
+
+        function clearFullForm() {
+            document.getElementById('dispatchForm').reset();
+            setDefaultDate();
             document.getElementById('locations').value = "";
             document.getElementById('mileage_display').innerText = "0.0";
             document.getElementById('time_display').innerText = "--";
             if (directionsRenderer) directionsRenderer.setDirections({routes: []});
         }
 
+        function setDefaultDate() {
+            const today = new Date();
+            const date = new Date(today.setDate(today.getDate() + 14));
+            document.getElementById('due_date').value = date.toISOString().split('T')[0];
+        }
+
         window.onload = () => {
             initMap();
+            setDefaultDate();
             const params = new URLSearchParams(window.location.search);
             const raw = params.get('data');
             if (raw) {
                 const d = JSON.parse(decodeURIComponent(escape(atob(raw))));
                 document.getElementById('setupFields').remove();
                 document.getElementById('icMode').classList.remove('hidden');
+                let displayDate = 'N/A';
+                if (d.due) {
+                    const p = d.due.split('-');
+                    displayDate = p.length === 3 ? `${p[1]}/${p[2]}/${p[0]}` : d.due;
+                }
                 document.getElementById('summaryZone').innerHTML = `
+                    <div class="flex justify-between border-b pb-2 mb-2 font-bold uppercase text-[10px] tracking-widest text-slate-400"><span>Summary</span></div>
                     <div class="flex justify-between border-b pb-2 mb-2 font-bold"><span>Contractor:</span> <span>${d.icn}</span></div>
-                    <div class="flex justify-between text-blue-600 font-black"><span>Work Order #:</span> <span>${d.wo}</span></div>
-                    <div class="flex justify-between"><span>Optimized Mileage:</span> <span>${d.mi} Miles</span></div>
+                    <div class="flex justify-between font-bold text-blue-600"><span>Work Order #:</span> <span>${d.wo}</span></div>
+                    <div class="flex justify-between text-slate-500"><span>Due Date:</span> <span>${displayDate}</span></div>
+                    <div class="flex justify-between"><span>Mileage:</span> <span>${d.mi} Miles</span></div>
+                    <div class="flex justify-between"><span>Estimated Time:</span> <span>${d.time}</span></div>
                     <div class="flex justify-between border-t pt-2 mt-2 font-black text-xl text-emerald-600"><span>Total Comp:</span> <span>$${d.comp}</span></div>
                 `;
                 window.payloadData = d;
             }
         };
-
-        async function submitAuthorization() {
-            if (!document.getElementById('legal_consent').checked) return alert("Consent required.");
-            document.getElementById('icMode').style.display = 'none';
-            document.getElementById('successView').classList.remove('hidden');
-        }
     </script>
 </body>
 </html>
