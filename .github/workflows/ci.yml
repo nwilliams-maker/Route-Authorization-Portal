@@ -4,7 +4,7 @@ on:
   push:
     branches: ["main"]
 
-# Forces Node 24 and clears deprecation warnings
+# This clears the warning by forcing the environment to Node 24
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
