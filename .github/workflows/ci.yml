@@ -6,14 +6,25 @@ on:
   pull_request:
     branches: [main]
 
+# THIS SECTION FORCES NODE 24 FOR GITHUB ACTIONS
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      
+      - name: Setup Node.js 24
+        uses: actions/setup-node@v4
         with:
           node-version: 24
+          
       - run: node --version
+      
       # Add your install/build/test steps here
+      # For example:
+      # - run: npm ci
+      # - run: npm run build --if-present
