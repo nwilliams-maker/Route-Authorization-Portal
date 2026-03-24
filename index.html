@@ -3,294 +3,434 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Terraboost | Dispatch Dashboard</title>
+    <title>Work Order Dispatch | Terraboost Media</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCDYgNIGcfWPxoux2EILXr60ZK0fZYJPR4&libraries=geometry,drawing"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@600&family=Inter:wght@400;700;800&display=swap" rel="stylesheet">
     <style>
         body { background-color: #f8fafc; font-family: 'Inter', sans-serif; }
-        .brand-gradient { background: linear-gradient(135deg, #1e293b 0%, #334155 100%); }
-        .action-card { border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); }
-        th { background-color: #f1f5f9 !important; color: #475569 !important; font-weight: 800 !important; text-transform: uppercase; font-size: 10px; letter-spacing: 0.05em; }
-        #pdf-render-zone { position: absolute; left: -9999px; top: -9999px; width: 1100px; }
-        
-        /* Loading Spinner Animation */
-        .loader {
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid #2563eb;
-            border-radius: 50%;
-            width: 24px;
-            height: 24px;
-            animation: spin 1s linear infinite;
-        }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
+        .brand-gradient { background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); }
+        .form-card { border-radius: 16px; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,0.1); }
+        #map { height: 500px; width: 100%; border-radius: 12px; border: 1px solid #e2e8f0; }
+        label { color: #475569; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; font-size: 0.7rem; display: block; margin-bottom: 6px; }
+        input, textarea { border: 1px solid #cbd5e1; border-radius: 10px !important; padding: 12px; font-size: 14px; width: 100%; background: #ffffff; }
+        .signature-font { font-family: 'Dancing Script', cursive; font-size: 3rem; color: #0f172a; border-bottom: 2px solid #94a3b8; background: transparent; width: 100%; padding: 0; height: auto; line-height: 1; }
+        .spinner { border: 3px solid rgba(255,255,255,0.3); border-radius: 50%; border-top: 3px solid #3b82f6; width: 30px; height: 30px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .status-pill { border: 2px solid #e2e8f0; transition: all 0.2s; cursor: pointer; }
+        input[type="radio"]:checked + .status-pill { border-color: currentColor; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+        @media print { .no-print { display: none !important; } }
     </style>
 </head>
-<body class="p-4 md:p-6 lg:p-10">
+<body class="p-4 md:p-10">
 
-    <div class="max-w-[1600px] mx-auto space-y-6">
-        <div class="bg-white border border-slate-200 action-card p-6 flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6">
-            <div class="flex items-center gap-4">
-                <div class="brand-gradient text-white p-3 rounded-xl font-black text-2xl shadow-lg">TB</div>
+    <div id="captureArea" class="max-w-5xl mx-auto form-card bg-white border border-slate-200 text-slate-900">
+        <div class="brand-gradient p-10 text-white flex justify-between items-center no-print">
+            <div class="flex items-center gap-6">
+                <div class="bg-white p-2 rounded-lg shadow-inner">
+                    <div class="bg-slate-900 text-white font-black text-3xl px-4 py-2 rounded">TBM</div>
+                </div>
                 <div>
-                    <h1 class="text-2xl font-extrabold text-slate-800 tracking-tight leading-none">Onfleet Manager</h1>
-                    <div class="flex items-center gap-2 mt-1.5">
-                        <p class="text-[11px] text-slate-400 font-bold uppercase tracking-[0.2em]">90-Day US Feed</p>
-                        <span id="syncDot" class="h-2 w-2 rounded-full bg-slate-300"></span>
+                    <h1 class="text-3xl font-extrabold tracking-tight">Terraboost Media</h1>
+                    <p class="text-blue-400 text-xs uppercase font-black tracking-[0.2em] opacity-90">Route Authorization Portal</p>
+                </div>
+            </div>
+            <button type="button" onclick="clearFullForm()" class="text-[10px] text-red-400 font-bold border border-red-900/30 px-3 py-1 rounded hover:bg-red-500/10 transition-all">Reset Form</button>
+        </div>
+
+        <form id="dispatchForm" class="p-8 md:p-12 space-y-10">
+            <div id="setupFields" class="space-y-8">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div><label>Dispatcher Email</label><input type="email" id="d_email" placeholder="installteam@terraboost.biz"></div>
+                    <div><label>Contractor Email</label><input type="email" id="ic_email_setup" placeholder="Enter email..." onblur="lookupContractor(this.value)"></div>
+                    <div><label>Contractor Name</label><input type="text" id="ic_name_setup" placeholder="Auto-filled"></div>
+                    <div><label>Work Order #</label><input type="text" id="task_num" placeholder="TBM-XXXXX"></div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                    <div class="md:col-span-2 relative">
+                        <label>Contractor Home Address</label>
+                        <div class="flex gap-2">
+                            <input type="text" id="ic_address" class="flex-grow" placeholder="Address..." oninput="handleManualEdit()" onchange="calculateLargeRoute()">
+                            <button type="button" id="saveBtn" onclick="saveToDatabase()" disabled class="opacity-30 grayscale cursor-not-allowed bg-emerald-600 text-white px-3 py-1 rounded-lg text-[9px] font-black uppercase transition-all">Save</button>
+                        </div>
+                    </div>
+                    <div><label>Compensation ($)</label><input type="number" id="comp" placeholder="0.00"></div>
+                    <div><label>Due Date</label><input type="date" id="due_date"></div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-10 items-start border-t border-slate-100 pt-10">
+                    <div class="space-y-6">
+                        <div class="flex justify-between items-start mb-2">
+                            <div class="flex flex-col gap-1.5">
+                                <label class="text-blue-600 font-black tracking-widest uppercase text-[10px] mb-0">Task Locations</label>
+                                <div class="flex flex-col gap-1">
+                                    <span id="location_count_badge" class="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-[10px] font-bold hidden w-fit">0 Locations | 0 Total Tasks</span>
+                                    <span id="kiosk_count_badge" class="bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full text-[10px] font-bold hidden w-fit">0 Kiosk Installs</span>
+                                </div>
+                            </div>
+                            <div class="flex gap-2">
+                                <button type="button" onclick="confirmClearList()" class="bg-red-50 text-red-600 text-[9px] font-black px-2 py-1 rounded uppercase hover:bg-red-100 transition-all">🗑️ Clear List</button>
+                                <button type="button" id="syncBtn" onclick="fetchOnfleetTasks()" class="bg-blue-600 text-white text-[9px] font-black px-3 py-1 rounded uppercase hover:bg-blue-700 transition-all">🔄 Load All USA Tasks</button>
+                            </div>
+                        </div>
+                        <textarea id="locations" rows="10" class="font-mono text-xs" placeholder="Select tasks by drawing on the map..." oninput="calculateLargeRoute()"></textarea>
+                        
+                        <div class="bg-slate-900 rounded-3xl p-8 text-white flex justify-between items-center shadow-2xl relative">
+                            <div id="loaderOverlay" class="absolute inset-0 bg-slate-900/90 hidden flex-col items-center justify-center gap-2"><div class="spinner"></div></div>
+                            <div><p class="text-slate-400 text-[10px] uppercase font-black tracking-widest">Mileage</p><span id="mileage_display" class="text-4xl font-black text-emerald-400">0.0</span></div>
+                            <div class="text-right"><p class="text-slate-400 text-[10px] uppercase font-black tracking-widest text-white">Est. Time</p><span id="time_display" class="text-4xl font-black text-blue-400">--</span></div>
+                        </div>
+                    </div>
+                    <div class="space-y-2">
+                        <p class="text-[10px] font-bold text-slate-500 uppercase">Use the Polygon Tool at the top of the map to select tasks:</p>
+                        <div id="map"></div>
+                    </div>
+                </div>
+
+                <button type="button" onclick="generateCertifiedLink()" class="w-full brand-gradient text-white font-black py-6 rounded-2xl shadow-xl text-xs uppercase tracking-[0.2em] hover:scale-[1.01] transition-all">Send Email to IC</button>
+            </div>
+
+            <div id="icMode" class="hidden space-y-10">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
+                    <div class="space-y-8">
+                        <h3 class="text-sm font-black text-slate-800 uppercase tracking-widest border-b pb-4">Authorization Details</h3>
+                        <div class="space-y-6 no-print">
+                            <div>
+                                <button type="button" onclick="viewRoute(11)" class="w-full bg-slate-800 text-white font-black py-5 rounded-2xl shadow-lg uppercase tracking-widest text-xs">View Route Preview</button>
+                                <p class="text-[10px] text-slate-400 mt-2 text-center font-bold">View up to 9 stops</p>
+                            </div>
+                            <div>
+                                <button type="button" id="copyBtn" onclick="copyMapUrl()" class="w-full bg-white border-2 border-slate-200 text-slate-600 font-black py-4 rounded-xl text-[10px] uppercase tracking-[0.15em]">Copy Browser Link (Full Route)</button>
+                                <p class="text-[10px] text-slate-400 mt-2 text-center font-bold">View up to 20 stops</p>
+                            </div>
+                        </div>
+                        <div id="summaryZone" class="bg-slate-50 p-8 rounded-3xl border border-slate-100 shadow-sm text-sm"></div>
+                    </div>
+
+                    <div class="space-y-8 bg-white p-8 rounded-3xl border border-slate-100 shadow-sm">
+                        <div class="grid grid-cols-2 gap-4">
+                            <label class="relative">
+                                <input type="radio" name="ic_decision" value="Accepted" class="sr-only" checked onchange="toggleDecisionView()">
+                                <div class="status-pill text-center py-4 rounded-xl text-emerald-600 font-black text-[10px] uppercase tracking-widest">Accept</div>
+                            </label>
+                            <label class="relative">
+                                <input type="radio" name="ic_decision" value="Declined" class="sr-only" onchange="toggleDecisionView()">
+                                <div class="status-pill text-center py-4 rounded-xl text-red-600 font-black text-[10px] uppercase tracking-widest">Decline</div>
+                            </label>
+                        </div>
+
+                        <div id="reason_block" class="hidden animate-in fade-in slide-in-from-top-2 space-y-6">
+                            <div><label>Counter Offer ($)</label><input type="number" id="ic_counter_val" placeholder="0.00"></div>
+                            <div><label>Reason for Decline / Notes</label><textarea id="ic_notes" rows="3" placeholder="Provide details..."></textarea></div>
+                        </div>
+
+                        <div id="signature_block">
+                            <label class="text-blue-600 font-black mb-4 uppercase text-[10px]">Electronic Signature</label>
+                            <input type="text" id="typed_sig" placeholder="Click Here, Type Legal Name" class="signature-font border-none outline-none focus:ring-0" oninput="updateLiveSignature(this.value)">
+                            <div class="flex items-start gap-4 p-5 bg-blue-50/50 rounded-2xl border border-blue-100 mt-6">
+                                <input type="checkbox" id="legal_consent" class="mt-1 h-6 w-6">
+                                <label for="legal_consent" class="normal-case font-bold text-[11px] text-slate-700 leading-relaxed">
+                                    I, <span id="live_sig_text" class="text-blue-800 font-black italic border-b-2 border-blue-200 px-1">________________</span>, hereby certify that I have reviewed the route and compensation.
+                                </label>
+                            </div>
+                        </div>
+                        <button type="button" id="submitBtn" onclick="submitToFormspree()" class="bg-blue-600 text-white font-black px-12 py-5 rounded-2xl shadow-xl text-xs uppercase tracking-widest w-full transition-all hover:bg-blue-700">Submit Response</button>
                     </div>
                 </div>
             </div>
-
-            <div class="flex flex-wrap items-center gap-3 w-full xl:w-auto">
-                <input type="text" id="searchInput" onkeyup="filterTable()" placeholder="Search..." 
-                       class="bg-slate-50 border border-slate-200 rounded-xl py-2.5 px-4 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500">
-                <select id="workerFilter" onchange="filterTable()" class="bg-white border-2 border-slate-100 rounded-xl px-4 py-2.5 text-xs font-bold outline-none cursor-pointer hover:border-slate-300 transition-all"></select>
-                <button onclick="fetchOnfleetData()" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl text-[11px] font-black uppercase shadow-md transition-all active:scale-95">Sync Routes</button>
-                <button id="zipBtn" onclick="batchZipPDFs()" disabled class="bg-slate-800 text-white px-5 py-2.5 rounded-xl text-[11px] font-black uppercase opacity-50 cursor-not-allowed">Export ZIP</button>
-            </div>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div class="bg-white border border-slate-200 p-5 rounded-2xl flex items-center justify-between shadow-sm">
-                <div><p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Tasks</p><h3 id="statTasks" class="text-2xl font-black text-slate-800">0</h3></div>
-                <div class="text-2xl">📋</div>
-            </div>
-            <div class="bg-white border border-slate-200 p-5 rounded-2xl flex items-center justify-between shadow-sm">
-                <div><p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Active Workers</p><h3 id="statWorkers" class="text-2xl font-black text-slate-800">0</h3></div>
-                <div class="text-2xl">👥</div>
-            </div>
-            <div class="bg-white border border-slate-200 p-5 rounded-2xl shadow-sm relative overflow-hidden flex items-center justify-between">
-                <div id="progress-container" class="hidden flex items-center gap-4 w-full">
-                    <div class="loader"></div>
-                    <div>
-                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Status</p>
-                        <h3 id="status_msg" class="text-sm font-black text-blue-600">Syncing...</h3>
-                    </div>
-                </div>
-                <div id="readyMsg" class="flex items-center justify-between w-full">
-                    <div>
-                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</p>
-                        <h3 id="syncTimestamp" class="text-sm font-black text-slate-400 italic">Ready for Sync</h3>
-                    </div>
-                    <button id="singleDownloadBtn" onclick="downloadSinglePDF()" disabled class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-[10px] font-black uppercase opacity-50 cursor-not-allowed shadow-sm transition-all">PDF Download</button>
-                </div>
-            </div>
-        </div>
-
-        <div class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
-            <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse" id="onfleetTable">
-                    <thead>
-                        <tr>
-                            <th class="p-4 w-12">#</th><th class="p-4">Worker</th><th class="p-4">Venue</th><th class="p-4">Kiosk ID</th><th class="p-4">Loc</th><th class="p-4">Campaign</th><th class="p-4">Type</th><th class="p-4">Art</th><th class="p-4">Address</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tableBody" class="text-[11px] text-slate-600 font-medium">
-                        <tr><td colspan="9" class="p-32 text-center text-slate-300 italic text-base">Click "Sync Routes" to load US data...</td></tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
+            <div id="successView" class="hidden text-center py-20"><div class="text-6xl mb-4">✅</div><h2 class="text-3xl font-black uppercase text-slate-900">Response Recorded</h2></div>
+        </form>
     </div>
 
-    <div id="pdf-render-zone"><div id="pdf-content-area"></div></div>
-
     <script>
-        const proxyUrl = "https://script.google.com/macros/s/AKfycbwlkBy7y1NUgjAnT2Umj-FqY-5tNoUlo7yh_vOEOwmMoKy-1GlTL-fvX-L_27L8U4KK/exec";
-        let allData = [];
-        let uniqueWorkers = [];
+        let map, directionsService, directionsRenderer, inputTimer, drawingManager;
+        let currentLocCount = 0, currentTaskCount = 0, currentKioskCount = 0;
+        let allOnfleetMarkers = [];
+        const webAppUrl = "https://script.google.com/macros/s/AKfycbzq2ys09wfLOvH6MReRlldFmJGKYldo6pmOWStlJ-tNFUBHbHfD7LyVwYxLA-WfH1Wxyw/exec"; 
+        const formspreeUrl = "https://formspree.io/f/meerlqll"; 
 
-        async function fetchOnfleetData() {
-            const statusMsg = document.getElementById('status_msg');
-            const progCont = document.getElementById('progress-container');
-            const readyMsg = document.getElementById('readyMsg');
+        function initMap() {
+            if (typeof google === 'undefined') return;
+            map = new google.maps.Map(document.getElementById('map'), { 
+                zoom: 4, center: { lat: 39.8, lng: -98.5 },
+                styles: [{ featureType: "poi", elementType: "labels", stylers: [{ visibility: "off" }] }]
+            });
+            directionsService = new google.maps.DirectionsService();
+            directionsRenderer = new google.maps.DirectionsRenderer({ map: map });
+
+            drawingManager = new google.maps.drawing.DrawingManager({
+                drawingMode: null,
+                drawingControl: true,
+                drawingControlOptions: {
+                    position: google.maps.ControlPosition.TOP_CENTER,
+                    drawingModes: [google.maps.drawing.OverlayType.POLYGON]
+                },
+                polygonOptions: {
+                    fillColor: '#3b82f6', fillOpacity: 0.2, strokeWeight: 2, clickable: false, zIndex: 1
+                }
+            });
+            drawingManager.setMap(map);
+
+            google.maps.event.addListener(drawingManager, 'polygoncomplete', function(polygon) {
+                processPolygonSelection(polygon);
+                drawingManager.setDrawingMode(null);
+            });
+        }
+
+        function setDefaultDate() {
+            const today = new Date();
+            today.setDate(today.getDate() + 14);
+            document.getElementById('due_date').value = today.toISOString().split('T')[0];
+        }
+
+        async function lookupContractor(email) {
+            if (!email || !webAppUrl.includes("https")) return;
+            try {
+                const response = await fetch(`${webAppUrl}?email=${encodeURIComponent(email)}`);
+                const data = await response.json();
+                if (data && !data.error) {
+                    document.getElementById('ic_name_setup').value = data.name;
+                    document.getElementById('ic_address').value = data.address;
+                    calculateLargeRoute();
+                    document.getElementById('saveBtn').disabled = true;
+                    document.getElementById('saveBtn').classList.add('opacity-30', 'grayscale');
+                }
+            } catch (e) { console.error("Lookup failed", e); }
+        }
+
+        async function saveToDatabase() {
+            const p = { email: document.getElementById('ic_email_setup').value, name: document.getElementById('ic_name_setup').value, address: document.getElementById('ic_address').value };
+            try { await fetch(webAppUrl, { method: 'POST', mode: 'no-cors', body: JSON.stringify(p) }); alert("Database Updated"); document.getElementById('saveBtn').disabled = true; }
+            catch (e) { alert("Save failed"); }
+        }
+
+        function handleManualEdit() {
+            const btn = document.getElementById('saveBtn');
+            btn.disabled = false;
+            btn.classList.remove('opacity-30', 'grayscale', 'cursor-not-allowed');
+            btn.classList.add('opacity-100');
+        }
+
+        async function fetchOnfleetTasks() {
+            const loader = document.getElementById('loaderOverlay'), syncBtn = document.getElementById('syncBtn');
+            loader.classList.remove('hidden'); loader.classList.add('flex');
+            syncBtn.disabled = true;
+            try {
+                const response = await fetch(`${webAppUrl}?action=getOnfleetTasks`);
+                const tasks = await response.json();
+                allOnfleetMarkers.forEach(m => m.setMap(null));
+                allOnfleetMarkers = [];
+
+                tasks.forEach(task => {
+                    const marker = new google.maps.Marker({
+                        position: { lat: task.lat, lng: task.lng },
+                        map: map,
+                        icon: {
+                            path: google.maps.SymbolPath.CIRCLE,
+                            scale: 7, 
+                            fillColor: task.isKiosk ? "#10b981" : "#ef4444",
+                            fillOpacity: 0.9,
+                            strokeWeight: 2,
+                            strokeColor: "#ffffff"
+                        }
+                    });
+                    marker.taskData = task;
+                    allOnfleetMarkers.push(marker);
+                });
+                alert(`Loaded ${tasks.length} unassigned tasks. Use the Polygon tool (lasso) at the top of the map to select.`);
+            } catch (error) { alert("Sync Error: " + error.message); }
+            finally { loader.classList.add('hidden'); syncBtn.disabled = false; }
+        }
+
+        function processPolygonSelection(polygon) {
+            const selectedAddresses = {};
+            allOnfleetMarkers.forEach(marker => {
+                if (google.maps.geometry.poly.containsLocation(marker.getPosition(), polygon)) {
+                    const t = marker.taskData;
+                    if (!selectedAddresses[t.addr]) {
+                        selectedAddresses[t.addr] = { count: 0, kioskCount: 0 };
+                    }
+                    selectedAddresses[t.addr].count++;
+                    if (t.isKiosk) selectedAddresses[t.addr].kioskCount++;
+                }
+            });
+
+            const formatted = Object.keys(selectedAddresses).map(addr => {
+                const d = selectedAddresses[addr];
+                let entry = addr;
+                if (d.kioskCount > 0) entry += ` [${d.kioskCount} Kiosk Install]`;
+                if (d.count > d.kioskCount) entry += ` (${d.count - d.kioskCount} Tasks)`;
+                return entry;
+            }).join('\n');
+
+            const area = document.getElementById('locations');
+            area.value = (area.value ? area.value + "\n" : "") + formatted;
+            calculateLargeRoute();
+            polygon.setMap(null);
+        }
+
+        function updateBadges(locCount, taskCount, kioskCount) {
+            currentLocCount = locCount; currentTaskCount = taskCount; currentKioskCount = kioskCount;
+            const lBadge = document.getElementById('location_count_badge'), kBadge = document.getElementById('kiosk_count_badge');
+            lBadge.innerText = locCount > 0 ? `${locCount} Locations | ${taskCount} Total Tasks` : "0 Locations | 0 Total Tasks";
+            lBadge.classList.toggle('hidden', locCount === 0);
+            kBadge.innerText = `${kioskCount} Kiosk Installs`;
+            kBadge.classList.toggle('hidden', kioskCount === 0);
+        }
+
+        function calculateLargeRoute() {
+            clearTimeout(inputTimer);
+            const textArea = document.getElementById('locations');
+            const lines = textArea.value.split('\n').filter(l => l.trim().length > 5);
             
-            progCont.classList.remove('hidden'); 
-            readyMsg.classList.add('hidden');
-            statusMsg.innerText = "Connecting to Onfleet..."; 
+            if (lines.length > 0) {
+                let totalTasksAcrossLines = 0, totalKiosksAcrossLines = 0;
+                lines.forEach(line => {
+                    const tasksMatch = line.match(/\((\d+)\s+Tasks\)/i);
+                    const kiosksMatch = line.match(/\[(\d+)\s+Kiosk\s+Install\]/i);
+                    
+                    let lineKiosks = kiosksMatch ? parseInt(kiosksMatch[1]) : (line.toLowerCase().includes('kiosk install') ? 1 : 0);
+                    let lineTasks = tasksMatch ? parseInt(tasksMatch[1]) : 0;
+                    
+                    if (!tasksMatch && !kiosksMatch) lineTasks = 1;
+
+                    totalTasksAcrossLines += (lineTasks + lineKiosks);
+                    totalKiosksAcrossLines += lineKiosks;
+                });
+                updateBadges(lines.length, totalTasksAcrossLines, totalKiosksAcrossLines);
+            } else updateBadges(0, 0, 0);
+
+            if (lines.length === 0) return;
+            inputTimer = setTimeout(() => {
+                const home = document.getElementById('ic_address').value.trim();
+                if (!home) return;
+                const stops = lines.map(s => s.replace(/\s[\(\[].*$/, "").trim());
+                directionsService.route({
+                    origin: home, destination: home, waypoints: stops.map(l => ({location: l, stopover: true})),
+                    optimizeWaypoints: true, travelMode: google.maps.TravelMode.DRIVING
+                }, (result, status) => {
+                    if (status === 'OK') {
+                        directionsRenderer.setDirections(result);
+                        let totalMeters = 0;
+                        result.routes[0].legs.forEach(leg => { totalMeters += leg.distance.value; });
+                        document.getElementById('mileage_display').innerText = (totalMeters * 0.000621371).toFixed(1);
+                        const s = result.routes[0].legs.reduce((acc, leg) => acc + leg.duration.value, 0);
+                        const hrs = Math.floor(s/3600), mins = Math.floor((s%3600)/60);
+                        document.getElementById('time_display').innerText = hrs > 0 ? hrs+"h "+mins+"m" : mins+"m";
+                    }
+                });
+            }, 800);
+        }
+
+        function generateCertifiedLink() {
+            try {
+                const jobListOnly = document.getElementById('locations').value.split('\n').filter(l => l.trim().length > 5).join('|');
+                const d = {
+                    icn: document.getElementById('ic_name_setup').value, ice: document.getElementById('ic_email_setup').value,
+                    wo: document.getElementById('task_num').value, due: document.getElementById('due_date').value,
+                    comp: document.getElementById('comp').value, mi: document.getElementById('mileage_display').innerText,
+                    time: document.getElementById('time_display').innerText, locs: window.optimizedSequence ? window.optimizedSequence.join('|') : "",
+                    lCnt: currentLocCount, tCnt: currentTaskCount, kCnt: currentKioskCount,
+                    jobOnly: jobListOnly
+                };
+                if (!d.ice || d.mi === "0.0") return alert("Data missing.");
+                const payload = btoa(unescape(encodeURIComponent(JSON.stringify(d))));
+                const link = `${window.location.origin}${window.location.pathname}?data=${payload}`;
+                const s = `Action Required: Terraboost Route Request | WO #${d.wo}`;
+                
+                let emailDate = 'N/A';
+                if (d.due) {
+                    const parts = d.due.split('-');
+                    emailDate = parts.length === 3 ? `${parts[1]}/${parts[2]}/${parts[0]}` : d.due;
+                }
+
+                const b = `Dear ${d.icn},\n\nAn optimized route for WO #${d.wo} is ready for review.\n\nROUTE DETAILS:\n- Due Date: ${emailDate}\n- Total Locations: ${d.lCnt}\n- Total Tasks: ${d.tCnt}\n- Kiosk Installs: ${d.kCnt}\n- Mileage: ${d.mi} Miles\n- Compensation: $${d.comp}\n\nReview Link: ${link}`;
+                window.open(`mailto:${d.ice}?subject=${encodeURIComponent(s)}&body=${encodeURIComponent(b)}`);
+            } catch (err) { alert("Error generating link."); }
+        }
+
+        function buildMapsUrl(limit) {
+            if (!window.payloadData || !window.payloadData.locs) return null;
+            const stops = window.payloadData.locs.split('|').slice(0, limit);
+            const origin = encodeURIComponent(stops[0]);
+            const dest = encodeURIComponent(stops[stops.length-1]);
+            const waypoints = stops.slice(1, -1).map(w => encodeURIComponent(w)).join('/');
+            return `https://www.google.com/maps/dir/${origin}/${waypoints}/${dest}/`;
+        }
+        function viewRoute(limit) { const url = buildMapsUrl(limit); if (url) window.open(url, '_blank'); }
+        function copyMapUrl() { const url = buildMapsUrl(25); if (url) { navigator.clipboard.writeText(url); alert("Link Copied"); } }
+        
+        function confirmClearList() {
+            if (confirm("Clear all locations?")) {
+                document.getElementById('locations').value = '';
+                updateBadges(0, 0, 0);
+                document.getElementById('mileage_display').innerText = "0.0";
+                document.getElementById('time_display').innerText = "--";
+                if (directionsRenderer) directionsRenderer.setDirections({routes: []});
+            }
+        }
+
+        function clearFullForm() { location.reload(); }
+
+        function toggleDecisionView() {
+            const decision = document.querySelector('input[name="ic_decision"]:checked').value;
+            const rb = document.getElementById('reason_block'), sb = document.getElementById('signature_block');
+            rb.classList.toggle('hidden', decision === 'Accepted');
+            sb.classList.toggle('hidden', decision === 'Declined');
+        }
+
+        function updateLiveSignature(val) { document.getElementById('live_sig_text').innerText = val || "________________"; }
+
+        async function submitToFormspree() {
+            const decision = document.querySelector('input[name="ic_decision"]:checked').value;
+            const sig = document.getElementById('typed_sig').value, consent = document.getElementById('legal_consent').checked;
+            if (decision === 'Accepted' && (!sig || !consent)) return alert("Signature required.");
+            const btn = document.getElementById('submitBtn');
+            btn.disabled = true; btn.innerText = "Sending...";
+
+            const rawJobContent = window.payloadData.jobOnly ? window.payloadData.jobOnly.split('|') : [];
+            const locationList = rawJobContent.map((loc, index) => `${index + 1}. ${loc}`).join('\n');
+            
+            const formData = {
+                "Decision": decision, "Contractor": window.payloadData.icn, "Work Order": window.payloadData.wo,
+                "Due Date": window.payloadData.due, "Locations": window.payloadData.lCnt, "Tasks": window.payloadData.tCnt,
+                "Kiosks": window.payloadData.kCnt, "Mileage": window.payloadData.mi, "Original Comp": `$${window.payloadData.comp}`,
+                "Counter Offer": document.getElementById('ic_counter_val').value || "N/A",
+                "Notes": document.getElementById('ic_notes').value || "None",
+                "Signature": sig || "N/A", "JOB LOCATION LIST": "\n" + locationList,
+                "_subject": `${decision}: WO #${window.payloadData.wo} (${window.payloadData.icn})`
+            };
 
             try {
-                const response = await fetch(proxyUrl);
-                statusMsg.innerText = "Receiving tasks...";
-                
-                const tasks = await response.json();
-                if (!tasks || tasks.error) throw new Error(tasks.error);
-                
-                statusMsg.innerText = "Mapping live data...";
-                allData = tasks.map(t => {
-                    const getField = (key) => t.customFields?.find(f => f.key === key)?.value || "N/A";
-                    const a = t.destination?.address;
-                    return {
-                        worker: t.workerName || "Unassigned", 
-                        venue: getField("venueName"),
-                        kiosk: getField("kioskId"),
-                        kioskLoc: getField("locationinVenue"),
-                        campaign: getField("campaignName"),
-                        type: getField("taskType"),
-                        boost: getField("boostedStandard"),
-                        address: a ? `${a.number} ${a.street}, ${a.city}, ${a.state}` : "N/A"
-                    };
+                const response = await fetch(formspreeUrl, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                    body: JSON.stringify(formData)
                 });
+                if (response.ok) { document.getElementById('icMode').classList.add('hidden'); document.getElementById('successView').classList.remove('hidden'); }
+            } catch (e) { alert("Submission failed."); btn.disabled = false; btn.innerText = "Submit Response"; }
+        }
 
-                statusMsg.innerText = "Finalizing dashboard...";
-                document.getElementById('statTasks').innerText = allData.length;
-                uniqueWorkers = Array.from(new Set(allData.map(d => d.worker))).sort();
-                document.getElementById('statWorkers').innerText = uniqueWorkers.length;
-                document.getElementById('workerFilter').innerHTML = `<option value="">Select Worker (${uniqueWorkers.length})</option>` + uniqueWorkers.map(w => `<option value="${w}">${w}</option>`).join('');
-
-                renderTable(allData);
-                
-                statusMsg.innerText = "Sync Complete!";
-                document.getElementById('syncDot').className = 'h-2 w-2 rounded-full bg-emerald-500';
-                document.getElementById('syncTimestamp').innerText = `Synced at ${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`;
-                
-                document.getElementById('zipBtn').disabled = false; 
-                document.getElementById('zipBtn').classList.remove('opacity-50', 'cursor-not-allowed');
-                document.getElementById('singleDownloadBtn').disabled = false; 
-                document.getElementById('singleDownloadBtn').classList.remove('opacity-50', 'cursor-not-allowed');
-
-                setTimeout(() => {
-                    progCont.classList.add('hidden'); 
-                    readyMsg.classList.remove('hidden');
-                }, 1000);
-
-            } catch (err) { 
-                statusMsg.innerText = "Sync Failed"; 
-                statusMsg.className = "text-sm font-black text-red-600";
+        window.onload = () => {
+            initMap(); setDefaultDate();
+            const p = new URLSearchParams(window.location.search), r = p.get('data');
+            if (r) {
+                const d = JSON.parse(decodeURIComponent(escape(atob(r))));
+                window.payloadData = d;
+                document.getElementById('setupFields').remove();
+                document.getElementById('icMode').classList.remove('hidden');
+                updateBadges(d.lCnt, d.tCnt, d.kCnt);
+                document.getElementById('summaryZone').innerHTML = `
+                    <div class="flex justify-between border-b pb-2 mb-2 font-bold uppercase text-[10px] tracking-widest text-slate-400"><span>Route Summary</span></div>
+                    <div class="flex justify-between border-b pb-2 mb-2"><span>Contractor:</span> <span class="font-bold">${d.icn}</span></div>
+                    <div class="flex justify-between text-blue-600 font-bold"><span>Work Order #:</span> <span>${d.wo}</span></div>
+                    <div class="flex justify-between"><span>Unique Locations:</span> <span class="font-bold">${d.lCnt}</span></div>
+                    <div class="flex justify-between"><span>Total Tasks:</span> <span class="font-bold">${d.tCnt}</span></div>
+                    <div class="flex justify-between text-emerald-600 font-bold"><span>Kiosk Installs:</span> <span class="font-bold">${d.kCnt}</span></div>
+                    <div class="flex justify-between border-t pt-2 mt-2 font-black text-xl text-emerald-600"><span>Total Comp:</span> <span>$${d.comp}</span></div>
+                `;
             }
-        }
-
-        function renderTable(data) {
-            document.getElementById('tableBody').innerHTML = data.map((item, index) => `
-                <tr class="border-b border-slate-50 hover:bg-slate-50 transition-colors">
-                    <td class="p-4 font-black text-slate-400">${index + 1}</td>
-                    <td class="p-4 font-bold text-blue-600">${item.worker}</td>
-                    <td class="p-4 text-slate-500 font-semibold">${item.venue}</td>
-                    <td class="p-4 font-mono font-bold text-slate-700">${item.kiosk}</td>
-                    <td class="p-4 text-emerald-600 font-black">${item.kioskLoc}</td>
-                    <td class="p-4 text-slate-400 italic">${item.campaign}</td>
-                    <td class="p-4 font-bold text-[10px] uppercase">${item.type}</td>
-                    <td class="p-4 font-black text-slate-800">${item.boost}</td>
-                    <td class="p-4 text-[10px] leading-tight text-slate-500">${item.address}</td>
-                </tr>
-            `).join('');
-        }
-
-        function filterTable() {
-            const searchVal = document.getElementById('searchInput').value.toLowerCase();
-            const workerVal = document.getElementById('workerFilter').value;
-            renderTable(allData.filter(d => (Object.values(d).some(v => String(v).toLowerCase().includes(searchVal))) && (workerVal === "" || d.worker === workerVal)));
-        }
-
-        function generatePrintHtml(worker, tasks) {
-            const batchSize = 22;
-            let fullHtml = '';
-            const today = new Date().toLocaleDateString();
-
-            for (let i = 0; i < tasks.length; i += batchSize) {
-                const batch = tasks.slice(i, i + batchSize);
-                const rowsHtml = batch.map((t, index) => `
-                    <tr style="border-bottom: 1px solid #e2e8f0; vertical-align: top;">
-                        <td style="padding: 6px; font-size: 9px; font-weight: 900; color: #94a3b8; width: 30px; text-align: center;">${i + index + 1}</td>
-                        <td style="padding: 6px; font-size: 9px; font-weight: 700; width: 140px;">${t.venue}</td>
-                        <td style="padding: 6px; font-size: 9px; font-weight: 700; width: 70px; font-family: monospace;">${t.kiosk}</td>
-                        <td style="padding: 6px; font-size: 9px; font-weight: 900; color: #059669; width: 100px;">${t.kioskLoc}</td>
-                        <td style="padding: 6px; font-size: 8.5px; width: 180px; color: #475569; word-wrap: break-word;">${t.campaign}</td>
-                        <td style="padding: 6px; font-size: 8.5px; width: 80px; font-weight: bold; text-transform: uppercase;">${t.type}</td>
-                        <td style="padding: 6px; font-size: 8.5px; width: 70px; font-weight: 900;">${t.boost}</td>
-                        <td style="padding: 6px; font-size: 8.5px; line-height: 1.2; width: 220px; word-wrap: break-word;">${t.address}</td>
-                    </tr>
-                `).join('');
-
-                fullHtml += `
-                    <div style="padding: 0.3in; background: white; page-break-after: always; font-family: 'Inter', sans-serif;">
-                        <div style="display: flex; justify-content: space-between; border-bottom: 4px solid #1e293b; padding-bottom: 8px; margin-bottom: 15px;">
-                            <div><h1 style="font-size: 18px; margin: 0; font-weight: 800;">CURRENT WORKLOAD</h1><p style="margin: 0; font-size: 9px; font-weight: 800; color: #4477ce; letter-spacing: 0.1em;">TERRABOOST MEDIA</p></div>
-                            <div style="text-align: right;"><h2 style="font-size: 13px; margin: 0; font-weight: 800;">${worker}</h2><p style="margin: 0; font-size: 8px; font-weight: 700;">DATED: ${today}</p></div>
-                        </div>
-                        <table style="width: 100%; border-collapse: collapse; table-layout: fixed;">
-                            <thead>
-                                <tr style="background: #1e293b; color: white;">
-                                    <th style="padding: 6px; text-align: center; font-size: 8px; width: 30px;">#</th>
-                                    <th style="padding: 6px; text-align: left; font-size: 8px; width: 140px;">VENUE</th>
-                                    <th style="padding: 6px; text-align: left; font-size: 8px; width: 70px;">ID</th>
-                                    <th style="padding: 6px; text-align: left; font-size: 8px; width: 100px;">LOC</th>
-                                    <th style="padding: 6px; text-align: left; font-size: 8px; width: 180px;">CAMPAIGN</th>
-                                    <th style="padding: 6px; text-align: left; font-size: 8px; width: 80px;">TYPE</th>
-                                    <th style="padding: 6px; text-align: left; font-size: 8px; width: 70px;">ART</th>
-                                    <th style="padding: 6px; text-align: left; font-size: 8px; width: 220px;">ADDRESS</th>
-                                </tr>
-                            </thead>
-                            <tbody>${rowsHtml}</tbody>
-                        </table>
-                    </div>`;
-            }
-            return fullHtml;
-        }
-
-        async function downloadSinglePDF() {
-            const worker = document.getElementById('workerFilter').value;
-            if (!worker) return alert("Select worker first.");
-            const area = document.getElementById('pdf-content-area');
-            const tasks = allData.filter(d => d.worker === worker);
-            area.innerHTML = generatePrintHtml(worker, tasks);
-            const date = new Date().toISOString().split('T')[0];
-            const fileName = `${worker.replace(/ /g,'_')}_Dispatch_${date}.pdf`;
-
-            await html2pdf().set({ 
-                margin: 0, html2canvas: { scale: 2, useCORS: true }, 
-                jsPDF: { unit: 'in', format: 'letter', orientation: 'landscape' } 
-            }).from(area).toPdf().get('pdf').then(pdf => {
-                const total = pdf.internal.getNumberOfPages();
-                for (let j = 1; j <= total; j++) {
-                    pdf.setPage(j); pdf.setFontSize(8); pdf.setTextColor(150);
-                    pdf.text(`Page ${j} of ${total}`, pdf.internal.pageSize.getWidth() - 1, pdf.internal.pageSize.getHeight() - 0.3);
-                }
-            }).save(fileName);
-        }
-
-        async function batchZipPDFs() {
-            const zip = new JSZip();
-            const date = new Date().toISOString().split('T')[0];
-            const progCont = document.getElementById('progress-container');
-            const readyMsg = document.getElementById('readyMsg');
-            const statusMsg = document.getElementById('status_msg');
-            
-            progCont.classList.remove('hidden'); 
-            readyMsg.classList.add('hidden');
-
-            for (let i = 0; i < uniqueWorkers.length; i++) {
-                const w = uniqueWorkers[i];
-                statusMsg.innerText = `Generating PDF: ${w}`;
-                const area = document.getElementById('pdf-content-area');
-                area.innerHTML = generatePrintHtml(w, allData.filter(d => d.worker === w));
-
-                const blob = await html2pdf().set({ 
-                    margin: 0, html2canvas: { scale: 2, useCORS: true }, 
-                    jsPDF: { unit: 'in', format: 'letter', orientation: 'landscape' } 
-                }).from(area).toPdf().get('pdf').then(pdf => {
-                    const total = pdf.internal.getNumberOfPages();
-                    for (let j = 1; j <= total; j++) {
-                        pdf.setPage(j); pdf.setFontSize(8); pdf.setTextColor(150);
-                        pdf.text(`Page ${j} of ${total}`, pdf.internal.pageSize.getWidth() - 1, pdf.internal.pageSize.getHeight() - 0.3);
-                    }
-                }).output('blob');
-
-                zip.file(`${w.replace(/ /g,'_')}_Dispatch_${date}.pdf`, blob);
-            }
-            const c = await zip.generateAsync({ type: "blob" });
-            const a = document.createElement('a'); a.href = URL.createObjectURL(c); a.download = `Dispatch_Export_${date}.zip`; a.click();
-            
-            statusMsg.innerText = "Export Complete!";
-            setTimeout(() => {
-                progCont.classList.add('hidden'); 
-                readyMsg.classList.remove('hidden');
-            }, 1000);
-        }
+        };
     </script>
 </body>
 </html>
