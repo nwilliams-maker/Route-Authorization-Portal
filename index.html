@@ -11,20 +11,18 @@
         body { background-color: #f8fafc; font-family: 'Inter', sans-serif; }
         .brand-gradient { background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); }
         .form-card { border-radius: 16px; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,0.1); }
-        #map { height: 500px; width: 100%; border-radius: 12px; border: 1px solid #e2e8f0; }
+        #map { height: 600px; width: 100%; border-radius: 12px; border: 1px solid #e2e8f0; }
         label { color: #475569; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; font-size: 0.7rem; display: block; margin-bottom: 6px; }
         input, textarea { border: 1px solid #cbd5e1; border-radius: 10px !important; padding: 12px; font-size: 14px; width: 100%; background: #ffffff; }
-        .signature-font { font-family: 'Dancing Script', cursive; font-size: 3rem; color: #0f172a; border-bottom: 2px solid #94a3b8; background: transparent; width: 100%; padding: 0; height: auto; line-height: 1; }
         .spinner { border: 3px solid rgba(255,255,255,0.3); border-radius: 50%; border-top: 3px solid #3b82f6; width: 30px; height: 30px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         .status-pill { border: 2px solid #e2e8f0; transition: all 0.2s; cursor: pointer; }
         input[type="radio"]:checked + .status-pill { border-color: currentColor; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
-        @media print { .no-print { display: none !important; } }
     </style>
 </head>
 <body class="p-4 md:p-10">
 
-    <div id="captureArea" class="max-w-5xl mx-auto form-card bg-white border border-slate-200 text-slate-900">
+    <div id="captureArea" class="max-w-6xl mx-auto form-card bg-white border border-slate-200 text-slate-900">
         <div class="brand-gradient p-10 text-white flex justify-between items-center no-print">
             <div class="flex items-center gap-6">
                 <div class="bg-white p-2 rounded-lg shadow-inner">
@@ -50,10 +48,7 @@
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
                     <div class="md:col-span-2 relative">
                         <label>Contractor Home Address</label>
-                        <div class="flex gap-2">
-                            <input type="text" id="ic_address" class="flex-grow" placeholder="Address..." oninput="handleManualEdit()" onchange="calculateLargeRoute()">
-                            <button type="button" id="saveBtn" onclick="saveToDatabase()" disabled class="opacity-30 grayscale cursor-not-allowed bg-emerald-600 text-white px-3 py-1 rounded-lg text-[9px] font-black uppercase transition-all">Save</button>
-                        </div>
+                        <input type="text" id="ic_address" placeholder="Address..." onchange="calculateLargeRoute()">
                     </div>
                     <div><label>Compensation ($)</label><input type="number" id="comp" placeholder="0.00"></div>
                     <div><label>Due Date</label><input type="date" id="due_date"></div>
@@ -83,63 +78,13 @@
                         </div>
                     </div>
                     <div class="space-y-2">
-                        <p class="text-[10px] font-bold text-slate-500 uppercase">Use the Polygon Tool at the top of the map to select tasks:</p>
+                        <p class="text-[10px] font-bold text-slate-500 uppercase">Use the Draw Polygon tool to select tasks:</p>
                         <div id="map"></div>
                     </div>
                 </div>
 
                 <button type="button" onclick="generateCertifiedLink()" class="w-full brand-gradient text-white font-black py-6 rounded-2xl shadow-xl text-xs uppercase tracking-[0.2em] hover:scale-[1.01] transition-all">Send Email to IC</button>
             </div>
-
-            <div id="icMode" class="hidden space-y-10">
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
-                    <div class="space-y-8">
-                        <h3 class="text-sm font-black text-slate-800 uppercase tracking-widest border-b pb-4">Authorization Details</h3>
-                        <div class="space-y-6 no-print">
-                            <div>
-                                <button type="button" onclick="viewRoute(11)" class="w-full bg-slate-800 text-white font-black py-5 rounded-2xl shadow-lg uppercase tracking-widest text-xs">View Route Preview</button>
-                                <p class="text-[10px] text-slate-400 mt-2 text-center font-bold">View up to 9 stops</p>
-                            </div>
-                            <div>
-                                <button type="button" id="copyBtn" onclick="copyMapUrl()" class="w-full bg-white border-2 border-slate-200 text-slate-600 font-black py-4 rounded-xl text-[10px] uppercase tracking-[0.15em]">Copy Browser Link (Full Route)</button>
-                                <p class="text-[10px] text-slate-400 mt-2 text-center font-bold">View up to 20 stops</p>
-                            </div>
-                        </div>
-                        <div id="summaryZone" class="bg-slate-50 p-8 rounded-3xl border border-slate-100 shadow-sm text-sm"></div>
-                    </div>
-
-                    <div class="space-y-8 bg-white p-8 rounded-3xl border border-slate-100 shadow-sm">
-                        <div class="grid grid-cols-2 gap-4">
-                            <label class="relative">
-                                <input type="radio" name="ic_decision" value="Accepted" class="sr-only" checked onchange="toggleDecisionView()">
-                                <div class="status-pill text-center py-4 rounded-xl text-emerald-600 font-black text-[10px] uppercase tracking-widest">Accept</div>
-                            </label>
-                            <label class="relative">
-                                <input type="radio" name="ic_decision" value="Declined" class="sr-only" onchange="toggleDecisionView()">
-                                <div class="status-pill text-center py-4 rounded-xl text-red-600 font-black text-[10px] uppercase tracking-widest">Decline</div>
-                            </label>
-                        </div>
-
-                        <div id="reason_block" class="hidden animate-in fade-in slide-in-from-top-2 space-y-6">
-                            <div><label>Counter Offer ($)</label><input type="number" id="ic_counter_val" placeholder="0.00"></div>
-                            <div><label>Reason for Decline / Notes</label><textarea id="ic_notes" rows="3" placeholder="Provide details..."></textarea></div>
-                        </div>
-
-                        <div id="signature_block">
-                            <label class="text-blue-600 font-black mb-4 uppercase text-[10px]">Electronic Signature</label>
-                            <input type="text" id="typed_sig" placeholder="Click Here, Type Legal Name" class="signature-font border-none outline-none focus:ring-0" oninput="updateLiveSignature(this.value)">
-                            <div class="flex items-start gap-4 p-5 bg-blue-50/50 rounded-2xl border border-blue-100 mt-6">
-                                <input type="checkbox" id="legal_consent" class="mt-1 h-6 w-6">
-                                <label for="legal_consent" class="normal-case font-bold text-[11px] text-slate-700 leading-relaxed">
-                                    I, <span id="live_sig_text" class="text-blue-800 font-black italic border-b-2 border-blue-200 px-1">________________</span>, hereby certify that I have reviewed the route and compensation.
-                                </label>
-                            </div>
-                        </div>
-                        <button type="button" id="submitBtn" onclick="submitToFormspree()" class="bg-blue-600 text-white font-black px-12 py-5 rounded-2xl shadow-xl text-xs uppercase tracking-widest w-full transition-all hover:bg-blue-700">Submit Response</button>
-                    </div>
-                </div>
-            </div>
-            <div id="successView" class="hidden text-center py-20"><div class="text-6xl mb-4">✅</div><h2 class="text-3xl font-black uppercase text-slate-900">Response Recorded</h2></div>
         </form>
     </div>
 
@@ -147,8 +92,8 @@
         let map, directionsService, directionsRenderer, inputTimer, drawingManager;
         let currentLocCount = 0, currentTaskCount = 0, currentKioskCount = 0;
         let allOnfleetMarkers = [];
+        let currentGlobalRate = 30; // Default fallback
         const webAppUrl = "https://script.google.com/macros/s/AKfycbzq2ys09wfLOvH6MReRlldFmJGKYldo6pmOWStlJ-tNFUBHbHfD7LyVwYxLA-WfH1Wxyw/exec"; 
-        const formspreeUrl = "https://formspree.io/f/meerlqll"; 
 
         function initMap() {
             if (typeof google === 'undefined') return;
@@ -178,57 +123,28 @@
             });
         }
 
-        function setDefaultDate() {
-            const today = new Date();
-            today.setDate(today.getDate() + 14);
-            document.getElementById('due_date').value = today.toISOString().split('T')[0];
-        }
-
-        async function lookupContractor(email) {
-            if (!email || !webAppUrl.includes("https")) return;
-            try {
-                const response = await fetch(`${webAppUrl}?email=${encodeURIComponent(email)}`);
-                const data = await response.json();
-                if (data && !data.error) {
-                    document.getElementById('ic_name_setup').value = data.name;
-                    document.getElementById('ic_address').value = data.address;
-                    calculateLargeRoute();
-                    document.getElementById('saveBtn').disabled = true;
-                    document.getElementById('saveBtn').classList.add('opacity-30', 'grayscale');
-                }
-            } catch (e) { console.error("Lookup failed", e); }
-        }
-
-        async function saveToDatabase() {
-            const p = { email: document.getElementById('ic_email_setup').value, name: document.getElementById('ic_name_setup').value, address: document.getElementById('ic_address').value };
-            try { await fetch(webAppUrl, { method: 'POST', mode: 'no-cors', body: JSON.stringify(p) }); alert("Database Updated"); document.getElementById('saveBtn').disabled = true; }
-            catch (e) { alert("Save failed"); }
-        }
-
-        function handleManualEdit() {
-            const btn = document.getElementById('saveBtn');
-            btn.disabled = false;
-            btn.classList.remove('opacity-30', 'grayscale', 'cursor-not-allowed');
-            btn.classList.add('opacity-100');
-        }
-
         async function fetchOnfleetTasks() {
-            const loader = document.getElementById('loaderOverlay'), syncBtn = document.getElementById('syncBtn');
+            const loader = document.getElementById('loaderOverlay');
             loader.classList.remove('hidden'); loader.classList.add('flex');
-            syncBtn.disabled = true;
             try {
                 const response = await fetch(`${webAppUrl}?action=getOnfleetTasks`);
-                const tasks = await response.json();
+                const data = await response.json();
+                
+                // NEW: Extract tasks and rate from the object
+                const tasks = data.tasks; 
+                currentGlobalRate = data.rate || 30;
+
                 allOnfleetMarkers.forEach(m => m.setMap(null));
                 allOnfleetMarkers = [];
 
+                // Use the extracted tasks array for forEach
                 tasks.forEach(task => {
                     const marker = new google.maps.Marker({
                         position: { lat: task.lat, lng: task.lng },
                         map: map,
                         icon: {
                             path: google.maps.SymbolPath.CIRCLE,
-                            scale: 7, 
+                            scale: 7,
                             fillColor: task.isKiosk ? "#10b981" : "#ef4444",
                             fillOpacity: 0.9,
                             strokeWeight: 2,
@@ -238,9 +154,12 @@
                     marker.taskData = task;
                     allOnfleetMarkers.push(marker);
                 });
-                alert(`Loaded ${tasks.length} unassigned tasks. Use the Polygon tool (lasso) at the top of the map to select.`);
-            } catch (error) { alert("Sync Error: " + error.message); }
-            finally { loader.classList.add('hidden'); syncBtn.disabled = false; }
+                alert(`Loaded ${tasks.length} tasks nationally. Suggested Rate: $${currentGlobalRate}/hr.`);
+            } catch (e) { 
+                console.error(e);
+                alert("Sync Error: " + e.message); 
+            }
+            finally { loader.classList.add('hidden'); }
         }
 
         function processPolygonSelection(polygon) {
@@ -270,35 +189,24 @@
             polygon.setMap(null);
         }
 
-        function updateBadges(locCount, taskCount, kioskCount) {
-            currentLocCount = locCount; currentTaskCount = taskCount; currentKioskCount = kioskCount;
-            const lBadge = document.getElementById('location_count_badge'), kBadge = document.getElementById('kiosk_count_badge');
-            lBadge.innerText = locCount > 0 ? `${locCount} Locations | ${taskCount} Total Tasks` : "0 Locations | 0 Total Tasks";
-            lBadge.classList.toggle('hidden', locCount === 0);
-            kBadge.innerText = `${kioskCount} Kiosk Installs`;
-            kBadge.classList.toggle('hidden', kioskCount === 0);
-        }
-
         function calculateLargeRoute() {
             clearTimeout(inputTimer);
             const textArea = document.getElementById('locations');
+            const compInput = document.getElementById('comp');
             const lines = textArea.value.split('\n').filter(l => l.trim().length > 5);
             
             if (lines.length > 0) {
-                let totalTasksAcrossLines = 0, totalKiosksAcrossLines = 0;
+                let totalT = 0, totalK = 0;
                 lines.forEach(line => {
-                    const tasksMatch = line.match(/\((\d+)\s+Tasks\)/i);
-                    const kiosksMatch = line.match(/\[(\d+)\s+Kiosk\s+Install\]/i);
-                    
-                    let lineKiosks = kiosksMatch ? parseInt(kiosksMatch[1]) : (line.toLowerCase().includes('kiosk install') ? 1 : 0);
-                    let lineTasks = tasksMatch ? parseInt(tasksMatch[1]) : 0;
-                    
-                    if (!tasksMatch && !kiosksMatch) lineTasks = 1;
-
-                    totalTasksAcrossLines += (lineTasks + lineKiosks);
-                    totalKiosksAcrossLines += lineKiosks;
+                    const tMatch = line.match(/\((\d+)\s+Tasks\)/i);
+                    const kMatch = line.match(/\[(\d+)\s+Kiosk\s+Install\]/i);
+                    let lineKiosks = kMatch ? parseInt(kMatch[1]) : 0;
+                    let lineTasks = tMatch ? parseInt(tMatch[1]) : 0;
+                    if (!tMatch && !kMatch) lineTasks = 1;
+                    totalT += (lineTasks + lineKiosks);
+                    totalK += lineKiosks;
                 });
-                updateBadges(lines.length, totalTasksAcrossLines, totalKiosksAcrossLines);
+                updateBadges(lines.length, totalT, totalK);
             } else updateBadges(0, 0, 0);
 
             if (lines.length === 0) return;
@@ -312,125 +220,47 @@
                 }, (result, status) => {
                     if (status === 'OK') {
                         directionsRenderer.setDirections(result);
-                        let totalMeters = 0;
-                        result.routes[0].legs.forEach(leg => { totalMeters += leg.distance.value; });
+                        let totalMeters = 0, totalSeconds = 0;
+                        result.routes[0].legs.forEach(leg => { 
+                            totalMeters += leg.distance.value; 
+                            totalSeconds += leg.duration.value;
+                        });
                         document.getElementById('mileage_display').innerText = (totalMeters * 0.000621371).toFixed(1);
-                        const s = result.routes[0].legs.reduce((acc, leg) => acc + leg.duration.value, 0);
-                        const hrs = Math.floor(s/3600), mins = Math.floor((s%3600)/60);
+                        const hrs = Math.floor(totalSeconds/3600), mins = Math.floor((totalSeconds%3600)/60);
                         document.getElementById('time_display').innerText = hrs > 0 ? hrs+"h "+mins+"m" : mins+"m";
+                        
+                        // Using the rate from the Google Script
+                        compInput.placeholder = `Sug: $${(totalSeconds / 3600 * currentGlobalRate).toFixed(2)}`;
                     }
                 });
             }, 800);
         }
 
-        function generateCertifiedLink() {
+        function updateBadges(loc, task, kiosk) {
+            currentLocCount = loc; currentTaskCount = task; currentKioskCount = kiosk;
+            const lBadge = document.getElementById('location_count_badge'), kBadge = document.getElementById('kiosk_count_badge');
+            lBadge.innerText = loc > 0 ? `${loc} Locations | ${task} Total Tasks` : "0 Locations | 0 Total Tasks";
+            lBadge.classList.toggle('hidden', loc === 0);
+            kBadge.innerText = `${kiosk} Kiosk Installs`;
+            kBadge.classList.toggle('hidden', kiosk === 0);
+        }
+
+        async function lookupContractor(email) {
+            if (!email) return;
             try {
-                const jobListOnly = document.getElementById('locations').value.split('\n').filter(l => l.trim().length > 5).join('|');
-                const d = {
-                    icn: document.getElementById('ic_name_setup').value, ice: document.getElementById('ic_email_setup').value,
-                    wo: document.getElementById('task_num').value, due: document.getElementById('due_date').value,
-                    comp: document.getElementById('comp').value, mi: document.getElementById('mileage_display').innerText,
-                    time: document.getElementById('time_display').innerText, locs: window.optimizedSequence ? window.optimizedSequence.join('|') : "",
-                    lCnt: currentLocCount, tCnt: currentTaskCount, kCnt: currentKioskCount,
-                    jobOnly: jobListOnly
-                };
-                if (!d.ice || d.mi === "0.0") return alert("Data missing.");
-                const payload = btoa(unescape(encodeURIComponent(JSON.stringify(d))));
-                const link = `${window.location.origin}${window.location.pathname}?data=${payload}`;
-                const s = `Action Required: Terraboost Route Request | WO #${d.wo}`;
-                
-                let emailDate = 'N/A';
-                if (d.due) {
-                    const parts = d.due.split('-');
-                    emailDate = parts.length === 3 ? `${parts[1]}/${parts[2]}/${parts[0]}` : d.due;
+                const response = await fetch(`${webAppUrl}?email=${encodeURIComponent(email)}`);
+                const data = await response.json();
+                if (data && !data.error) {
+                    document.getElementById('ic_name_setup').value = data.name;
+                    document.getElementById('ic_address').value = data.address;
+                    // If contractor has a specific rate, update it here
+                    if (data.rate) currentGlobalRate = data.rate;
                 }
-
-                const b = `Dear ${d.icn},\n\nAn optimized route for WO #${d.wo} is ready for review.\n\nROUTE DETAILS:\n- Due Date: ${emailDate}\n- Total Locations: ${d.lCnt}\n- Total Tasks: ${d.tCnt}\n- Kiosk Installs: ${d.kCnt}\n- Mileage: ${d.mi} Miles\n- Compensation: $${d.comp}\n\nReview Link: ${link}`;
-                window.open(`mailto:${d.ice}?subject=${encodeURIComponent(s)}&body=${encodeURIComponent(b)}`);
-            } catch (err) { alert("Error generating link."); }
-        }
-
-        function buildMapsUrl(limit) {
-            if (!window.payloadData || !window.payloadData.locs) return null;
-            const stops = window.payloadData.locs.split('|').slice(0, limit);
-            const origin = encodeURIComponent(stops[0]);
-            const dest = encodeURIComponent(stops[stops.length-1]);
-            const waypoints = stops.slice(1, -1).map(w => encodeURIComponent(w)).join('/');
-            return `https://www.google.com/maps/dir/${origin}/${waypoints}/${dest}/`;
-        }
-        function viewRoute(limit) { const url = buildMapsUrl(limit); if (url) window.open(url, '_blank'); }
-        function copyMapUrl() { const url = buildMapsUrl(25); if (url) { navigator.clipboard.writeText(url); alert("Link Copied"); } }
-        
-        function confirmClearList() {
-            if (confirm("Clear all locations?")) {
-                document.getElementById('locations').value = '';
-                updateBadges(0, 0, 0);
-                document.getElementById('mileage_display').innerText = "0.0";
-                document.getElementById('time_display').innerText = "--";
-                if (directionsRenderer) directionsRenderer.setDirections({routes: []});
-            }
+            } catch (e) {}
         }
 
         function clearFullForm() { location.reload(); }
-
-        function toggleDecisionView() {
-            const decision = document.querySelector('input[name="ic_decision"]:checked').value;
-            const rb = document.getElementById('reason_block'), sb = document.getElementById('signature_block');
-            rb.classList.toggle('hidden', decision === 'Accepted');
-            sb.classList.toggle('hidden', decision === 'Declined');
-        }
-
-        function updateLiveSignature(val) { document.getElementById('live_sig_text').innerText = val || "________________"; }
-
-        async function submitToFormspree() {
-            const decision = document.querySelector('input[name="ic_decision"]:checked').value;
-            const sig = document.getElementById('typed_sig').value, consent = document.getElementById('legal_consent').checked;
-            if (decision === 'Accepted' && (!sig || !consent)) return alert("Signature required.");
-            const btn = document.getElementById('submitBtn');
-            btn.disabled = true; btn.innerText = "Sending...";
-
-            const rawJobContent = window.payloadData.jobOnly ? window.payloadData.jobOnly.split('|') : [];
-            const locationList = rawJobContent.map((loc, index) => `${index + 1}. ${loc}`).join('\n');
-            
-            const formData = {
-                "Decision": decision, "Contractor": window.payloadData.icn, "Work Order": window.payloadData.wo,
-                "Due Date": window.payloadData.due, "Locations": window.payloadData.lCnt, "Tasks": window.payloadData.tCnt,
-                "Kiosks": window.payloadData.kCnt, "Mileage": window.payloadData.mi, "Original Comp": `$${window.payloadData.comp}`,
-                "Counter Offer": document.getElementById('ic_counter_val').value || "N/A",
-                "Notes": document.getElementById('ic_notes').value || "None",
-                "Signature": sig || "N/A", "JOB LOCATION LIST": "\n" + locationList,
-                "_subject": `${decision}: WO #${window.payloadData.wo} (${window.payloadData.icn})`
-            };
-
-            try {
-                const response = await fetch(formspreeUrl, {
-                    method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-                    body: JSON.stringify(formData)
-                });
-                if (response.ok) { document.getElementById('icMode').classList.add('hidden'); document.getElementById('successView').classList.remove('hidden'); }
-            } catch (e) { alert("Submission failed."); btn.disabled = false; btn.innerText = "Submit Response"; }
-        }
-
-        window.onload = () => {
-            initMap(); setDefaultDate();
-            const p = new URLSearchParams(window.location.search), r = p.get('data');
-            if (r) {
-                const d = JSON.parse(decodeURIComponent(escape(atob(r))));
-                window.payloadData = d;
-                document.getElementById('setupFields').remove();
-                document.getElementById('icMode').classList.remove('hidden');
-                updateBadges(d.lCnt, d.tCnt, d.kCnt);
-                document.getElementById('summaryZone').innerHTML = `
-                    <div class="flex justify-between border-b pb-2 mb-2 font-bold uppercase text-[10px] tracking-widest text-slate-400"><span>Route Summary</span></div>
-                    <div class="flex justify-between border-b pb-2 mb-2"><span>Contractor:</span> <span class="font-bold">${d.icn}</span></div>
-                    <div class="flex justify-between text-blue-600 font-bold"><span>Work Order #:</span> <span>${d.wo}</span></div>
-                    <div class="flex justify-between"><span>Unique Locations:</span> <span class="font-bold">${d.lCnt}</span></div>
-                    <div class="flex justify-between"><span>Total Tasks:</span> <span class="font-bold">${d.tCnt}</span></div>
-                    <div class="flex justify-between text-emerald-600 font-bold"><span>Kiosk Installs:</span> <span class="font-bold">${d.kCnt}</span></div>
-                    <div class="flex justify-between border-t pt-2 mt-2 font-black text-xl text-emerald-600"><span>Total Comp:</span> <span>$${d.comp}</span></div>
-                `;
-            }
-        };
+        window.onload = () => { initMap(); };
     </script>
 </body>
 </html>
