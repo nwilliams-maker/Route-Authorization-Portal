@@ -6,160 +6,303 @@
     <title>Work Order Dispatch | Terraboost Media</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCDYgNIGcfWPxoux2EILXr60ZK0fZYJPR4&libraries=geometry,drawing"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@600&family=Inter:wght@400;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@600&family=Inter:wght@400;500;700;800&display=swap" rel="stylesheet">
     <style>
-        body { background-color: #f8fafc; font-family: 'Inter', sans-serif; }
+        body { background-color: #f1f5f9; font-family: 'Inter', sans-serif; color: #0f172a; }
         .brand-gradient { background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); }
-        .form-card { border-radius: 16px; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,0.1); }
-        #map { height: 500px; width: 100%; border-radius: 12px; border: 1px solid #e2e8f0; }
-        label { color: #475569; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; font-size: 0.7rem; display: block; margin-bottom: 6px; }
-        input, textarea { border: 1px solid #cbd5e1; border-radius: 10px !important; padding: 12px; font-size: 14px; width: 100%; background: #ffffff; }
-        .signature-font { font-family: 'Dancing Script', cursive; font-size: 3rem; color: #0f172a; border-bottom: 2px solid #94a3b8; background: transparent; width: 100%; padding: 0; height: auto; line-height: 1; }
+        .form-card { border-radius: 24px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15); border: 1px solid #e2e8f0; background: #ffffff; }
+        
+        #map { height: 650px; width: 100%; border-radius: 16px; border: 1px solid #e2e8f0; transition: all 0.3s ease; }
+        .map-control-glass { background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(12px); border: 1px solid rgba(226, 232, 240, 0.8); }
+        
+        label { color: #64748b; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; font-size: 0.65rem; display: block; margin-bottom: 8px; }
+        input, textarea, select { 
+            border: 1px solid #cbd5e1; border-radius: 12px !important; padding: 14px 16px; 
+            font-size: 14px; width: 100%; background: #f8fafc; transition: all 0.2s ease;
+            box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.02);
+        }
+        input:focus, select:focus, textarea:focus { border-color: #3b82f6; outline: none; background: #ffffff; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
+        
+        .signature-font { font-family: 'Dancing Script', cursive; font-size: 3.5rem; color: #0f172a; border-bottom: 2px solid #94a3b8; background: transparent; width: 100%; padding: 0; height: auto; line-height: 1; box-shadow: none !important; }
+        .signature-font:focus { box-shadow: none !important; border-color: #3b82f6; }
+        
         .spinner { border: 3px solid rgba(255,255,255,0.3); border-radius: 50%; border-top: 3px solid #3b82f6; width: 30px; height: 30px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .status-pill { border: 2px solid #e2e8f0; transition: all 0.2s; cursor: pointer; }
-        input[type="radio"]:checked + .status-pill { border-color: currentColor; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+        
+        .status-pill { border: 2px solid #e2e8f0; transition: all 0.2s; cursor: pointer; background: #f8fafc; }
+        input[type="radio"]:checked + .status-pill { border-color: currentColor; transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); background: #ffffff; }
+        
+        .btn-modern { transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
+        .btn-modern:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); }
+        .btn-modern:active:not(:disabled) { transform: translateY(0); box-shadow: none; }
+        
         @media print { .no-print { display: none !important; } }
     </style>
 </head>
-<body class="p-4 md:p-10">
+<body class="p-4 md:p-8 lg:p-12">
 
-    <div id="captureArea" class="max-w-5xl mx-auto form-card bg-white border border-slate-200 text-slate-900">
-        <div class="brand-gradient p-10 text-white flex justify-between items-center no-print">
+    <div id="captureArea" class="max-w-[1400px] mx-auto form-card">
+        <div class="brand-gradient p-8 md:p-10 text-white flex justify-between items-center no-print">
             <div class="flex items-center gap-6">
-                <div class="bg-white p-2 rounded-lg shadow-inner">
-                    <div class="bg-slate-900 text-white font-black text-3xl px-4 py-2 rounded">TBM</div>
+                <div class="bg-white p-2.5 rounded-xl shadow-lg">
+                    <div class="bg-slate-900 text-white font-black text-3xl px-4 py-2 rounded-lg">TBM</div>
                 </div>
                 <div>
-                    <h1 class="text-3xl font-extrabold tracking-tight">Terraboost Media</h1>
-                    <p class="text-blue-400 text-xs uppercase font-black tracking-[0.2em] opacity-90">Route Authorization Portal</p>
+                    <h1 class="text-3xl md:text-4xl font-extrabold tracking-tight">Terraboost Media</h1>
+                    <p class="text-blue-400 text-[10px] md:text-xs uppercase font-black tracking-[0.25em] opacity-90 mt-1">Route Authorization Portal</p>
                 </div>
             </div>
-            <button type="button" onclick="clearFullForm()" class="text-[10px] text-red-400 font-bold border border-red-900/30 px-3 py-1 rounded hover:bg-red-500/10 transition-all">Reset Form</button>
+            <button type="button" onclick="clearFullForm()" class="btn-modern text-[10px] text-red-300 font-bold border border-red-500/30 px-4 py-2 rounded-lg hover:bg-red-500 hover:text-white transition-all hidden md:block">RESET PORTAL</button>
         </div>
 
-        <form id="dispatchForm" class="p-8 md:p-12 space-y-10">
-            <div id="setupFields" class="space-y-8">
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    <div><label>Dispatcher Email</label><input type="email" id="d_email" placeholder="installteam@terraboost.biz"></div>
-                    <div><label>Contractor Email</label><input type="email" id="ic_email_setup" placeholder="Enter email..." onblur="lookupContractor(this.value)"></div>
-                    <div><label>Contractor Name</label><input type="text" id="ic_name_setup" placeholder="Auto-filled" oninput="handleManualEdit()"></div>
-                    <div><label>Work Order #</label><input type="text" id="task_num" placeholder="TBM-XXXXX"></div>
+        <form id="dispatchForm" class="p-6 md:p-10 lg:p-12 space-y-12">
+            
+            <div id="setupFields" class="space-y-10">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8">
+                    <div>
+                        <label>Dispatcher Email</label>
+                        <select id="d_email" class="cursor-pointer" onchange="clearError(this)">
+                            <option value="" disabled selected>Select dispatcher...</option>
+                            <option value="nwilliams@terraboost.biz">nwilliams@terraboost.biz</option>
+                            <option value="aengelhardt@terraboost.biz">aengelhardt@terraboost.biz</option>
+                            <option value="kgallardo@terraboost.biz">kgallardo@terraboost.biz</option>
+                            <option value="mespinoza@terraboost.biz">mespinoza@terraboost.biz</option>
+                            <option value="dborochov@terraboost.biz">dborochov@terraboost.biz</option>
+                            <option value="kheiden@terraboost.biz">kheiden@terraboost.biz</option>
+                            <option value="installteam@terraboost.biz">installteam@terraboost.biz</option>
+                        </select>
+                    </div>
+                    
+                    <div class="relative">
+                        <label>Contractor Email Search</label>
+                        <input type="email" id="ic_email_setup" list="ic_email_list" placeholder="Start typing email..." oninput="filterEmails(this.value); clearError(this);" onblur="lookupContractor(this.value)">
+                        <datalist id="ic_email_list"></datalist>
+                    </div>
+
+                    <div><label>Contractor Name</label><input type="text" id="ic_name_setup" placeholder="Auto-filled" class="font-medium text-slate-700" oninput="clearError(this)"></div>
+                    <div><label>Work Order #</label><input type="text" id="task_num" placeholder="TBM-XXXXX" class="font-bold text-blue-700" oninput="clearError(this)"></div>
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-6 lg:gap-8 bg-slate-50 p-6 rounded-2xl border border-slate-100">
                     <div class="md:col-span-2 relative">
-                        <label>Contractor Home Address</label>
-                        <div class="flex gap-2">
-                            <input type="text" id="ic_address" class="flex-grow" placeholder="Address..." oninput="handleManualEdit()" onchange="calculateLargeRoute()">
-                            <button type="button" id="saveBtn" onclick="saveToDatabase()" disabled class="opacity-30 grayscale cursor-not-allowed bg-emerald-600 text-white px-3 py-1 rounded-lg text-[9px] font-black uppercase transition-all">Save</button>
+                        <label>Contractor Home Address (Origin)</label>
+                        <div class="flex gap-3">
+                            <input type="text" id="ic_address" class="flex-grow" placeholder="123 Main St, City, State..." oninput="handleManualEdit(); clearError(this);" onchange="calculateLargeRoute()">
+                            <button type="button" id="saveBtn" onclick="saveToDatabase()" disabled class="opacity-30 grayscale cursor-not-allowed bg-emerald-600 text-white px-5 py-2 rounded-xl text-[10px] font-black uppercase transition-all">Save</button>
                         </div>
                     </div>
-                    <div><label>Compensation ($)</label><input type="number" id="comp" placeholder="0.00"></div>
-                    <div><label>Due Date</label><input type="date" id="due_date"></div>
+                    <div><label>Compensation ($)</label><input type="number" id="comp" placeholder="0.00" class="text-emerald-700 font-bold" oninput="clearError(this)"></div>
+                    <div><label>Target Due Date</label><input type="date" id="due_date" class="cursor-pointer" onchange="clearError(this)"></div>
                 </div>
 
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-10 items-start border-t border-slate-100 pt-10">
-                    <div class="space-y-6">
-                        <div class="flex justify-between items-start mb-2">
-                            <div class="flex flex-col gap-1.5">
-                                <label class="text-blue-600 font-black tracking-widest uppercase text-[10px] mb-0">Task Locations</label>
-                                <div class="flex flex-col gap-1">
-                                    <span id="location_count_badge" class="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-[10px] font-bold hidden w-fit">0 Locations | 0 Total Tasks</span>
-                                    <span id="kiosk_count_badge" class="bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full text-[10px] font-bold hidden w-fit">0 Kiosk Installs</span>
+                <div class="grid grid-cols-1 xl:grid-cols-12 gap-8 items-start pt-6">
+                    
+                    <div class="xl:col-span-4 space-y-6">
+                        <div class="map-control-glass p-5 rounded-2xl shadow-sm space-y-5">
+                            <label class="text-blue-600 font-black tracking-widest text-[10px] mb-0 whitespace-nowrap">Map Controls</label>
+                            
+                            <div class="grid grid-cols-2 gap-3">
+                                <select id="podFilter" onchange="applyMapFilters()" class="py-2.5 px-3 text-[10px] font-bold uppercase cursor-pointer bg-white">
+                                    <option value="All">🌎 All Pods</option>
+                                    <option value="Orange">🟠 Orange Pod</option>
+                                    <option value="Green">🟢 Green Pod</option>
+                                    <option value="Red">🔴 Red Pod</option>
+                                    <option value="Blue">🔵 Blue Pod</option>
+                                    <option value="Purple">🟣 Purple Pod</option>
+                                </select>
+                                
+                                <label class="flex items-center justify-center gap-2 text-[10px] font-bold uppercase text-slate-700 cursor-pointer bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-all select-none">
+                                    <input type="checkbox" id="digitalFilter" onchange="applyMapFilters()" checked class="w-3.5 h-3.5 text-blue-600 rounded"> 
+                                    Inc. Digital
+                                </label>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-3">
+                                <button type="button" onclick="fetchOnfleetTasks(true)" class="btn-modern bg-blue-600 text-white text-[10px] font-black py-2.5 rounded-xl uppercase shadow-md">🔄 Add All Tasks</button>
+                                <button type="button" onclick="fetchOnfleetTasks(false)" class="btn-modern bg-emerald-600 text-white text-[10px] font-black py-2.5 rounded-xl uppercase shadow-md">📍 Sync 40 Miles</button>
+                                <button type="button" id="btnToggleICs" onclick="toggleICMarkers()" class="btn-modern bg-slate-800 text-white text-[10px] font-black py-2.5 rounded-xl uppercase shadow-md col-span-2">👷 Show IC Locations</button>
+                            </div>
+                        </div>
+
+                        <div class="relative">
+                            <div class="flex justify-between items-end mb-2">
+                                <label class="mb-0">Selected Task Routing List</label>
+                                <button type="button" onclick="confirmClearList()" class="text-red-500 hover:text-red-700 text-[9px] transition-colors font-bold uppercase">🗑️ Clear List</button>
+                            </div>
+                            
+                            <div class="flex gap-2 flex-wrap mb-3 min-h-[24px]">
+                                <span id="location_count_badge" class="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-[9px] font-bold hidden shadow-sm">0 Stops</span>
+                                <span id="kiosk_count_badge" class="bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full text-[9px] font-bold hidden shadow-sm">0 Kiosk Installs</span>
+                                <span id="digital_count_badge" class="bg-purple-100 text-purple-700 px-3 py-1 rounded-full text-[9px] font-bold hidden shadow-sm">0 Digital Service</span>
+                            </div>
+
+                            <textarea id="locations" rows="11" class="font-mono text-[11px] leading-relaxed resize-none shadow-inner" placeholder="Use the Map Polygon Tool to lasso tasks. They will populate here automatically..." oninput="calculateLargeRoute(); clearError(this);"></textarea>
+                        </div>
+                        
+                        <div class="brand-gradient rounded-2xl p-6 text-white shadow-xl relative overflow-hidden">
+                            <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 via-emerald-400 to-blue-500 opacity-50"></div>
+                            <div id="loaderOverlay" class="absolute inset-0 bg-slate-900/90 hidden flex-col items-center justify-center gap-3 z-10">
+                                <div class="spinner"></div>
+                                <span class="text-[10px] font-black tracking-widest text-blue-400 uppercase">Loading...</span>
+                            </div>
+                            
+                            <div class="flex justify-between items-center">
+                                <div>
+                                    <p class="text-slate-400 text-[9px] uppercase font-black tracking-widest mb-1">Total Mileage</p>
+                                    <div class="flex items-baseline gap-1">
+                                        <span id="mileage_display" class="text-4xl font-black text-emerald-400 tracking-tighter">0.0</span>
+                                        <span class="text-xs text-emerald-600 font-bold">mi</span>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <p class="text-slate-400 text-[9px] uppercase font-black tracking-widest text-white mb-1">Est. Drive Time</p>
+                                    <span id="time_display" class="text-3xl font-black text-blue-400 tracking-tighter">--</span>
                                 </div>
                             </div>
-                            <div class="flex gap-2">
-                                <button type="button" onclick="confirmClearList()" class="bg-red-50 text-red-600 text-[9px] font-black px-2 py-1 rounded uppercase hover:bg-red-100 transition-all">🗑️ Clear</button>
-                                <button type="button" onclick="fetchOnfleetTasks(true)" class="bg-blue-600 text-white text-[9px] font-black px-3 py-1 rounded uppercase hover:bg-blue-700 transition-all shadow-sm">🔄 USA Map</button>
-                                <button type="button" onclick="fetchOnfleetTasks(false)" class="bg-emerald-600 text-white text-[9px] font-black px-3 py-1 rounded uppercase hover:bg-emerald-700 transition-all shadow-sm">📍 Sync 40 Miles</button>
-                            </div>
-                        </div>
-                        <textarea id="locations" rows="10" class="font-mono text-xs" placeholder="Paste stops here or use polygon map tool..." oninput="calculateLargeRoute()"></textarea>
-                        
-                        <div class="bg-slate-900 rounded-3xl p-8 text-white flex justify-between items-center shadow-2xl relative">
-                            <div id="loaderOverlay" class="absolute inset-0 bg-slate-900/90 hidden flex-col items-center justify-center gap-2"><div class="spinner"></div></div>
-                            <div><p class="text-slate-400 text-[10px] uppercase font-black tracking-widest">Mileage</p><span id="mileage_display" class="text-4xl font-black text-emerald-400">0.0</span></div>
-                            <div class="text-right"><p class="text-slate-400 text-[10px] uppercase font-black tracking-widest text-white">Est. Time</p><span id="time_display" class="text-4xl font-black text-blue-400">--</span></div>
                         </div>
                     </div>
-                    <div class="space-y-2">
-                        <p class="text-[10px] font-bold text-slate-500 uppercase">Use the Polygon Tool (top center) to lasso tasks:</p>
-                        <div id="map"></div>
+
+                    <div class="xl:col-span-8 space-y-4 h-full flex flex-col">
+                        <div class="flex justify-between items-center flex-wrap gap-4">
+                            <p class="text-[11px] font-bold text-slate-500 uppercase tracking-wide">Select tasks using the <span class="text-blue-600 font-black">Polygon Tool</span> (Top Center)</p>
+                            
+                            <div class="flex flex-wrap items-center gap-3 text-[9px] font-black uppercase text-slate-600 bg-white px-4 py-2 rounded-full shadow-sm border border-slate-200">
+                                <span class="flex items-center gap-1.5"><div class="w-2.5 h-2.5 rounded-full bg-red-500 shadow-sm"></div> Escalation</span>
+                                <span class="flex items-center gap-1.5"><div class="w-2.5 h-2.5 rounded-full bg-orange-500 shadow-sm"></div> Boosted</span>
+                                <span class="flex items-center gap-1.5"><div class="w-2.5 h-2.5 rounded-full bg-blue-500 shadow-sm"></div> CVS Kiosk</span>
+                                <span class="flex items-center gap-1.5"><div class="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-sm"></div> Kiosk Install</span>
+                                <span class="flex items-center gap-1.5"><div class="w-2.5 h-2.5 rounded-full bg-purple-500 shadow-sm"></div> Digital Service</span>
+                            </div>
+                        </div>
+                        
+                        <div class="p-2 bg-white border border-slate-200 rounded-2xl shadow-sm flex-grow">
+                            <div id="map"></div>
+                        </div>
                     </div>
                 </div>
 
-                <button type="button" onclick="generateCertifiedLink()" class="w-full brand-gradient text-white font-black py-6 rounded-2xl shadow-xl text-xs uppercase tracking-[0.2em] hover:scale-[1.01] transition-all">Generate Authorization Link</button>
+                <div class="pt-6">
+                    <button id="generateBtn" type="button" onclick="generateCertifiedLink()" class="btn-modern w-full brand-gradient text-white font-black py-6 rounded-2xl shadow-xl text-sm uppercase tracking-[0.25em] hover:shadow-blue-900/20 transition-all">Generate Authorization Link</button>
+                </div>
             </div>
 
-            <div id="icMode" class="hidden space-y-10">
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
-                    <div class="space-y-8">
-                        <h3 class="text-sm font-black text-slate-800 uppercase tracking-widest border-b pb-4">Authorization Details</h3>
-                        <div class="space-y-6 no-print">
-                            <div>
-                                <button type="button" onclick="viewRoute(11)" class="w-full bg-slate-800 text-white font-black py-5 rounded-2xl shadow-lg uppercase tracking-widest text-xs">View Route Preview</button>
-                                <p class="text-[10px] text-slate-400 mt-2 text-center font-bold">View up to 9 stops</p>
-                            </div>
-                            <div>
-                                <button type="button" id="copyBtn" onclick="copyMapUrl()" class="w-full bg-white border-2 border-slate-200 text-slate-600 font-black py-4 rounded-xl text-[10px] uppercase tracking-[0.15em]">Copy Browser Link (Full Route)</button>
-                                <p class="text-[10px] text-slate-400 mt-2 text-center font-bold">View up to 20 stops</p>
-                            </div>
+            <div id="icMode" class="hidden space-y-12">
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-10">
+                    
+                    <div class="lg:col-span-5 space-y-8">
+                        <div class="bg-white p-8 rounded-3xl border border-slate-200 shadow-xl shadow-slate-200/40 relative overflow-hidden">
+                            <div class="absolute top-0 left-0 w-1 h-full bg-blue-500"></div>
+                            <h3 class="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-6">Route Authorization</h3>
+                            <div id="summaryZone" class="space-y-4 text-sm text-slate-700"></div>
                         </div>
-                        <div id="summaryZone" class="bg-slate-50 p-8 rounded-3xl border border-slate-100 shadow-sm text-sm"></div>
+                        
+                        <div class="space-y-4 no-print">
+                            <button type="button" onclick="viewRoute(11)" class="btn-modern w-full bg-slate-900 text-white font-black py-4 rounded-xl shadow-lg uppercase tracking-widest text-xs flex justify-center items-center gap-2">
+                                <span>🗺️</span> View Route Preview <span class="text-[9px] text-slate-400 normal-case tracking-normal font-normal ml-1">(Up to 9 stops)</span>
+                            </button>
+                            <button type="button" id="copyBtn" onclick="copyMapUrl()" class="btn-modern w-full bg-white border-2 border-slate-200 text-slate-600 hover:text-blue-600 hover:border-blue-300 font-black py-4 rounded-xl text-[10px] uppercase tracking-[0.15em] flex justify-center items-center gap-2">
+                                <span>🔗</span> Copy Browser Link <span class="text-[9px] text-slate-400 normal-case tracking-normal font-normal ml-1">(Up to 20 stops)</span>
+                            </button>
+                        </div>
                     </div>
 
-                    <div class="space-y-8 bg-white p-8 rounded-3xl border border-slate-100 shadow-sm">
-                        <div class="grid grid-cols-2 gap-4">
+                    <div class="lg:col-span-7 space-y-8 bg-white p-8 md:p-10 rounded-3xl border border-slate-200 shadow-xl shadow-slate-200/40">
+                        <div class="grid grid-cols-2 gap-5">
                             <label class="relative">
                                 <input type="radio" name="ic_decision" value="Accepted" class="sr-only" checked onchange="toggleDecisionView()">
-                                <div class="status-pill text-center py-4 rounded-xl text-emerald-600 font-black text-[10px] uppercase tracking-widest">Accept</div>
+                                <div class="status-pill text-center py-5 rounded-2xl text-emerald-600 font-black text-xs uppercase tracking-widest">Accept Route</div>
                             </label>
                             <label class="relative">
                                 <input type="radio" name="ic_decision" value="Declined" class="sr-only" onchange="toggleDecisionView()">
-                                <div class="status-pill text-center py-4 rounded-xl text-red-600 font-black text-[10px] uppercase tracking-widest">Decline</div>
+                                <div class="status-pill text-center py-5 rounded-2xl text-red-600 font-black text-xs uppercase tracking-widest">Decline Route</div>
                             </label>
                         </div>
 
-                        <div id="reason_block" class="hidden animate-in fade-in slide-in-from-top-2 space-y-6">
-                            <div><label>Counter Offer ($)</label><input type="number" id="ic_counter_val" placeholder="0.00"></div>
-                            <div><label>Reason for Decline / Notes</label><textarea id="ic_notes" rows="3" placeholder="Provide details..."></textarea></div>
+                        <div id="reason_block" class="hidden animate-in fade-in slide-in-from-top-2 space-y-6 pt-4">
+                            <div><label>Counter Offer ($) (Optional)</label><input type="number" id="ic_counter_val" placeholder="0.00" class="text-lg"></div>
+                            <div><label>Reason for Decline / Notes</label><textarea id="ic_notes" rows="4" placeholder="Please provide details..."></textarea></div>
                         </div>
 
-                        <div id="signature_block">
-                            <label class="text-blue-600 font-black mb-4 uppercase text-[10px]">Electronic Signature</label>
-                            <input type="text" id="typed_sig" placeholder="Click Here, Type Legal Name" class="signature-font border-none outline-none focus:ring-0" oninput="updateLiveSignature(this.value)">
-                            <div class="flex items-start gap-4 p-5 bg-blue-50/50 rounded-2xl border border-blue-100 mt-6">
-                                <input type="checkbox" id="legal_consent" class="mt-1 h-6 w-6">
-                                <label for="legal_consent" class="normal-case font-bold text-[11px] text-slate-700 leading-relaxed">
-                                    I, <span id="live_sig_text" class="text-blue-800 font-black italic border-b-2 border-blue-200 px-1">________________</span>, hereby certify that I have reviewed the route and compensation.
+                        <div id="signature_block" class="pt-4">
+                            <label class="text-blue-600 font-black mb-6 uppercase text-[10px] tracking-widest">Electronic Signature</label>
+                            <input type="text" id="typed_sig" placeholder="Click Here, Type Legal Name" class="signature-font focus:border-blue-500 transition-colors" oninput="updateLiveSignature(this.value)">
+                            
+                            <div class="flex items-start gap-4 p-6 bg-blue-50/50 rounded-2xl border border-blue-100 mt-8">
+                                <input type="checkbox" id="legal_consent" class="mt-1 h-5 w-5 rounded text-blue-600 focus:ring-blue-500 cursor-pointer">
+                                <label for="legal_consent" class="normal-case font-medium text-xs text-slate-700 leading-relaxed cursor-pointer select-none">
+                                    I, <span id="live_sig_text" class="text-blue-800 font-black italic border-b border-blue-200 px-1">________________</span>, hereby certify that I am an Independent Contractor. I have reviewed the proposed route locations, expected deliverables, and the offered compensation.
                                 </label>
                             </div>
                         </div>
-                        <button type="button" id="submitBtn" onclick="submitToFormspree()" class="bg-blue-600 text-white font-black px-12 py-5 rounded-2xl shadow-xl text-xs uppercase tracking-widest w-full transition-all hover:bg-blue-700">Submit Response</button>
+                        
+                        <div class="pt-4">
+                            <button type="button" id="submitBtn" onclick="submitToFormspree()" class="btn-modern bg-blue-600 text-white font-black py-6 rounded-2xl shadow-xl shadow-blue-600/20 text-sm uppercase tracking-[0.2em] w-full">Submit Final Response</button>
+                        </div>
                     </div>
                 </div>
             </div>
-            <div id="successView" class="hidden text-center py-20"><div class="text-6xl mb-4">✅</div><h2 class="text-3xl font-black uppercase text-slate-900">Response Recorded</h2></div>
+            
+            <div id="successView" class="hidden text-center py-32 animate-in fade-in zoom-in duration-500">
+                <div class="text-7xl mb-6 transform transition-transform hover:scale-110 duration-300">✅</div>
+                <h2 class="text-4xl font-black uppercase text-slate-900 tracking-tight">Response Recorded</h2>
+                <p class="text-slate-500 mt-4 font-medium">You may now close this window.</p>
+            </div>
         </form>
     </div>
 
     <script>
         let map, directionsService, directionsRenderer, inputTimer, drawingManager;
-        let currentLocCount = 0, currentTaskCount = 0, currentKioskCount = 0;
+        let currentLocCount = 0, currentTaskCount = 0, currentKioskCount = 0, currentDigitalCount = 0;
         let allOnfleetMarkers = [];
+        let icMarkers = []; 
+        let icsVisible = false; 
+        
         let currentGlobalRate = 30; 
-        const webAppUrl = "https://script.google.com/macros/s/AKfycbwz7F7wnWnCbGABYaOxHYbNtSBueyl2ODVJW-doJMPlsUoQDMb3OhmVe57fkImI-dcF/exec"; 
+        let allContractors = [];
+        
+        const webAppUrl = "https://script.google.com/macros/s/AKfycbwjxjCKVVFGnTE26dk0pJfp2C9icLnt1h3GGLMhYWc3nys-69FD2JsvsajiOUfVF6Q5qg/exec"; 
         const formspreeUrl = "https://formspree.io/f/meerlqll"; 
+
+        const podData = {
+            "AK": "Orange", "ALASKA": "Orange", "AZ": "Orange", "ARIZONA": "Orange", "CA": "Orange", "CALIFORNIA": "Orange", 
+            "HI": "Orange", "HAWAII": "Orange", "ID": "Orange", "IDAHO": "Orange", "NV": "Orange", "NEVADA": "Orange", 
+            "OR": "Orange", "OREGON": "Orange", "WA": "Orange", "WASHINGTON": "Orange",
+            
+            "CO": "Green", "COLORADO": "Green", "DC": "Green", "DISTRICT OF COLUMBIA": "Green", "WASHINGTON DC": "Green", 
+            "GA": "Green", "GEORGIA": "Green", "IN": "Green", "INDIANA": "Green", "KY": "Green", "KENTUCKY": "Green", 
+            "MD": "Green", "MARYLAND": "Green", "NJ": "Green", "NEW JERSEY": "Green", "OH": "Green", "OHIO": "Green", "UT": "Green", "UTAH": "Green",
+            
+            "CT": "Red", "CONNECTICUT": "Red", "DE": "Red", "DELAWARE": "Red", "MA": "Red", "MASSACHUSETTS": "Red", 
+            "ME": "Red", "MAINE": "Red", "NH": "Red", "NEW HAMPSHIRE": "Red", "NY": "Red", "NEW YORK": "Red", 
+            "PA": "Red", "PENNSYLVANIA": "Red", "RI": "Red", "RHODE ISLAND": "Red", "VA": "Red", "VIRGINIA": "Red", 
+            "VT": "Red", "VERMONT": "Red", "WV": "Red", "WEST VIRGINIA": "Red",
+            
+            "AL": "Blue", "ALABAMA": "Blue", "AR": "Blue", "ARKANSAS": "Blue", "FL": "Blue", "FLORIDA": "Blue", 
+            "IA": "Blue", "IOWA": "Blue", "IL": "Blue", "ILLINOIS": "Blue", "LA": "Blue", "LOUISIANA": "Blue", 
+            "MI": "Blue", "MICHIGAN": "Blue", "MN": "Blue", "MINNESOTA": "Blue", "MO": "Blue", "MISSOURI": "Blue", 
+            "MS": "Blue", "MISSISSIPPI": "Blue", "NC": "Blue", "NORTH CAROLINA": "Blue", "SC": "Blue", "SOUTH CAROLINA": "Blue", "WI": "Blue", "WISCONSIN": "Blue",
+            
+            "KS": "Purple", "KANSAS": "Purple", "MT": "Purple", "MONTANA": "Purple", "ND": "Purple", "NORTH DAKOTA": "Purple", 
+            "NE": "Purple", "NEBRASKA": "Purple", "NM": "Purple", "NEW MEXICO": "Purple", "OK": "Purple", "OKLAHOMA": "Purple", 
+            "SD": "Purple", "SOUTH DAKOTA": "Purple", "TN": "Purple", "TENNESSEE": "Purple", "TX": "Purple", "TEXAS": "Purple", "WY": "Purple", "WYOMING": "Purple"
+        };
 
         function initMap() {
             if (typeof google === 'undefined') return;
             map = new google.maps.Map(document.getElementById('map'), { 
-                zoom: 4, center: { lat: 39.8, lng: -98.5 },
-                styles: [{ featureType: "poi", elementType: "labels", stylers: [{ visibility: "off" }] }]
+                zoom: 4, 
+                center: { lat: 39.8, lng: -98.5 },
+                mapTypeControl: false,
+                streetViewControl: false,
+                fullscreenControl: true
             });
+            
             directionsService = new google.maps.DirectionsService();
-            directionsRenderer = new google.maps.DirectionsRenderer({ map: map });
+            directionsRenderer = new google.maps.DirectionsRenderer({ 
+                map: map,
+                suppressMarkers: false,
+                polylineOptions: { strokeColor: '#3b82f6', strokeWeight: 5, strokeOpacity: 0.8 } 
+            });
 
             drawingManager = new google.maps.drawing.DrawingManager({
                 drawingMode: null,
@@ -168,7 +311,7 @@
                     position: google.maps.ControlPosition.TOP_CENTER,
                     drawingModes: [google.maps.drawing.OverlayType.POLYGON]
                 },
-                polygonOptions: { fillColor: '#3b82f6', fillOpacity: 0.2, strokeWeight: 2, clickable: false, zIndex: 1 }
+                polygonOptions: { fillColor: '#3b82f6', fillOpacity: 0.15, strokeWeight: 2, strokeColor: '#2563eb', clickable: false, zIndex: 1 }
             });
             drawingManager.setMap(map);
 
@@ -176,6 +319,135 @@
                 processPolygonSelection(polygon);
                 drawingManager.setDrawingMode(null);
             });
+        }
+
+        function clearError(element) {
+            element.classList.remove('border-red-500', 'ring-2', 'ring-red-200');
+        }
+
+        function filterEmails(query) {
+            const datalist = document.getElementById('ic_email_list');
+            datalist.innerHTML = ''; 
+            
+            if (query.length < 2) return; 
+            
+            const matches = allContractors.filter(c => c.email.toLowerCase().includes(query.toLowerCase())).slice(0, 5);
+            
+            matches.forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c.email;
+                datalist.appendChild(opt);
+            });
+        }
+
+        function applyMapFilters() {
+            const selectedPod = document.getElementById('podFilter').value;
+            const incDigital = document.getElementById('digitalFilter').checked;
+
+            allOnfleetMarkers.forEach(marker => {
+                const task = marker.taskData;
+                const stateStr = task.state ? task.state.toUpperCase().trim() : "";
+                
+                let matchedPod = "Unknown";
+                if (podData[stateStr]) {
+                    matchedPod = podData[stateStr];
+                } else {
+                    for (const [stateAbbr, podColor] of Object.entries(podData)) {
+                        if (task.addr.toUpperCase().endsWith(` ${stateAbbr}`) || task.addr.toUpperCase().includes(`, ${stateAbbr} `) || task.addr.toUpperCase().includes(` ${stateAbbr} `)) {
+                            matchedPod = podColor;
+                            break;
+                        }
+                    }
+                }
+                task.pod = matchedPod; 
+
+                let show = true;
+                if (selectedPod !== "All" && task.pod !== selectedPod) show = false;
+                if (task.isDigital && !incDigital) show = false;
+
+                marker.setVisible(show);
+            });
+        }
+
+        async function toggleICMarkers() {
+            const btn = document.getElementById('btnToggleICs');
+            
+            if (icsVisible) {
+                icMarkers.forEach(m => m.setMap(null));
+                icsVisible = false;
+                btn.innerHTML = "👷 Show IC Locations";
+                btn.classList.remove('bg-slate-800', 'text-white');
+                btn.classList.add('bg-slate-100', 'text-slate-800');
+                return;
+            }
+            
+            if (allContractors.length === 0) {
+                alert("Contractor data is still loading. Please wait a moment and try again.");
+                return;
+            }
+
+            icsVisible = true;
+            btn.innerHTML = "<span class='spinner inline-block w-4 h-4 border-2 mr-2' style='border-top-color:transparent;'></span> Loading Pins...";
+            btn.classList.remove('bg-slate-100', 'text-slate-800');
+            btn.classList.add('bg-slate-800', 'text-white');
+            
+            const geocoder = new google.maps.Geocoder();
+            
+            for (let i = 0; i < allContractors.length; i++) {
+                if (!icsVisible) break; 
+                
+                const c = allContractors[i];
+                if (!c.address || c.address.length < 5) continue;
+                
+                if (c.lat) {
+                    addICMarker(c);
+                    continue;
+                }
+
+                const cacheKey = 'tbm_geo_' + btoa(encodeURIComponent(c.address));
+                const cachedCoords = localStorage.getItem(cacheKey);
+                if (cachedCoords) {
+                    const coords = JSON.parse(cachedCoords);
+                    c.lat = coords.lat;
+                    c.lng = coords.lng;
+                    addICMarker(c);
+                    continue; 
+                }
+
+                try {
+                    const res = await new Promise((resolve, reject) => {
+                        geocoder.geocode({ address: c.address }, (results, status) => {
+                            if (status === 'OK') resolve(results[0].geometry.location);
+                            else reject(status);
+                        });
+                    });
+                    c.lat = res.lat();
+                    c.lng = res.lng();
+                    
+                    localStorage.setItem(cacheKey, JSON.stringify({lat: c.lat, lng: c.lng}));
+                    
+                    addICMarker(c);
+                    await new Promise(r => setTimeout(r, 300)); 
+                } catch (e) {
+                    console.warn("Geocode failed for: " + c.name);
+                    await new Promise(r => setTimeout(r, 500)); 
+                }
+            }
+            
+            if (icsVisible) btn.innerHTML = "👷 Hide IC Locations";
+        }
+
+        function addICMarker(c) {
+            const marker = new google.maps.Marker({
+                position: { lat: c.lat, lng: c.lng },
+                map: map,
+                title: `${c.name} (${c.email})`, 
+                icon: {
+                    url: "https://maps.google.com/mapfiles/ms/icons/yellow-dot.png" 
+                },
+                zIndex: 999 
+            });
+            icMarkers.push(marker);
         }
 
         function setDefaultDate() {
@@ -193,6 +465,13 @@
                     document.getElementById('ic_name_setup').value = data.name;
                     document.getElementById('ic_address').value = data.address;
                     if (data.rate) currentGlobalRate = data.rate;
+                    
+                    window.currentContractorPhone = data.phone || ""; 
+
+                    clearError(document.getElementById('ic_email_setup'));
+                    clearError(document.getElementById('ic_name_setup'));
+                    clearError(document.getElementById('ic_address'));
+
                     calculateLargeRoute();
                     document.getElementById('saveBtn').disabled = true;
                     document.getElementById('saveBtn').classList.add('opacity-30', 'grayscale');
@@ -202,8 +481,15 @@
 
         async function saveToDatabase() {
             const p = { email: document.getElementById('ic_email_setup').value, name: document.getElementById('ic_name_setup').value, address: document.getElementById('ic_address').value };
-            try { await fetch(webAppUrl, { method: 'POST', mode: 'no-cors', body: JSON.stringify(p) }); alert("Database Updated"); document.getElementById('saveBtn').disabled = true; }
-            catch (e) { alert("Save failed"); }
+            try { 
+                await fetch(webAppUrl, { 
+                    method: 'POST', 
+                    headers: { "Content-Type": "text/plain;charset=utf-8" },
+                    body: JSON.stringify(p) 
+                }); 
+                alert("Database Updated"); 
+                document.getElementById('saveBtn').disabled = true; 
+            } catch (e) { alert("Save failed"); }
         }
 
         function handleManualEdit() {
@@ -220,11 +506,8 @@
             const loader = document.getElementById('loaderOverlay');
             loader.classList.remove('hidden'); loader.classList.add('flex');
             
-            // Pass the address to the backend so it geocodes safely
             let url = `${webAppUrl}?action=getOnfleetTasks`;
-            if (homeAddress) {
-                url += `&homeAddress=${encodeURIComponent(homeAddress)}`;
-            }
+            if (homeAddress) url += `&homeAddress=${encodeURIComponent(homeAddress)}`;
 
             try {
                 const response = await fetch(url);
@@ -238,39 +521,52 @@
                 allOnfleetMarkers = [];
                 const selectedAddresses = {};
 
-                // Use the backend's coordinates, bypassing the Google Cloud error!
                 let homeLoc = null;
-                if (data.homeLoc) {
-                    homeLoc = new google.maps.LatLng(data.homeLoc.lat, data.homeLoc.lng);
-                }
+                if (data.homeLoc) homeLoc = new google.maps.LatLng(data.homeLoc.lat, data.homeLoc.lng);
 
                 let localBounds = new google.maps.LatLngBounds();
                 if (homeLoc) localBounds.extend(homeLoc);
 
                 tasks.forEach(task => {
                     const taskLatLng = new google.maps.LatLng(task.lat, task.lng);
+                    
+                    let pinColor = "#94a3b8"; 
+                    let tName = task.team ? task.team.toLowerCase() : "";
+                    
+                    if (tName.includes("escalation")) pinColor = "#ef4444"; 
+                    else if (tName.includes("boosted")) pinColor = "#f97316"; 
+                    else if (tName.includes("cvs kiosk removal")) pinColor = "#3b82f6"; 
+                    else if (task.isKiosk) pinColor = "#10b981";
+                    else if (task.isDigital) pinColor = "#8b5cf6";
+
                     const marker = new google.maps.Marker({
                         position: taskLatLng,
                         map: map,
                         icon: {
                             path: google.maps.SymbolPath.CIRCLE,
-                            scale: 7,
-                            fillColor: task.isKiosk ? "#10b981" : "#ef4444",
-                            fillOpacity: 0.9,
-                            strokeWeight: 2,
+                            scale: 6.5,
+                            fillColor: pinColor,
+                            fillOpacity: 1,
+                            strokeWeight: 1.5,
                             strokeColor: "#ffffff"
                         }
                     });
                     marker.taskData = task;
                     allOnfleetMarkers.push(marker);
+                });
 
-                    if (!isGlobal && homeLoc) {
-                        const distanceMeters = google.maps.geometry.spherical.computeDistanceBetween(homeLoc, taskLatLng);
+                applyMapFilters();
+
+                allOnfleetMarkers.forEach(marker => {
+                    if (!isGlobal && homeLoc && marker.getVisible()) {
+                        const task = marker.taskData;
+                        const distanceMeters = google.maps.geometry.spherical.computeDistanceBetween(homeLoc, marker.getPosition());
                         if ((distanceMeters * 0.000621371) <= 40) {
-                            if (!selectedAddresses[task.addr]) selectedAddresses[task.addr] = { count: 0, kioskCount: 0 };
+                            if (!selectedAddresses[task.addr]) selectedAddresses[task.addr] = { count: 0, kioskCount: 0, digitalCount: 0 };
                             selectedAddresses[task.addr].count++;
                             if (task.isKiosk) selectedAddresses[task.addr].kioskCount++;
-                            localBounds.extend(taskLatLng);
+                            if (task.isDigital) selectedAddresses[task.addr].digitalCount++;
+                            localBounds.extend(marker.getPosition());
                         }
                     }
                 });
@@ -280,29 +576,24 @@
                         const d = selectedAddresses[addr];
                         let entry = addr;
                         if (d.kioskCount > 0) entry += ` [${d.kioskCount} Kiosk Install]`;
-                        if (d.count > d.kioskCount) entry += ` (${d.count - d.kioskCount} Tasks)`;
+                        if (d.digitalCount > 0) entry += ` [${d.digitalCount} Digital Service]`;
+                        
+                        let standardTasks = d.count - d.kioskCount - d.digitalCount;
+                        if (standardTasks > 0) entry += ` (${standardTasks} Tasks)`;
                         return entry;
                     }).join('\n');
                     
                     document.getElementById('locations').value = formatted;
                     
                     map.fitBounds(localBounds);
-                    const listener = google.maps.event.addListener(map, "idle", function() { 
-                        if (map.getZoom() > 10) map.setZoom(10); 
-                        google.maps.event.removeListener(listener); 
-                    });
-
                     calculateLargeRoute();
 
                     if(formatted.length === 0) {
-                        alert("All tasks loaded, but none found within 40 miles of home address.");
-                    } else {
-                        alert(`Auto-selected locations within 40 miles.`);
+                        alert("All tasks loaded, but none found within 40 miles of home address for the selected Pod.");
                     }
                 } else {
                     map.setCenter({ lat: 39.8, lng: -98.5 });
                     map.setZoom(4);
-                    alert(`Loaded ${tasks.length} unassigned tasks. Use Polygon tool to select.`);
                 }
             } catch (e) { alert("Sync Error: " + e.message); }
             finally { loader.classList.add('hidden'); }
@@ -311,11 +602,12 @@
         function processPolygonSelection(polygon) {
             const selectedAddresses = {};
             allOnfleetMarkers.forEach(marker => {
-                if (google.maps.geometry.poly.containsLocation(marker.getPosition(), polygon)) {
+                if (marker.getVisible() && google.maps.geometry.poly.containsLocation(marker.getPosition(), polygon)) {
                     const t = marker.taskData;
-                    if (!selectedAddresses[t.addr]) selectedAddresses[t.addr] = { count: 0, kioskCount: 0 };
+                    if (!selectedAddresses[t.addr]) selectedAddresses[t.addr] = { count: 0, kioskCount: 0, digitalCount: 0 };
                     selectedAddresses[t.addr].count++;
                     if (t.isKiosk) selectedAddresses[t.addr].kioskCount++;
+                    if (t.isDigital) selectedAddresses[t.addr].digitalCount++;
                 }
             });
 
@@ -323,131 +615,351 @@
                 const d = selectedAddresses[addr];
                 let entry = addr;
                 if (d.kioskCount > 0) entry += ` [${d.kioskCount} Kiosk Install]`;
-                if (d.count > d.kioskCount) entry += ` (${d.count - d.kioskCount} Tasks)`;
+                if (d.digitalCount > 0) entry += ` [${d.digitalCount} Digital Service]`;
+                
+                let standardTasks = d.count - d.kioskCount - d.digitalCount;
+                if (standardTasks > 0) entry += ` (${standardTasks} Tasks)`;
                 return entry;
             }).join('\n');
 
             const area = document.getElementById('locations');
             area.value = (area.value ? area.value + "\n" : "") + formatted;
+            clearError(area);
             calculateLargeRoute();
             polygon.setMap(null);
         }
 
-        function updateBadges(locCount, taskCount, kioskCount) {
-            currentLocCount = locCount; currentTaskCount = taskCount; currentKioskCount = kioskCount;
-            const lBadge = document.getElementById('location_count_badge'), kBadge = document.getElementById('kiosk_count_badge');
+        function updateBadges(locCount, taskCount, kioskCount, digitalCount = 0) {
+            currentLocCount = locCount; 
+            currentTaskCount = taskCount; 
+            currentKioskCount = kioskCount;
+            currentDigitalCount = digitalCount;
+
+            const lBadge = document.getElementById('location_count_badge');
+            const kBadge = document.getElementById('kiosk_count_badge');
+            const dBadge = document.getElementById('digital_count_badge');
+            
             if (locCount > 0) {
                 lBadge.innerText = `${locCount} Locations | ${taskCount} Total Tasks`;
                 lBadge.classList.remove('hidden');
-            } else lBadge.classList.add('hidden');
+                lBadge.classList.add('inline-block');
+            } else {
+                lBadge.classList.add('hidden');
+            }
+            
             if (kioskCount > 0) {
                 kBadge.innerText = `${kioskCount} Kiosk Installs`;
                 kBadge.classList.remove('hidden');
-            } else kBadge.classList.add('hidden');
+                kBadge.classList.add('inline-block');
+            } else {
+                kBadge.classList.add('hidden');
+            }
+
+            if (digitalCount > 0) {
+                dBadge.innerText = `${digitalCount} Digital Service`;
+                dBadge.classList.remove('hidden');
+                dBadge.classList.add('inline-block');
+            } else {
+                dBadge.classList.add('hidden');
+            }
         }
 
-        function calculateLargeRoute() {
+        async function calculateLargeRoute() {
             clearTimeout(inputTimer);
-            const mileageDisplay = document.getElementById('mileage_display'), timeDisplay = document.getElementById('time_display'), compInput = document.getElementById('comp');
-            const home = document.getElementById('ic_address').value.trim(), textArea = document.getElementById('locations');
+            const mileageDisplay = document.getElementById('mileage_display');
+            const timeDisplay = document.getElementById('time_display');
+            const compInput = document.getElementById('comp');
+            const home = document.getElementById('ic_address').value.trim();
+            const textArea = document.getElementById('locations');
             const lines = textArea.value.split('\n').filter(l => l.trim().length > 5);
             
             if (lines.length > 0) {
-                let totalT = 0, totalK = 0;
+                let totalT = 0, totalK = 0, totalD = 0;
                 lines.forEach(line => {
                     const tMatch = line.match(/\((\d+)\sTasks\)/i);
                     const kMatch = line.match(/\[(\d+)\sKiosk\sInstall\]/i);
+                    const dMatch = line.match(/\[(\d+)\sDigital\sService\]/i); 
+
                     let lineKiosks = kMatch ? parseInt(kMatch[1]) : (line.toLowerCase().includes('kiosk install') ? 1 : 0);
+                    let lineDigital = dMatch ? parseInt(dMatch[1]) : (line.toLowerCase().includes('digital service') ? 1 : 0);
                     let lineTasks = tMatch ? parseInt(tMatch[1]) : 0;
-                    if (!tMatch && !kMatch && lineKiosks === 0) lineTasks = 1;
-                    totalT += (lineTasks + lineKiosks);
+                    
+                    if (!tMatch && !kMatch && !dMatch && lineKiosks === 0 && lineDigital === 0) lineTasks = 1;
+                    
+                    totalT += (lineTasks + lineKiosks + lineDigital);
                     totalK += lineKiosks;
+                    totalD += lineDigital;
                 });
-                updateBadges(lines.length, totalT, totalK);
+                updateBadges(lines.length, totalT, totalK, totalD);
             } else {
-                updateBadges(0, 0, 0);
+                updateBadges(0, 0, 0, 0);
             }
 
             if (lines.length === 0) return;
 
-            inputTimer = setTimeout(() => {
+            inputTimer = setTimeout(async () => {
                 if (!home) return;
                 const stops = lines.map(s => s.replace(/\s[\(\[].*$/, "").trim());
                 
-                // Added safety check: Google Maps API breaks if you send > 25 locations to route
-                if (stops.length > 25) {
-                    mileageDisplay.innerText = "Limit";
-                    timeDisplay.innerText = "> 25 Stops";
-                    alert("Route has more than 25 stops. Google Maps cannot generate a continuous drive route for groups this large. Mileage and Time will need to be entered manually.");
-                    return;
-                }
+                if (stops.length <= 25) {
+                    directionsService.route({
+                        origin: home, destination: home, waypoints: stops.map(l => ({location: l, stopover: true})),
+                        optimizeWaypoints: true, travelMode: google.maps.TravelMode.DRIVING
+                    }, (result, status) => {
+                        if (status === 'OK') {
+                            directionsRenderer.setDirections(result);
+                            let totalMeters = 0, totalSeconds = 0;
+                            result.routes[0].legs.forEach(leg => { totalMeters += leg.distance.value; totalSeconds += leg.duration.value; });
+                            mileageDisplay.innerText = (totalMeters * 0.000621371).toFixed(1);
+                            const h = Math.floor(totalSeconds / 3600), m = Math.floor((totalSeconds % 3600) / 60);
+                            timeDisplay.innerText = h > 0 ? h + "h " + m + "m" : m + "m";
+                            compInput.placeholder = `Sug: $${(totalSeconds / 3600 * currentGlobalRate).toFixed(2)}`; 
+                            window.optimizedSequence = [home, ...result.routes[0].waypoint_order.map(i => stops[i]), home];
+                        }
+                    });
+                } else {
+                    mileageDisplay.innerText = "...";
+                    timeDisplay.innerText = "Calc...";
+                    if (directionsRenderer) directionsRenderer.setDirections({routes: []}); 
+                    
+                    const allPoints = [home, ...stops, home];
+                    let totalMeters = 0;
+                    let totalSeconds = 0;
+                    const maxWaypoints = 25; 
+                    let success = true;
 
-                directionsService.route({
-                    origin: home, destination: home, waypoints: stops.map(l => ({location: l, stopover: true})),
-                    optimizeWaypoints: true, travelMode: google.maps.TravelMode.DRIVING
-                }, (result, status) => {
-                    if (status === 'OK') {
-                        directionsRenderer.setDirections(result);
-                        let totalMeters = 0, totalSeconds = 0;
-                        result.routes[0].legs.forEach(leg => { totalMeters += leg.distance.value; totalSeconds += leg.duration.value; });
+                    for (let i = 0; i < allPoints.length - 1; i += (maxWaypoints + 1)) {
+                        const origin = allPoints[i];
+                        const destIndex = Math.min(i + maxWaypoints + 1, allPoints.length - 1);
+                        const destination = allPoints[destIndex];
+                        
+                        const waypoints = [];
+                        for (let j = i + 1; j < destIndex; j++) {
+                            waypoints.push({ location: allPoints[j], stopover: true });
+                        }
+
+                        try {
+                            const result = await new Promise((resolve, reject) => {
+                                directionsService.route({
+                                    origin: origin,
+                                    destination: destination,
+                                    waypoints: waypoints,
+                                    optimizeWaypoints: false, 
+                                    travelMode: google.maps.TravelMode.DRIVING
+                                }, (res, status) => {
+                                    if (status === 'OK') resolve(res);
+                                    else reject(status);
+                                });
+                            });
+                            
+                            result.routes[0].legs.forEach(leg => { 
+                                totalMeters += leg.distance.value; 
+                                totalSeconds += leg.duration.value; 
+                            });
+
+                            await new Promise(r => setTimeout(r, 300));
+                            
+                        } catch (e) {
+                            success = false;
+                            console.error("Directions routing error on chunk", e);
+                            break;
+                        }
+                    }
+
+                    if (success) {
                         mileageDisplay.innerText = (totalMeters * 0.000621371).toFixed(1);
                         const h = Math.floor(totalSeconds / 3600), m = Math.floor((totalSeconds % 3600) / 60);
                         timeDisplay.innerText = h > 0 ? h + "h " + m + "m" : m + "m";
                         compInput.placeholder = `Sug: $${(totalSeconds / 3600 * currentGlobalRate).toFixed(2)}`; 
-                        window.optimizedSequence = [home, ...result.routes[0].waypoint_order.map(i => stops[i]), home];
+                        window.optimizedSequence = allPoints; 
+                    } else {
+                        mileageDisplay.innerText = "Err";
+                        timeDisplay.innerText = "Err";
+                        alert("Google Maps failed to calculate a route this large. Too many stops.");
                     }
-                });
+                }
             }, 800);
         }
 
-        function generateCertifiedLink() {
-            try {
-                const jobListOnly = document.getElementById('locations').value.split('\n').filter(l => l.trim().length > 5).join('|');
-                const d = {
-                    icn: document.getElementById('ic_name_setup').value, ice: document.getElementById('ic_email_setup').value,
-                    wo: document.getElementById('task_num').value, due: document.getElementById('due_date').value,
-                    comp: document.getElementById('comp').value, mi: document.getElementById('mileage_display').innerText,
-                    time: document.getElementById('time_display').innerText, locs: window.optimizedSequence ? window.optimizedSequence.join('|') : "",
-                    lCnt: currentLocCount, tCnt: currentTaskCount, kCnt: currentKioskCount, jobOnly: jobListOnly
-                };
-                if (!d.ice || d.mi === "0.0") return alert("Data missing.");
-                const payload = btoa(unescape(encodeURIComponent(JSON.stringify(d))));
-                const link = `${window.location.origin}${window.location.pathname}?data=${payload}`;
-                const s = `Action Required: Terraboost Route Request | WO #${d.wo}`;
-                let emailDate = 'N/A';
-                if (d.due) {
-                    const parts = d.due.split('-');
-                    emailDate = parts.length === 3 ? `${parts[1]}/${parts[2]}/${parts[0]}` : d.due;
+        async function generateCertifiedLink() {
+            const btn = document.getElementById('generateBtn');
+            
+            const requiredFields = [
+                { id: 'd_email', name: 'Dispatcher Email' },
+                { id: 'ic_email_setup', name: 'Contractor Email Search' },
+                { id: 'ic_name_setup', name: 'Contractor Name' },
+                { id: 'task_num', name: 'Work Order #' },
+                { id: 'ic_address', name: 'Contractor Home Address' },
+                { id: 'comp', name: 'Compensation ($)' },
+                { id: 'due_date', name: 'Target Due Date' }
+            ];
+
+            let isValid = true;
+            let missingFields = [];
+
+            requiredFields.forEach(field => {
+                const el = document.getElementById(field.id);
+                el.classList.remove('border-red-500', 'ring-2', 'ring-red-200'); 
+                if (!el.value || el.value.trim() === '') {
+                    el.classList.add('border-red-500', 'ring-2', 'ring-red-200');
+                    missingFields.push(field.name);
+                    isValid = false;
                 }
-                const b = `Dear ${d.icn},\n\nRoute Summary:\n- Due Date: ${emailDate}\n- Locations: ${d.lCnt}\n- Tasks: ${d.tCnt}\n- Kiosk Installs: ${d.kCnt}\n- Mileage: ${d.mi} Miles\n- Compensation: $${d.comp}\n\nReview Link: ${link}`;
-                window.open(`mailto:${d.ice}?subject=${encodeURIComponent(s)}&body=${encodeURIComponent(b)}`);
-            } catch (err) { alert("Error generating link."); }
+            });
+
+            const locationLines = document.getElementById('locations').value.split('\n').filter(l => l.trim().length > 5);
+            const locEl = document.getElementById('locations');
+            if (locationLines.length === 0) {
+                locEl.classList.add('border-red-500', 'ring-2', 'ring-red-200');
+                missingFields.push('Task Locations (Select tasks on the map)');
+                isValid = false;
+            } else {
+                locEl.classList.remove('border-red-500', 'ring-2', 'ring-red-200');
+            }
+
+            if (!isValid) {
+                alert("⚠️ Please fill out all required fields before generating a link:\n\n- " + missingFields.join('\n- '));
+                return; 
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = "<span class='spinner inline-block w-4 h-4 border-2 mr-2' style='border-top-color:transparent;'></span> SAVING ROUTE TO DATABASE...";
+
+            try {
+                let selectedIds = [];
+                locationLines.forEach(line => {
+                    const addrOnly = line.replace(/\s[\(\[].*$/, "").trim();
+                    allOnfleetMarkers.forEach(m => {
+                        if (m.taskData.addr === addrOnly && m.getVisible()) selectedIds.push(m.taskData.id);
+                    });
+                });
+                const uniqueIds = [...new Set(selectedIds)]; 
+
+                const jobListOnly = locationLines.join('|');
+                const d = {
+                    icn: document.getElementById('ic_name_setup').value, 
+                    ice: document.getElementById('ic_email_setup').value,
+                    wo: document.getElementById('task_num').value, 
+                    due: document.getElementById('due_date').value,
+                    comp: document.getElementById('comp').value, 
+                    mi: document.getElementById('mileage_display').innerText,
+                    time: document.getElementById('time_display').innerText, 
+                    locs: window.optimizedSequence ? window.optimizedSequence.join('|') : "",
+                    lCnt: currentLocCount, 
+                    tCnt: currentTaskCount, 
+                    kCnt: currentKioskCount, 
+                    dCnt: currentDigitalCount, 
+                    jobOnly: jobListOnly,
+                    phone: window.currentContractorPhone,
+                    taskIds: uniqueIds.join(',') 
+                };
+
+                const routeId = "R-" + Math.floor(10000 + Math.random() * 90000);
+                const payloadStr = JSON.stringify(d);
+
+                const saveUrl = `${webAppUrl}?action=saveRoute&routeId=${routeId}&icn=${encodeURIComponent(d.icn)}&ice=${encodeURIComponent(d.ice)}&wo=${encodeURIComponent(d.wo)}&payload=${encodeURIComponent(payloadStr)}`;
+                
+                const response = await fetch(saveUrl);
+                const result = await response.json();
+                
+                if (result.success) {
+                    const tinyLink = `${window.location.origin}${window.location.pathname}?route=${routeId}`;
+                    
+                    const s = `Action Required: Terraboost Route Request | WO #${d.wo}`;
+                    let emailDate = d.due ? `${d.due.split('-')[1]}/${d.due.split('-')[2]}/${d.due.split('-')[0]}` : 'N/A';
+                    
+                    const dispatcherEmail = document.getElementById('d_email').value;
+                    
+                    const b = `Dear ${d.icn},\n\nRoute Summary:\n- Due Date: ${emailDate}\n- Locations: ${d.lCnt}\n- Tasks: ${d.tCnt}\n- Kiosk Installs: ${d.kCnt}\n- Digital Services: ${d.dCnt}\n- Mileage: ${d.mi} Miles\n- Compensation: $${d.comp}\n\nReview Link: ${tinyLink}\n\nSent by: ${dispatcherEmail}`;
+                    
+                    window.open(`mailto:${d.ice}?subject=${encodeURIComponent(s)}&body=${encodeURIComponent(b)}`);
+                    
+                    btn.innerText = "LINK GENERATED SAFELY";
+                    btn.classList.add('bg-emerald-600');
+                    setTimeout(() => { btn.disabled = false; btn.innerText = "Generate Authorization Link"; btn.classList.remove('bg-emerald-600'); }, 3000);
+                } else {
+                    throw new Error("Database rejected save.");
+                }
+                
+            } catch (err) { 
+                alert("Error saving route. Please ensure you deployed a New Version of your Google Script."); 
+                btn.disabled = false; btn.innerText = "Generate Authorization Link";
+            }
         }
 
         window.onload = () => {
             initMap(); setDefaultDate();
-            const p = new URLSearchParams(window.location.search), r = p.get('data');
-            if (r) {
-                const d = JSON.parse(decodeURIComponent(escape(atob(r))));
-                window.payloadData = d;
+            
+            fetch(`${webAppUrl}?action=getAllContractors`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success && data.contractors) {
+                        allContractors = data.contractors; 
+                    }
+                }).catch(e => console.log("Silent error loading contractor DB", e));
+            
+            const p = new URLSearchParams(window.location.search);
+            const routeId = p.get('route'); 
+            
+            if (routeId) {
                 document.getElementById('setupFields').remove();
                 document.getElementById('icMode').classList.remove('hidden');
-                let displayDate = 'N/A';
-                if (d.due) {
-                    const parts = d.due.split('-');
-                    displayDate = parts.length === 3 ? `${parts[1]}/${parts[2]}/${parts[0]}` : d.due;
-                }
-                document.getElementById('summaryZone').innerHTML = `
-                    <div class="flex justify-between border-b pb-2 mb-2 font-bold uppercase text-[10px] tracking-widest text-slate-400"><span>Route Summary</span></div>
-                    <div class="flex justify-between border-b pb-2 mb-2"><span>Contractor:</span> <span class="font-bold">${d.icn}</span></div>
-                    <div class="flex justify-between text-blue-600 font-bold"><span>Work Order #:</span> <span>${d.wo}</span></div>
-                    <div class="flex justify-between"><span>Due Date:</span> <span class="font-bold">${displayDate}</span></div>
-                    <div class="flex justify-between"><span>Unique Locations:</span> <span class="font-bold">${d.lCnt}</span></div>
-                    <div class="flex justify-between"><span>Total Tasks:</span> <span class="font-bold">${d.tCnt}</span></div>
-                    <div class="flex justify-between text-emerald-600 font-bold"><span>Kiosk Installs:</span> <span>${d.kCnt}</span></div>
-                    <div class="flex justify-between"><span>Mileage:</span> <span>${d.mi} Miles</span></div>
-                    <div class="flex justify-between border-t pt-2 mt-2 font-black text-xl text-emerald-600"><span>Total Comp:</span> <span>$${d.comp}</span></div>
-                `;
+                
+                document.getElementById('summaryZone').innerHTML = `<div class="text-center py-10"><div class="spinner mx-auto mb-4 border-blue-500"></div><p class="text-slate-500 font-bold animate-pulse">Loading Route Data...</p></div>`;
+                
+                fetch(`${webAppUrl}?action=getRoute&routeId=${routeId}`)
+                    .then(response => response.json())
+                    .then(result => {
+                        if (result.error) {
+                            document.getElementById('summaryZone').innerHTML = `<div class="text-center py-10 text-red-500 font-bold">⚠️ ${result.error}</div>`;
+                            return;
+                        }
+                        
+                        const d = result.payload;
+                        window.payloadData = d;
+                        
+                        let displayDate = d.due ? `${d.due.split('-')[1]}/${d.due.split('-')[2]}/${d.due.split('-')[0]}` : 'N/A';
+                        
+                        // NEW: Kiosk Heavy Lifting Call-out Box!
+                        let kioskAlert = '';
+                        if (d.kCnt && d.kCnt > 0) {
+                            kioskAlert = `
+                                <div class="border-2 border-emerald-400 bg-emerald-50 rounded-2xl p-4 mb-6 shadow-sm">
+                                    <div class="flex items-start gap-3">
+                                        <div class="bg-emerald-100 p-2 rounded-full text-emerald-600 mt-1">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                        </div>
+                                        <div>
+                                            <h4 class="text-emerald-800 font-black text-[11px] uppercase tracking-widest">Heavy Lifting Required</h4>
+                                            <p class="text-emerald-600 text-xs font-medium mt-0.5">This route contains <strong>${d.kCnt} Kiosk Install(s)</strong>. Please be aware that kiosks weigh approximately 50 lbs each.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        }
+
+                        let digitalSummaryLine = '';
+                        if (d.dCnt && d.dCnt > 0) {
+                            digitalSummaryLine = `<div class="flex justify-between text-purple-600 font-bold pb-3 mb-3 border-b border-slate-100"><span>Digital Services:</span> <span>${d.dCnt}</span></div>`;
+                        }
+                        
+                        document.getElementById('summaryZone').innerHTML = `
+                            ${kioskAlert}
+                            <div class="flex justify-between border-b border-slate-100 pb-3 mb-3 font-bold uppercase text-[10px] tracking-widest text-slate-400"><span>Route Summary</span></div>
+                            <div class="flex justify-between border-b border-slate-100 pb-3 mb-3"><span>Contractor:</span> <span class="font-bold text-slate-900">${d.icn}</span></div>
+                            <div class="flex justify-between text-blue-600 font-bold pb-3 mb-3 border-b border-slate-100"><span>Work Order #:</span> <span>${d.wo}</span></div>
+                            <div class="flex justify-between pb-3 mb-3 border-b border-slate-100"><span>Due Date:</span> <span class="font-bold text-slate-900">${displayDate}</span></div>
+                            <div class="flex justify-between pb-3 mb-3 border-b border-slate-100"><span>Unique Locations:</span> <span class="font-bold text-slate-900">${d.lCnt}</span></div>
+                            <div class="flex justify-between pb-3 mb-3 border-b border-slate-100"><span>Total Tasks:</span> <span class="font-bold text-slate-900">${d.tCnt}</span></div>
+                            <div class="flex justify-between text-emerald-600 font-bold pb-3 mb-3 border-b border-slate-100"><span>Kiosk Installs:</span> <span>${d.kCnt}</span></div>
+                            ${digitalSummaryLine}
+                            <div class="flex justify-between pb-3 mb-3"><span>Mileage:</span> <span class="font-medium">${d.mi} Miles</span></div>
+                            <div class="flex justify-between border-t border-slate-200 pt-4 mt-2 font-black text-2xl text-emerald-600"><span>Total Comp:</span> <span>$${d.comp}</span></div>
+                        `;
+                    })
+                    .catch(e => {
+                        document.getElementById('summaryZone').innerHTML = `<div class="text-center py-10 text-red-500 font-bold">⚠️ Error connecting to database. Please refresh.</div>`;
+                    });
             }
         };
 
@@ -465,7 +977,7 @@
         function confirmClearList() {
             if (confirm("Clear all locations?")) {
                 document.getElementById('locations').value = '';
-                updateBadges(0, 0, 0);
+                updateBadges(0, 0, 0, 0);
                 document.getElementById('mileage_display').innerText = "0.0";
                 document.getElementById('time_display').innerText = "--";
                 document.getElementById('comp').placeholder = "0.00";
@@ -480,8 +992,12 @@
             document.getElementById('mileage_display').innerText = "0.0";
             document.getElementById('time_display').innerText = "--";
             document.getElementById('comp').placeholder = "0.00";
-            updateBadges(0, 0, 0);
+            updateBadges(0, 0, 0, 0);
             if (directionsRenderer) directionsRenderer.setDirections({routes: []});
+            localStorage.clear(); 
+            
+            const inputs = document.querySelectorAll('input, select, textarea');
+            inputs.forEach(el => clearError(el));
         }
 
         function toggleDecisionView() {
@@ -511,7 +1027,7 @@
             }
 
             const btn = document.getElementById('submitBtn');
-            btn.disabled = true; btn.innerText = "Sending...";
+            btn.disabled = true; btn.innerHTML = "<span class='spinner inline-block w-4 h-4 border-2 mr-2' style='border-top-color:transparent;'></span> Submitting...";
 
             const rawJobContent = window.payloadData.jobOnly ? window.payloadData.jobOnly.split('|') : [];
             const locationList = rawJobContent.map((loc, index) => `${index + 1}. ${loc}`).join('\n');
@@ -530,6 +1046,7 @@
                 "Locations": window.payloadData.lCnt,
                 "Tasks": window.payloadData.tCnt,
                 "Kiosks": window.payloadData.kCnt,
+                "Digital": window.payloadData.dCnt || 0,
                 "Mileage": window.payloadData.mi,
                 "Original Comp": `$${window.payloadData.comp}`,
                 "Counter Offer": counter ? `$${counter}` : "N/A",
@@ -545,15 +1062,31 @@
                     headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
                     body: JSON.stringify(formData)
                 });
+                
                 if (response.ok) {
                     document.getElementById('icMode').classList.add('hidden');
                     document.getElementById('successView').classList.remove('hidden');
+
+                    if (decision === 'Accepted' && window.payloadData.phone && window.payloadData.taskIds) {
+                        const assignUrl = `${webAppUrl}?action=assignTasks&phone=${encodeURIComponent(window.payloadData.phone)}&taskIds=${encodeURIComponent(window.payloadData.taskIds)}`;
+                        fetch(assignUrl)
+                            .then(res => res.json())
+                            .then(data => {
+                                if (data.success) {
+                                    alert(`Success! ${data.msg}`);
+                                } else {
+                                    alert(`Auto-Assign Failed: ${data.error}`);
+                                }
+                            })
+                            .catch(e => alert("Auto-assign network request failed."));
+                    }
+
                 } else {
                     throw new Error();
                 }
             } catch (e) {
                 alert("Submission failed. Please try again.");
-                btn.disabled = false; btn.innerText = "Submit Response";
+                btn.disabled = false; btn.innerText = "Submit Final Response";
             }
         }
     </script>
