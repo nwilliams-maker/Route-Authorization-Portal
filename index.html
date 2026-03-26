@@ -98,10 +98,33 @@
                 <div class="grid grid-cols-1 xl:grid-cols-12 gap-8 items-start pt-6">
                     
                     <div class="xl:col-span-4 space-y-6">
+                        <div class="brand-gradient rounded-2xl p-6 text-white shadow-xl relative overflow-hidden">
+                            <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 via-emerald-400 to-blue-500 opacity-50"></div>
+                            <div id="loaderOverlay" class="absolute inset-0 bg-slate-900/90 hidden flex-col items-center justify-center gap-3 z-10">
+                                <div class="spinner"></div>
+                                <span class="text-[10px] font-black tracking-widest text-blue-400 uppercase">Loading Data...</span>
+                            </div>
+                            
+                            <div class="flex justify-between items-center">
+                                <div>
+                                    <p class="text-slate-400 text-[9px] uppercase font-black tracking-widest mb-1">Total Mileage</p>
+                                    <div class="flex items-baseline gap-1">
+                                        <span id="mileage_display" class="text-4xl font-black text-emerald-400 tracking-tighter">0.0</span>
+                                        <span class="text-xs text-emerald-600 font-bold">mi</span>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <p class="text-slate-400 text-[9px] uppercase font-black tracking-widest text-white mb-1">Est. Drive Time</p>
+                                    <span id="time_display" class="text-3xl font-black text-blue-400 tracking-tighter">--</span>
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="map-control-glass p-5 rounded-2xl shadow-sm space-y-5">
                             
                             <div class="flex justify-between items-center">
                                 <label class="text-blue-600 font-black tracking-widest text-[10px] mb-0 whitespace-nowrap">Map Controls</label>
+                                <span id="sync_status" class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Not Synced</span>
                             </div>
                             
                             <div class="grid grid-cols-2 gap-3">
@@ -139,28 +162,6 @@
                             </div>
 
                             <textarea id="locations" rows="11" class="font-mono text-[11px] leading-relaxed resize-none shadow-inner" placeholder="Use the Map Polygon Tool to lasso tasks. They will populate here automatically..." oninput="calculateLargeRoute(); clearError(this);"></textarea>
-                        </div>
-                        
-                        <div class="brand-gradient rounded-2xl p-6 text-white shadow-xl relative overflow-hidden">
-                            <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 via-emerald-400 to-blue-500 opacity-50"></div>
-                            <div id="loaderOverlay" class="absolute inset-0 bg-slate-900/90 hidden flex-col items-center justify-center gap-3 z-10">
-                                <div class="spinner"></div>
-                                <span class="text-[10px] font-black tracking-widest text-blue-400 uppercase">Loading Data...</span>
-                            </div>
-                            
-                            <div class="flex justify-between items-center">
-                                <div>
-                                    <p class="text-slate-400 text-[9px] uppercase font-black tracking-widest mb-1">Total Mileage</p>
-                                    <div class="flex items-baseline gap-1">
-                                        <span id="mileage_display" class="text-4xl font-black text-emerald-400 tracking-tighter">0.0</span>
-                                        <span class="text-xs text-emerald-600 font-bold">mi</span>
-                                    </div>
-                                </div>
-                                <div class="text-right">
-                                    <p class="text-slate-400 text-[9px] uppercase font-black tracking-widest text-white mb-1">Est. Drive Time</p>
-                                    <span id="time_display" class="text-3xl font-black text-blue-400 tracking-tighter">--</span>
-                                </div>
-                            </div>
                         </div>
                     </div>
 
@@ -285,7 +286,7 @@
             "AL": "Blue", "ALABAMA": "Blue", "AR": "Blue", "ARKANSAS": "Blue", "FL": "Blue", "FLORIDA": "Blue", 
             "IA": "Blue", "IOWA": "Blue", "IL": "Blue", "ILLINOIS": "Blue", "LA": "Blue", "LOUISIANA": "Blue", 
             "MI": "Blue", "MICHIGAN": "Blue", "MN": "Blue", "MINNESOTA": "Blue", "MO": "Blue", "MISSOURI": "Blue", 
-            "MS": "Blue", "MISSissippi": "Blue", "NC": "Blue", "NORTH CAROLINA": "Blue", "SC": "Blue", "SOUTH CAROLINA": "Blue", "WI": "Blue", "WISCONSIN": "Blue",
+            "MS": "Blue", "MISSISSIPPI": "Blue", "NC": "Blue", "NORTH CAROLINA": "Blue", "SC": "Blue", "SOUTH CAROLINA": "Blue", "WI": "Blue", "WISCONSIN": "Blue",
             
             "KS": "Purple", "KANSAS": "Purple", "MT": "Purple", "MONTANA": "Purple", "ND": "Purple", "NORTH DAKOTA": "Purple", 
             "NE": "Purple", "NEBRASKA": "Purple", "NM": "Purple", "NEW MEXICO": "Purple", "OK": "Purple", "OKLAHOMA": "Purple", 
@@ -381,6 +382,65 @@
             });
         }
 
+        async function autoLoadICMarkers() {
+            const validContractors = allContractors.filter(c => c.address && c.address.length >= 5);
+            const totalValid = validContractors.length;
+            let loadedICs = 0;
+            const counterEl = document.getElementById('ic_counter');
+
+            if (totalValid === 0) return;
+
+            const updateCounter = () => {
+                if (counterEl) {
+                    if (loadedICs < totalValid) {
+                        counterEl.innerText = `${loadedICs}/${totalValid}`;
+                    } else {
+                        counterEl.innerText = `${totalValid}/${totalValid}`;
+                        counterEl.classList.remove('text-blue-500', 'animate-pulse');
+                        counterEl.classList.add('text-slate-400');
+                    }
+                }
+            };
+
+            updateCounter(); 
+
+            for (let i = 0; i < validContractors.length; i++) {
+                const c = validContractors[i];
+                
+                const cacheKey = 'tbm_geo_' + btoa(encodeURIComponent(c.address));
+                const cachedCoords = localStorage.getItem(cacheKey);
+                if (cachedCoords) {
+                    const coords = JSON.parse(cachedCoords);
+                    c.lat = coords.lat;
+                    c.lng = coords.lng;
+                    addICMarker(c);
+                    loadedICs++;
+                    updateCounter();
+                    continue; 
+                }
+
+                try {
+                    const res = await fetch(`${webAppUrl}?action=geocode&address=${encodeURIComponent(c.address)}`);
+                    const geoData = await res.json();
+                    
+                    if (geoData.success) {
+                        c.lat = geoData.lat;
+                        c.lng = geoData.lng;
+                        localStorage.setItem(cacheKey, JSON.stringify({lat: c.lat, lng: c.lng}));
+                        addICMarker(c);
+                    }
+                    
+                    loadedICs++;
+                    updateCounter();
+                    await new Promise(r => setTimeout(r, 200)); 
+                } catch (e) {
+                    console.warn("Geocode failed for: " + c.name);
+                    loadedICs++;
+                    updateCounter();
+                }
+            }
+        }
+
         function addICMarker(c) {
             const marker = new google.maps.Marker({
                 position: { lat: c.lat, lng: c.lng },
@@ -444,7 +504,6 @@
                     headers: { "Content-Type": "text/plain;charset=utf-8" },
                     body: JSON.stringify(p) 
                 }); 
-                alert("Database Updated"); 
                 document.getElementById('saveBtn').disabled = true; 
             } catch (e) { alert("Save failed"); }
         }
@@ -529,6 +588,10 @@
                     }
                 });
 
+                // CHANGED: Update UI Sync Status silently instead of intrusive alerts
+                const now = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                const syncStatusEl = document.getElementById('sync_status');
+
                 if (!isGlobal && homeLoc) {
                     const formatted = Object.keys(selectedAddresses).map(addr => {
                         const d = selectedAddresses[addr];
@@ -547,13 +610,18 @@
                     calculateLargeRoute();
 
                     if(formatted.length === 0) {
-                        alert("All tasks loaded, but none found within 40 miles of home address for the selected Pod.");
+                        syncStatusEl.innerHTML = `<span class="text-amber-500">⚠ ${tasks.length} TASKS PULLED (0 IN 40MI) @ ${now}</span>`;
+                    } else {
+                        syncStatusEl.innerHTML = `<span class="text-emerald-500">✓ ${tasks.length} TASKS PULLED @ ${now}</span>`;
                     }
                 } else {
                     map.setCenter({ lat: 39.8, lng: -98.5 });
                     map.setZoom(4);
+                    syncStatusEl.innerHTML = `<span class="text-emerald-500">✓ ${tasks.length} TASKS PULLED @ ${now}</span>`;
                 }
-            } catch (e) { alert("Sync Error: " + e.message); }
+            } catch (e) { 
+                alert("Sync Error: " + e.message); 
+            }
             finally { loader.classList.add('hidden'); }
         }
 
@@ -855,7 +923,6 @@
                         allContractors = data.contractors; 
                         
                         allContractors.forEach(c => {
-                            // If they already have a pod from the DB, don't overwrite it
                             if (c.pod && c.pod.length > 2) return;
 
                             let matchedPod = "Unknown";
@@ -869,14 +936,12 @@
                             c.pod = matchedPod;
                         });
 
-                        // Instantly plot anyone who already has coordinates in the database
                         allContractors.forEach(c => {
                             if (c.lat && c.lng) {
                                 addICMarker(c);
                             }
                         });
                         
-                        // Update the live counter instantly to show how many loaded
                         const counterEl = document.getElementById('ic_counter');
                         if (counterEl) {
                             const totalValid = allContractors.filter(c => c.address && c.address.length >= 5).length;
