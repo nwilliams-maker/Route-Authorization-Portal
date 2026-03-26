@@ -176,7 +176,7 @@
                                 <span class="flex items-center gap-1.5"><div class="w-2.5 h-2.5 rounded-full bg-purple-500 shadow-sm"></div> Digital Service</span>
                                 <span class="flex items-center gap-1.5">
                                     <div class="w-2.5 h-2.5 rounded-full bg-yellow-400 shadow-sm border border-black"></div> 
-                                    Contractor <span id="ic_counter" class="text-blue-500 font-bold animate-pulse ml-0.5 tracking-normal"></span>
+                                    Contractor <span id="ic_counter" class="text-slate-400 font-bold ml-0.5 tracking-normal"></span>
                                 </span>
                             </div>
                         </div>
@@ -285,7 +285,7 @@
             "AL": "Blue", "ALABAMA": "Blue", "AR": "Blue", "ARKANSAS": "Blue", "FL": "Blue", "FLORIDA": "Blue", 
             "IA": "Blue", "IOWA": "Blue", "IL": "Blue", "ILLINOIS": "Blue", "LA": "Blue", "LOUISIANA": "Blue", 
             "MI": "Blue", "MICHIGAN": "Blue", "MN": "Blue", "MINNESOTA": "Blue", "MO": "Blue", "MISSOURI": "Blue", 
-            "MS": "Blue", "MISSISSIPPI": "Blue", "NC": "Blue", "NORTH CAROLINA": "Blue", "SC": "Blue", "SOUTH CAROLINA": "Blue", "WI": "Blue", "WISCONSIN": "Blue",
+            "MS": "Blue", "MISSissippi": "Blue", "NC": "Blue", "NORTH CAROLINA": "Blue", "SC": "Blue", "SOUTH CAROLINA": "Blue", "WI": "Blue", "WISCONSIN": "Blue",
             
             "KS": "Purple", "KANSAS": "Purple", "MT": "Purple", "MONTANA": "Purple", "ND": "Purple", "NORTH DAKOTA": "Purple", 
             "NE": "Purple", "NEBRASKA": "Purple", "NM": "Purple", "NEW MEXICO": "Purple", "OK": "Purple", "OKLAHOMA": "Purple", 
@@ -379,65 +379,6 @@
                 if (selectedPod !== "All" && ic.pod !== selectedPod) show = false;
                 marker.setVisible(show);
             });
-        }
-
-        async function autoLoadICMarkers() {
-            const validContractors = allContractors.filter(c => c.address && c.address.length >= 5);
-            const totalValid = validContractors.length;
-            let loadedICs = 0;
-            const counterEl = document.getElementById('ic_counter');
-
-            if (totalValid === 0) return;
-
-            const updateCounter = () => {
-                if (counterEl) {
-                    if (loadedICs < totalValid) {
-                        counterEl.innerText = `${loadedICs}/${totalValid}`;
-                    } else {
-                        counterEl.innerText = `${totalValid}/${totalValid}`;
-                        counterEl.classList.remove('text-blue-500', 'animate-pulse');
-                        counterEl.classList.add('text-slate-400');
-                    }
-                }
-            };
-
-            updateCounter(); 
-
-            for (let i = 0; i < validContractors.length; i++) {
-                const c = validContractors[i];
-                
-                const cacheKey = 'tbm_geo_' + btoa(encodeURIComponent(c.address));
-                const cachedCoords = localStorage.getItem(cacheKey);
-                if (cachedCoords) {
-                    const coords = JSON.parse(cachedCoords);
-                    c.lat = coords.lat;
-                    c.lng = coords.lng;
-                    addICMarker(c);
-                    loadedICs++;
-                    updateCounter();
-                    continue; 
-                }
-
-                try {
-                    const res = await fetch(`${webAppUrl}?action=geocode&address=${encodeURIComponent(c.address)}`);
-                    const geoData = await res.json();
-                    
-                    if (geoData.success) {
-                        c.lat = geoData.lat;
-                        c.lng = geoData.lng;
-                        localStorage.setItem(cacheKey, JSON.stringify({lat: c.lat, lng: c.lng}));
-                        addICMarker(c);
-                    }
-                    
-                    loadedICs++;
-                    updateCounter();
-                    await new Promise(r => setTimeout(r, 200)); 
-                } catch (e) {
-                    console.warn("Geocode failed for: " + c.name);
-                    loadedICs++;
-                    updateCounter();
-                }
-            }
         }
 
         function addICMarker(c) {
@@ -914,6 +855,9 @@
                         allContractors = data.contractors; 
                         
                         allContractors.forEach(c => {
+                            // If they already have a pod from the DB, don't overwrite it
+                            if (c.pod && c.pod.length > 2) return;
+
                             let matchedPod = "Unknown";
                             const addrUpper = (c.address || "").toUpperCase();
                             for (const [stateAbbr, podColor] of Object.entries(podData)) {
@@ -924,8 +868,26 @@
                             }
                             c.pod = matchedPod;
                         });
+
+                        // Instantly plot anyone who already has coordinates in the database
+                        allContractors.forEach(c => {
+                            if (c.lat && c.lng) {
+                                addICMarker(c);
+                            }
+                        });
                         
-                        autoLoadICMarkers();
+                        // Update the live counter instantly to show how many loaded
+                        const counterEl = document.getElementById('ic_counter');
+                        if (counterEl) {
+                            const totalValid = allContractors.filter(c => c.address && c.address.length >= 5).length;
+                            const totalLoaded = icMarkers.length;
+                            
+                            if (totalLoaded > 0) {
+                                counterEl.innerText = `${totalLoaded}/${totalValid}`;
+                                counterEl.classList.remove('text-blue-500', 'animate-pulse');
+                                counterEl.classList.add('text-slate-400');
+                            }
+                        }
                     }
                 }).catch(e => console.log("Silent error loading contractor DB", e));
             
