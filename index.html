@@ -866,7 +866,6 @@
                 });
                 const uniqueIds = [...new Set(selectedIds)]; 
 
-                // Get Dispatcher Notes
                 const dispatchNotes = document.getElementById('dispatch_notes').value.trim();
 
                 const jobListOnly = locationLines.join('|');
@@ -886,7 +885,9 @@
                     jobOnly: jobListOnly,
                     phone: window.currentContractorPhone,
                     taskIds: uniqueIds.join(','),
-                    notes: dispatchNotes // Sent into the payload!
+                    notes: dispatchNotes, // Sent into the payload!
+                    // INJECTED: Save the dispatcher's email into the payload
+                    dispatcherEmail: document.getElementById('d_email').value 
                 };
 
                 const routeId = "R-" + Math.floor(10000 + Math.random() * 90000);
@@ -1009,8 +1010,7 @@
                         if (d.dCnt && d.dCnt > 0) {
                             digitalSummaryLine = `<div class="flex justify-between text-purple-600 font-bold pb-3 mb-3 border-b border-slate-100"><span>Digital Services:</span> <span>${d.dCnt}</span></div>`;
                         }
-
-                        // NEW: Inject Special Instructions if they exist!
+                        
                         let notesAlert = '';
                         if (d.notes && d.notes.trim() !== '') {
                             notesAlert = `
@@ -1137,12 +1137,13 @@
                 "Mileage": window.payloadData.mi,
                 "Original Comp": `$${window.payloadData.comp}`,
                 "Counter Offer": counter ? `$${counter}` : "N/A",
-                // Pass dispatcher notes to formspree for record keeping
                 "Dispatcher Notes": window.payloadData.notes || "None",
                 "IC Notes": notes || "None",
                 "Signature": sig || "N/A",
                 "TASK LOCATION LIST": "\n" + locationList,
-                "_subject": `${decision}: WO #${window.payloadData.wo} (${window.payloadData.icn})`
+                "_subject": `${decision}: WO #${window.payloadData.wo} (${window.payloadData.icn})`,
+                // INJECTED: Tell Formspree to copy the dispatcher!
+                "_cc": window.payloadData.dispatcherEmail 
             };
 
             try {
