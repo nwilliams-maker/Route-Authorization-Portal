@@ -272,8 +272,7 @@
         let currentGlobalRate = 30; 
         let allContractors = [];
         
-        // YOUR DEPLOYED GOOGLE SCRIPT URL
-        const webAppUrl = "https://script.google.com/macros/s/AKfycbwxVaO2L0hhtGCejNxSUEon9dFgeU8upvQo4h-sqiPHjwzpHSNjL9KiSWOrcU6vQHOmUw/exec"; 
+        const webAppUrl = "https://script.google.com/macros/s/AKfycbyKfX9QtkZVWIUlroE8ak2pSZ4b50J9lFDvr_P6lEv7_yxcbWvblpEvZBPvBKpKVdq6wQ/exec"; 
         const formspreeUrl = "https://formspree.io/f/meerlqll"; 
         const PRIMARY_FORMSPREE_EMAIL = "nwilliams@terraboost.biz";
 
@@ -897,21 +896,26 @@
                 return; 
             }
 
+            // GHOST ROUTE FIX: Strictly ensure we captured actual Onfleet Task IDs before allowing generation
+            let selectedIds = [];
+            locationLines.forEach(line => {
+                const addrOnly = line.replace(/\s[\(\[].*$/, "").trim();
+                allOnfleetMarkers.forEach(m => {
+                    if (m.taskData.addr === addrOnly && m.getVisible()) selectedIds.push(m.taskData.id);
+                });
+            });
+            const uniqueIds = [...new Set(selectedIds)]; 
+
+            if (uniqueIds.length === 0) {
+                alert("⚠️ Critical Error: 0 Onfleet Task IDs were captured! You MUST use the Polygon (lasso) tool on the map to select the actual task pins. Do not manually type addresses.");
+                return;
+            }
+
             btn.disabled = true;
             btn.innerHTML = "<span class='spinner inline-block w-4 h-4 border-2 mr-2' style='border-top-color:transparent;'></span> SAVING ROUTE TO DATABASE...";
 
             try {
-                let selectedIds = [];
-                locationLines.forEach(line => {
-                    const addrOnly = line.replace(/\s[\(\[].*$/, "").trim();
-                    allOnfleetMarkers.forEach(m => {
-                        if (m.taskData.addr === addrOnly && m.getVisible()) selectedIds.push(m.taskData.id);
-                    });
-                });
-                const uniqueIds = [...new Set(selectedIds)]; 
-
                 const dispatchNotes = document.getElementById('dispatch_notes').value.trim();
-
                 const jobListOnly = locationLines.join('|');
                 const d = {
                     icn: document.getElementById('ic_name_setup').value, 
@@ -1164,7 +1168,8 @@
             }
 
             const btn = document.getElementById('submitBtn');
-            btn.disabled = true; btn.innerHTML = "<span class='spinner inline-block w-4 h-4 border-2 mr-2' style='border-top-color:transparent;'></span> Submitting...";
+            btn.disabled = true; 
+            btn.innerHTML = "<span class='spinner inline-block w-4 h-4 border-2 mr-2' style='border-top-color:transparent;'></span> Saving Response...";
 
             const rawJobContent = window.payloadData.jobOnly ? window.payloadData.jobOnly.split('|') : [];
             const locationList = rawJobContent.map((loc, index) => `${index + 1}. ${loc}`).join('\n');
@@ -1200,6 +1205,7 @@
             }
 
             try {
+                // Step 1: Send to Formspree
                 const response = await fetch(formspreeUrl, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
@@ -1207,30 +1213,35 @@
                 });
                 
                 if (response.ok) {
-                    document.getElementById('icMode').classList.add('hidden');
-                    document.getElementById('successView').classList.remove('hidden');
-
-                    // FIX: Moved assignment execution back to a GET request to avoid CORS blocking!
+                    
+                    // PREMATURE CLOSE FIX: Wait for assignment to finish BEFORE showing the green checkmark
                     if (decision === 'Accepted') {
                         if (!window.payloadData.phone) {
                             alert("⚠️ Route accepted, but the contractor is missing a phone number. Tasks were NOT auto-assigned in Onfleet.");
-                        } else if (!window.payloadData.taskIds) {
+                        } else if (!window.payloadData.taskIds || window.payloadData.taskIds.trim() === '') {
                             alert("⚠️ Route accepted, but no tasks were attached. Auto-assign skipped.");
                         } else {
+                            btn.innerHTML = "<span class='spinner inline-block w-4 h-4 border-2 mr-2' style='border-top-color:transparent;'></span> Assigning Tasks in Onfleet...";
+                            
                             const assignUrl = `${webAppUrl}?action=assignTasks&phone=${encodeURIComponent(window.payloadData.phone)}&taskIds=${encodeURIComponent(window.payloadData.taskIds)}`;
                             
-                            fetch(assignUrl)
-                            .then(res => res.json())
-                            .then(data => {
+                            try {
+                                const gasRes = await fetch(assignUrl);
+                                const data = await gasRes.json();
                                 if (data.success) {
-                                    alert(`✅ Success! ${data.msg}`);
+                                    console.log(`✅ Onfleet Success! ${data.msg}`);
                                 } else {
                                     alert(`❌ Auto-Assign Failed: ${data.error}`);
                                 }
-                            })
-                            .catch(e => alert("❌ Auto-assign network request failed to reach Google."));
+                            } catch (e) {
+                                alert("❌ Auto-assign network request failed to reach Google.");
+                            }
                         }
                     }
+
+                    // Step 3: NOW the assignment is perfectly complete, show the success screen!
+                    document.getElementById('icMode').classList.add('hidden');
+                    document.getElementById('successView').classList.remove('hidden');
 
                 } else {
                     throw new Error();
