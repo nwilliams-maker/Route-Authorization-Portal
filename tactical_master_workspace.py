@@ -18,12 +18,14 @@ IC_SHEET_URL = "https://docs.google.com/spreadsheets/d/1y6wX0x93iDc3gdK_nZKLD-2Q
 
 MAX_DEADHEAD_MILES = 60
 HOURLY_FLOOR_RATE = 25.00
-MAX_RATE_PER_STOP = 22.00
+THRESHOLD_CAP = 22.00 # The limit for automatic "Ready" categorization
 TB_PURPLE = "#633094"
 TB_GREEN = "#76bc21"
+TB_RED = "#ef4444"
 TB_BLUE = "#3b82f6"
 TB_LIGHT_BLUE = "#e6f0fa"
 
+# State and Pod Maps remain unchanged...
 POD_CONFIGS = {
     "Blue Pod": {"states": {"AL", "AR", "FL", "IL", "IA", "LA", "MI", "MN", "MS", "MO", "NC", "SC", "WI"}, "color": "blue"},
     "Green Pod": {"states": {"CO", "DC", "GA", "IN", "KY", "MD", "NJ", "OH", "UT"}, "color": "green"},
@@ -50,7 +52,7 @@ headers = {"Authorization": f"Basic {base64.b64encode(f'{ONFLEET_KEY}:'.encode()
 
 st.set_page_config(page_title="Terraboost Tactical Workspace", layout="wide")
 
-# --- UI STYLING (FIXED CONTRAST & LEGIBILITY) ---
+# --- UI STYLING (PRESERVED & UPDATED) ---
 st.markdown(f"""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap');
@@ -69,9 +71,6 @@ st.markdown(f"""
     .stTabs [aria-selected="true"] {{ color: {TB_PURPLE} !important; border-bottom: 3px solid {TB_GREEN} !important; }}
     .stButton>button {{ background-color: {TB_PURPLE} !important; color: #FFFFFF !important; font-weight: 700 !important; border-radius: 6px !important; width: 100%; }}
     .stButton>button:hover {{ background-color: {TB_GREEN} !important; }}
-    div[data-testid="stExpander"] {{ background-color: white !important; border: 1px solid #d0d4e4 !important; border-radius: 8px !important; margin-bottom: 12px; }}
-    div[data-testid="stExpander"] details summary p {{ color: #000000 !important; font-weight: 700 !important; font-size: 16px !important; }}
-    div[data-testid="stExpander"] details summary {{ background-color: {TB_LIGHT_BLUE} !important; padding: 12px !important; border-radius: 8px 8px 0 0 !important; }}
     #status {{ display: none !important; }}
     [data-testid="stStatusWidget"] {{ display: none !important; }}
     </style>
@@ -105,32 +104,15 @@ def fetch_gmaps_directions(home, waypoints_tuple):
 def get_metrics(home, cluster_nodes, stop_rate):
     unique_addrs = list(set([c['full_addr'] for c in cluster_nodes]))
     mi, hrs, t_str = fetch_gmaps_directions(home, tuple(unique_addrs[:10]))
-    
     stop_count = len(unique_addrs)
     
-    # 1. Calculate base pay from stops
-    base_stop_pay = stop_count * stop_rate
+    # PAY CALCULATOR: Higher of stop rate or hourly floor
+    pay = max(stop_count * stop_rate, hrs * HOURLY_FLOOR_RATE)
     
-    # 2. Calculate hourly floor ($25/hr)
-    hourly_floor_pay = hrs * HOURLY_FLOOR_RATE
+    # Logic for categorization later: check if effectively paying > $22/stop
+    effective_per_stop = pay / stop_count if stop_count > 0 else 0
     
-    # 3. Take the higher of the two
-    proposed_pay = max(base_stop_pay, hourly_floor_pay)
-    
-    # 4. Apply the MAX CAP ($22/stop)
-    # If the hourly floor is higher than the cap, we honor the hourly floor 
-    # to ensure the calculation isn't "off" for long-distance 1-stop routes.
-    max_cap = stop_count * MAX_RATE_PER_STOP
-    
-    if proposed_pay > max_cap:
-        # If it's a long drive, we pay the proposed_pay (hourly floor) 
-        # but flag it. If you want a hard cap regardless of time, use: pay = max_cap
-        pay = proposed_pay 
-    else:
-        pay = proposed_pay
-
-    h_rate = (pay / hrs) if hrs > 0 else 0
-    return round(mi, 1), t_str, round(pay, 2), round(h_rate, 2), "Adjusted"
+    return round(mi, 1), t_str, round(pay, 2), round(effective_per_stop, 2)
 
 def sync_to_sheet(ic, cluster_data, mi, time_str, pay, work_order, loc_sum, due_date):
     payload = {
@@ -220,17 +202,25 @@ def render_dispatch_logic(i, cluster, pod_name, is_sent=False):
     ic_opts = {f"{row['Name']} ({round(row['d'], 1)} mi)": row for _, row in valid_ics.iterrows()}
     c_ic, c_rate, c_due = st.columns([2, 1, 1])
     sel_label = c_ic.selectbox("Contractor", list(ic_opts.keys()), key=f"s_{i}_{pod_name}")
-    rate = c_rate.number_input("Rate/Stop", 16.0, 22.0, 18.0, 0.5, key=f"r_{i}_{pod_name}")
+    
+    # UPDATED: Cursor can go past 22
+    rate = c_rate.number_input("Rate/Stop", 16.0, 100.0, 18.0, 0.5, key=f"r_{i}_{pod_name}")
     due = c_due.date_input("Due Date", datetime.now().date() + timedelta(days=14), key=f"d_{i}_{pod_name}")
     
     sel_ic = ic_opts[sel_label]
-    mi, t_str, pay, hr_rate, p_type = get_metrics(sel_ic['Location'], cluster['data'], rate)
+    mi, t_str, pay, effective_rate = get_metrics(sel_ic['Location'], cluster['data'], rate)
     
+    # DYNAMIC COLOR WARNING: Red if effective rate > $22/stop
+    box_color = TB_RED if effective_rate > THRESHOLD_CAP else "#f8fafc"
+    text_color = "white" if effective_rate > THRESHOLD_CAP else "black"
+    label_color = "white" if effective_rate > THRESHOLD_CAP else "#444444"
+
     st.markdown(f"""
-        <div style="background-color: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 15px;">
-            <span style="color: #444444; font-weight: 800; font-size: 10px; text-transform: uppercase;">Route Financials</span><br>
-            <span style="color: #000000; font-weight: 700; font-size: 16px;">Comp: <span style="color: #16a34a;">${pay:.2f}</span></span> | 
-            <span style="color: #000000; font-weight: 600;">Drive: {mi} mi</span> | <span style="color: #000000; font-weight: 600;">Time: {t_str}</span>
+        <div style="background-color: {box_color}; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 15px;">
+            <span style="color: {label_color}; font-weight: 800; font-size: 10px; text-transform: uppercase;">Route Financials</span><br>
+            <span style="color: {text_color}; font-weight: 700; font-size: 16px;">Comp: <span style="color: {TB_GREEN if effective_rate <= 22 else '#ffcccc'};">${pay:.2f}</span></span> | 
+            <span style="color: {text_color}; font-weight: 600;">Drive: {mi} mi</span> | <span style="color: {text_color}; font-weight: 600;">Time: {t_str}</span> | 
+            <span style="color: {text_color}; font-weight: 600;">Eff: ${effective_rate}/stop</span>
         </div>
     """, unsafe_allow_html=True)
 
@@ -270,13 +260,21 @@ def run_pod_tab(pod_name):
     for c in clusters:
         c_h = hashlib.md5("".join(sorted([t['id'] for t in c['data']])).encode()).hexdigest()
         if f"sent_log_{c_h}" in st.session_state: sent.append(c); continue
+        
+        # 1. Contractor Range Check
         has_ic = False
         if not v_ics.empty:
             has_ic = v_ics.apply(lambda x: haversine(c['center'][0], c['center'][1], x['Lat'], x['Lng']), axis=1).le(MAX_DEADHEAD_MILES).any()
+        
+        # 2. EFFICIENCY LOGIC: Check if it's over $22/stop based on Hourly Floor
         mi, hrs, _ = fetch_gmaps_directions(f"{c['center'][0]},{c['center'][1]}", tuple([d['full_addr'] for d in c['data'][:5]]))
-        eff_ok = ((c['unique_count'] * 18.0) / hrs) >= HOURLY_FLOOR_RATE if hrs > 0 else True
-        if has_ic and eff_ok: ready.append(c)
+        calc_pay = max(c['unique_count'] * 18.0, hrs * HOURLY_FLOOR_RATE)
+        eff_rate = calc_pay / c['unique_count'] if c['unique_count'] > 0 else 0
+        
+        # Categorize: Must have IC AND be <= $22/stop to be "Ready"
+        if has_ic and eff_rate <= THRESHOLD_CAP: ready.append(c)
         else: review.append(c)
+
     c1, c2, c3, c4, c5 = st.columns(5)
     c1.markdown(f"<div class='metric-box'><div class='metric-title'>Total</div><div class='metric-value'>{len(clusters)}</div></div>", unsafe_allow_html=True)
     c2.markdown(f"<div class='metric-box'><div class='metric-title' style='color:{TB_GREEN}'>Ready</div><div class='metric-value'>{len(ready)}</div></div>", unsafe_allow_html=True)
@@ -297,7 +295,7 @@ def run_pod_tab(pod_name):
             with st.expander(f"✅ Sent | {c['city']}, {c['state']} | {c['unique_count']} Stops"): render_dispatch_logic(i+500, c, pod_name, is_sent=True)
     with t3:
         for i, c in enumerate(review):
-            with st.expander(f"🔴 Review | {c['city']}, {c['state']} | {c['unique_count']} Stops"): render_dispatch_logic(i+1000, c, pod_name)
+            with st.expander(f"🔴 Review Required | {c['city']}, {c['state']} | {c['unique_count']} Stops"): render_dispatch_logic(i+1000, c, pod_name)
 
 # --- MAIN ---
 if "ic_df" not in st.session_state: st.session_state.ic_df = load_ic_database(IC_SHEET_URL)
