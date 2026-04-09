@@ -45,17 +45,11 @@ STATE_MAP = {
     "WEST VIRGINIA": "WV", "WISCONSIN": "WI", "WYOMING": "WY", "DISTRICT OF COLUMBIA": "DC"
 }
 
-GEO_PRICING = {
-    "CA": 20.00, "WA": 19.50, "OR": 18.00, "HI": 20.00, "AK": 18.50,
-    "NV": 16.00, "AZ": 17.50, "ID": 16.00, "NY": 20.00, "NJ": 19.00,
-    "CT": 18.00, "MA": 18.00, "IL": 18.00, "FL": 17.50, "TX": 17.00
-}
-
 headers = {"Authorization": f"Basic {base64.b64encode(f'{ONFLEET_KEY}:'.encode()).decode()}"}
 
 st.set_page_config(page_title="Terraboost Tactical Workspace", layout="wide")
 
-# --- PERFECT UI STYLING RESTORED ---
+# --- PERFECT UI STYLING ---
 st.markdown(f"""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap');
@@ -64,16 +58,15 @@ st.markdown(f"""
     #status {{ display: none !important; }}
     [data-testid="stStatusWidget"] {{ display: none !important; }}
     .stTabs [data-baseweb="tab-list"] {{ gap: 24px; border-bottom: 1px solid #d0d4e4; }}
-    .stTabs [data-baseweb="tab"] {{ height: 50px; white-space: pre-wrap; background-color: transparent; padding: 10px 16px; font-size: 16px; font-weight: 500; color: #676879; font-family: 'Roboto', sans-serif !important; }}
+    .stTabs [data-baseweb="tab"] {{ height: 50px; background-color: transparent; padding: 10px 16px; font-size: 16px; font-weight: 500; color: #676879; font-family: 'Roboto', sans-serif !important; }}
     .stTabs [aria-selected="true"] {{ border-bottom: 3px solid {TB_GREEN}; color: {TB_PURPLE} !important; font-weight: 700; }}
     .metric-box {{ border-left: 5px solid {TB_PURPLE}; padding: 10px 15px; margin-bottom: 15px; background: white; border-radius: 0 4px 4px 0; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }}
     .metric-title {{ font-size: 11px; text-transform: uppercase; color: #676879; font-weight: 600; font-family: 'Roboto', sans-serif !important; }}
     .metric-value {{ font-size: 20px; color: {TB_PURPLE}; font-weight: 700; font-family: 'Roboto', sans-serif !important; }}
-    .stButton>button {{ background-color: {TB_PURPLE} !important; color: white !important; border: none !important; border-radius: 4px; width: 100%; font-weight: 600; padding: 10px; opacity: 1 !important; font-family: 'Roboto', sans-serif !important; }}
-    .stButton>button:hover {{ background-color: {TB_GREEN} !important; opacity: 1 !important; }}
-    div[data-testid="stExpander"] {{ background-color: white !important; border: 1px solid #d0d4e4 !important; border-radius: 8px !important; margin-bottom: 12px; overflow: hidden; }}
+    .stButton>button {{ background-color: {TB_PURPLE} !important; color: white !important; border: none !important; border-radius: 4px; font-weight: 600; font-family: 'Roboto', sans-serif !important; }}
+    .stButton>button:hover {{ background-color: {TB_GREEN} !important; }}
+    div[data-testid="stExpander"] {{ background-color: white !important; border: 1px solid #d0d4e4 !important; border-radius: 8px !important; margin-bottom: 12px; }}
     div[data-testid="stExpander"] details summary {{ background-color: {TB_LIGHT_BLUE} !important; padding: 12px !important; border-radius: 8px 8px 0 0 !important; }}
-    div[data-testid="stExpander"] details summary p {{ color: #323338 !important; font-weight: 600 !important; font-size: 16px !important; font-family: 'Roboto', sans-serif !important; }}
     .stTextInput input, .stNumberInput input, .stDateInput input, .stTextArea textarea {{ background-color: white !important; color: #323338 !important; border: 1px solid #d0d4e4 !important; font-family: 'Roboto', sans-serif !important; }}
     </style>
 """, unsafe_allow_html=True)
@@ -136,12 +129,12 @@ def load_ic_database(sheet_url):
     try: return pd.read_csv(f"{sheet_url.split('/edit')[0]}/export?format=csv&gid=0")
     except: return None
 
-# --- CORE ROUTING & CLUSTERING LOGIC ---
+# --- AGGRESSIVE 50-MILE ROUTING ---
 def process_pod_data(pod_name):
     config = POD_CONFIGS[pod_name]
     ui_container = st.empty()
     with ui_container.container():
-        p_bar = st.progress(0, text=f"📡 Syncing {pod_name}...")
+        p_bar = st.progress(0, text=f"📡 Synchronizing {pod_name} Intelligence...")
         all_tasks = []
         url = f"https://onfleet.com/api/v2/tasks/all?state=0&from={int(time.time() * 1000) - (80 * 24 * 3600 * 1000)}"
         while True:
@@ -168,20 +161,18 @@ def process_pod_data(pod_name):
             anchor = pool.pop(0)
             group, unique_locs, rem = [anchor], {anchor['full_addr']}, []
             for t in pool:
-                # 🎯 50-Mile Radius Grouping
                 if haversine(anchor['lat'], anchor['lon'], t['lat'], t['lon']) <= 50.0:
                     group.append(t); unique_locs.add(t['full_addr'])
-                else:
-                    rem.append(t)
+                else: rem.append(t)
             pool = rem
             clusters.append({"data": group, "center": [anchor['lat'], anchor['lon']], "unique_count": len(unique_locs)})
         
         st.session_state[f"clusters_{pod_name}"] = clusters
-        p_bar.progress(1.0, text="✅ Routes Clustered")
+        p_bar.progress(1.0, text="✅ Route Intelligence Ready")
         time.sleep(0.5)
     ui_container.empty()
 
-# --- UI RENDER FUNCTIONS ---
+# --- RENDER LOGIC ---
 def render_dispatch_logic(i, cluster, pod_name):
     cluster_hash = hashlib.md5("".join(sorted([t['id'] for t in cluster['data']])).encode()).hexdigest()
     sync_key = f"sync_{cluster_hash}"
@@ -204,7 +195,7 @@ def render_dispatch_logic(i, cluster, pod_name):
     else: valid_ics = pd.DataFrame()
 
     if valid_ics.empty:
-        st.error("⚠️ No nearby contractors found.")
+        st.error("⚠️ No contractors nearby.")
         return
 
     ic_opts = {f"{row['Name']} ({round(row['d'], 1)} mi)": row for _, row in valid_ics.iterrows()}
@@ -234,7 +225,6 @@ def render_dispatch_logic(i, cluster, pod_name):
                 rid = sync_to_sheet(sel_ic, cluster['data'], mi, t_str, pay, f"{sel_ic['Name']} - {datetime.now().strftime('%m%d%Y')}-{i}", loc_sum, due)
                 if rid: st.session_state[sync_key] = rid; st.rerun()
         else: st.button("✅ Synced", disabled=True, key=f"btn_d_{i}_{pod_name}")
-    
     with col2:
         if real_gas_id:
             mail = f"https://mail.google.com/mail/?view=cm&fs=1&to={sel_ic['Email']}&su=Route Request&body={requests.utils.quote(sig)}"
@@ -253,25 +243,19 @@ def run_pod_tab(pod_name):
     
     acc, unacc = [], []
     for c in clusters:
-        # 🎯 CRITERIA CHECK
-        # Pass 1: Stop Volume
-        vol_check = c['unique_count'] >= 4
-        
-        # Pass 2: IC Availability within 60 miles
+        # Check IC range
         has_ic = False
         if not v_ics.empty:
             has_ic = v_ics.apply(lambda x: haversine(c['center'][0], c['center'][1], x['Lat'], x['Lng']), axis=1).le(MAX_DEADHEAD_MILES).any()
         
-        # Pass 3: Profitability (Metric Simulation)
-        # Using a dummy home coordinate (cluster center) to estimate drive time/mileage efficiency
+        # EFFICIENCY LOGIC: $25/hr check
+        # Simulation using cluster center
         mi, hrs, _ = fetch_gmaps_directions(f"{c['center'][0]},{c['center'][1]}", tuple([d['full_addr'] for d in c['data'][:5]]))
-        pay = min(c['unique_count'] * 18.0, c['unique_count'] * MAX_RATE_PER_STOP)
-        profit_check = (pay / hrs) >= HOURLY_FLOOR_RATE if hrs > 0 else True
+        pay = c['unique_count'] * 18.0 # Baseline for sorting
+        efficiency_ok = (pay / hrs) >= HOURLY_FLOOR_RATE if hrs > 0 else True
 
-        if vol_check and has_ic and profit_check:
-            acc.append(c)
-        else:
-            unacc.append(c)
+        if has_ic and efficiency_ok: acc.append(c)
+        else: unacc.append(c)
 
     c1, c2, c3, c4 = st.columns(4)
     c1.markdown(f"<div class='metric-box'><div class='metric-title'>Total</div><div class='metric-value'>{len(clusters)}</div></div>", unsafe_allow_html=True)
@@ -295,7 +279,7 @@ def run_pod_tab(pod_name):
 # --- LAYOUT ---
 if "ic_df" not in st.session_state: st.session_state.ic_df = load_ic_database(IC_SHEET_URL)
 st.markdown("<h1 style='font-family: Roboto !important;'>Network Command Center</h1>", unsafe_allow_html=True)
-tabs = st.tabs(["🌎 Global", "🔵 Blue", "🟢 Green", "🟠 Orange", "🟣 Purple", "🔴 Red"])
+tabs = st.tabs(["🌎 Global Overview", "🔵 Blue Pod", "🟢 Green Pod", "🟠 Orange Pod", "🟣 Purple Pod", "🔴 Red Pod"])
 with tabs[1]: run_pod_tab("Blue Pod")
 with tabs[2]: run_pod_tab("Green Pod")
 with tabs[3]: run_pod_tab("Orange Pod")
