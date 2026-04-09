@@ -343,7 +343,7 @@ def run_pod_tab(pod_name):
             with st.expander(f"🔴 Review | {cluster['data'][0]['city']} | {cluster['unique_count']} Stops"): render_dispatch_logic(i + 1000, cluster, pod_name)
 
 def run_global_tab():
-    st.header("Network Command Center")
+    st.header("Dispatch Command Center")
     if "global_data" not in st.session_state:
         if st.button("🌍 Sync Global Overview Map", key="load_global"):
             all_tasks = []
