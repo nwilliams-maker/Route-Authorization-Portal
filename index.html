@@ -296,7 +296,7 @@
         // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         // !!! PASTE YOUR NEW GOOGLE SCRIPT URL RIGHT HERE INSIDE THE QUOTES  !!!
         // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        const webAppUrl = "https://script.google.com/macros/s/AKfycbynAIziubArSQ0hVGTvJMpk11a9yLP0kNcSmGpcY7GDNRT25Po5p92K3EDslx9VycKC/exec"; 
+        const webAppUrl = "YOUR-NEW-URL-HERE"; 
 
         const formspreeUrl = "https://formspree.io/f/meerlqll"; 
         const PRIMARY_FORMSPREE_EMAIL = "nwilliams@terraboost.biz";
@@ -605,9 +605,9 @@
                 title: `${c.name} (${c.email})`, 
                 icon: {
                     path: google.maps.SymbolPath.CIRCLE,
-                    scale: 6, 
+                    scale: 3.5,  // CHANGED: Much smaller than the task dots!
                     fillColor: "#facc15", 
-                    fillOpacity: 0.5, 
+                    fillOpacity: 0.8, // Slightly opaque so they stand out but don't block
                     strokeWeight: 1.5,
                     strokeColor: "#000000"
                 },
@@ -1555,80 +1555,88 @@
                 emailDate = parts.length === 3 ? `${parts[1]}/${parts[2]}/${parts[0]}` : window.payloadData.due;
             }
 
-            // We are using FormData to perfectly mimic a standard HTML form. Formspree's spam filter trusts this much more than raw JSON.
-            const formData = new FormData();
-            formData.append("name", window.payloadData.icn || "Contractor");
-            formData.append("email", window.payloadData.ice || "test@terraboost.biz"); // Required by Formspree to prevent spam flags
-            formData.append("_replyto", window.payloadData.ice || "test@terraboost.biz");
-            formData.append("_subject", `${decision}: WO #${window.payloadData.wo} (${window.payloadData.icn})`);
-            
-            formData.append("Decision", decision);
-            formData.append("Contractor", window.payloadData.icn);
-            formData.append("Work Order", window.payloadData.wo);
-            formData.append("Due Date", emailDate);
-            formData.append("Locations", window.payloadData.lCnt);
-            formData.append("Tasks", window.payloadData.tCnt);
-            formData.append("Kiosks", window.payloadData.kCnt);
-            formData.append("Digital", window.payloadData.dCnt || 0);
-            formData.append("Mileage", window.payloadData.mi);
-            formData.append("Original Comp", `$${window.payloadData.comp}`);
-            formData.append("Counter Offer", counter ? `$${counter}` : "N/A");
-            formData.append("Dispatcher Notes", window.payloadData.notes || "None");
-            formData.append("IC Notes", notes || "None");
-            formData.append("Signature", sig || "N/A");
-            formData.append("TASK LOCATION LIST", "\n" + locationList);
+            // COMPLETELY SPAM-PROOFED FORMSPREE PAYLOAD
+            const formData = {
+                "name": window.payloadData.icn || "Contractor", 
+                "email": window.payloadData.ice || "test@terraboost.biz", 
+                "_replyto": window.payloadData.ice || "test@terraboost.biz", 
+                "Decision": decision,
+                "Contractor": window.payloadData.icn,
+                "Work Order": window.payloadData.wo,
+                "Due Date": emailDate,
+                "Locations": window.payloadData.lCnt,
+                "Tasks": window.payloadData.tCnt,
+                "Kiosks": window.payloadData.kCnt,
+                "Digital": window.payloadData.dCnt || 0,
+                "Mileage": window.payloadData.mi,
+                "Original Comp": `$${window.payloadData.comp}`,
+                "Counter Offer": counter ? `$${counter}` : "N/A",
+                "Dispatcher Notes": window.payloadData.notes || "None",
+                "IC Notes": notes || "None",
+                "Signature": sig || "N/A",
+                "TASK LOCATION LIST": "\n" + locationList,
+                "_subject": `${decision}: WO #${window.payloadData.wo} (${window.payloadData.icn})`
+            };
 
             const dispatcherEmail = window.payloadData.dispatcherEmail;
             if (dispatcherEmail && dispatcherEmail.toLowerCase() !== PRIMARY_FORMSPREE_EMAIL.toLowerCase()) {
-                formData.append("_cc", dispatcherEmail);
+                formData["_cc"] = dispatcherEmail;
             }
 
             try {
-                // 1. Submit to Formspree
-                const formspreeResponse = await fetch(formspreeUrl, {
+                const response = await fetch(formspreeUrl, {
                     method: 'POST',
-                    headers: { 'Accept': 'application/json' },
-                    body: formData
+                    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                    body: JSON.stringify(formData)
                 });
                 
-                if (!formspreeResponse.ok) {
-                    throw new Error("Formspree rejected the request. Please check your Spam folder in the Formspree dashboard.");
-                }
-
-                // 2. Submit ONE secure payload to Google to instantly handle the Spreadsheet moving AND Onfleet assignment.
-                const gasPayload = {
-                    action: "processDecision",
-                    routeId: window.currentRouteId,
-                    decision: decision,
-                    phone: window.payloadData.phone,
-                    taskIds: window.payloadData.taskIds
-                };
-
-                const gasResponse = await fetch(webAppUrl, {
-                    method: 'POST',
-                    headers: { "Content-Type": "text/plain;charset=utf-8" },
-                    body: JSON.stringify(gasPayload)
-                });
-
-                const result = await gasResponse.json();
-
-                if (result.success) {
+                if (response.ok) {
+                    
                     if (decision === 'Accepted') {
-                        if (!result.onfleetSuccess) {
-                            alert(`⚠️ Spreadsheet updated, but Onfleet task assignment failed.\n\nOnfleet Error: ${result.onfleetMsg}`);
-                        } else if (result.onfleetMsg && result.onfleetMsg !== "") {
-                            console.log(`✅ Onfleet Success! ${result.onfleetMsg}`);
+                        if (!window.payloadData.phone) {
+                            alert("⚠️ Route accepted, but the contractor is missing a phone number. Tasks were NOT auto-assigned in Onfleet.");
+                        } else if (!window.payloadData.taskIds || window.payloadData.taskIds.trim() === '') {
+                            alert("⚠️ Route accepted, but no tasks were attached. Auto-assign skipped.");
+                        } else {
+                            btn.innerHTML = "<span class='spinner inline-block w-4 h-4 border-2 mr-2' style='border-top-color:transparent;'></span> Assigning Tasks in Onfleet...";
+                            
+                            const assignUrl = `${webAppUrl}?action=assignTasks&phone=${encodeURIComponent(window.payloadData.phone)}&taskIds=${encodeURIComponent(window.payloadData.taskIds)}`;
+                            
+                            try {
+                                const gasRes = await fetch(assignUrl);
+                                const data = await gasRes.json();
+                                if (data.success) {
+                                    console.log(`✅ Onfleet Success! ${data.msg}`);
+                                } else {
+                                    alert(`❌ Auto-Assign Failed: ${data.error}`);
+                                }
+                            } catch (e) {
+                                alert("❌ Auto-assign network request failed to reach Google.");
+                            }
+                        }
+                        if (window.currentRouteId) {
+                            try {
+                                fetch(`${webAppUrl}?action=acceptRoute&routeId=${encodeURIComponent(window.currentRouteId)}`);
+                            } catch(e) {}
+                        }
+                    } else if (decision === 'Declined') {
+                        if (window.currentRouteId) {
+                            try {
+                                fetch(`${webAppUrl}?action=declineRoute&routeId=${encodeURIComponent(window.currentRouteId)}`);
+                            } catch(e) {}
                         }
                     }
+
                     document.getElementById('icMode').classList.add('hidden');
                     document.getElementById('successView').classList.remove('hidden');
-                } else {
-                    throw new Error("Google Script failed to process the decision.");
-                }
 
+                } else {
+                    const errText = await response.text();
+                    throw new Error(errText || "Formspree rejected the request.");
+                }
             } catch (e) {
                 console.error(e);
-                alert("Submission Error: " + e.message);
+                alert("Submission failed to send to Formspree. Error: " + e.message);
                 btn.disabled = false; 
                 btn.innerText = "Submit Final Response";
             }
