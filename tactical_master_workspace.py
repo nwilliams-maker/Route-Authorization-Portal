@@ -72,6 +72,19 @@ st.markdown(f"""
     .stTabs [aria-selected="true"] {{ color: {TB_PURPLE} !important; border-bottom: 3px solid {TB_GREEN} !important; }}
     .stButton>button {{ background-color: {TB_PURPLE} !important; color: #FFFFFF !important; font-weight: 700 !important; border-radius: 6px !important; width: 100%; }}
     .stButton>button:hover {{ background-color: {TB_GREEN} !important; }}
+    
+    .gmail-link {{
+        display: block;
+        text-align: center;
+        background-color: {TB_GREEN} !important;
+        color: white !important;
+        padding: 10px;
+        border-radius: 6px;
+        text-decoration: none;
+        font-weight: 700;
+        margin-top: 10px;
+    }}
+    .gmail-link:hover {{ background-color: #619a1b !important; }}
     </style>
 """, unsafe_allow_html=True)
 
@@ -163,7 +176,6 @@ def process_pod_data(pod_name):
             pool = rem
             clusters.append({"data": group, "center": [anchor['lat'], anchor['lon']], "unique_count": len(unique_locs), "city": anchor['city'], "state": anchor['state']})
         st.session_state[f"clusters_{pod_name}"] = clusters
-        p_bar.progress(1.0, text="✅ Logic Applied")
     ui_container.empty()
 
 # --- DISPATCH RENDER ---
@@ -171,7 +183,7 @@ def render_dispatch_logic(i, cluster, pod_name, is_sent=False):
     cluster_hash = hashlib.md5("".join(sorted([t['id'] for t in cluster['data']])).encode()).hexdigest()
     sync_key, sent_key = f"sync_{cluster_hash}", f"sent_log_{cluster_hash}"
     real_gas_id = st.session_state.get(sync_key, None)
-    link_id = real_gas_id if real_gas_id else "LINK_GENERATED_UPON_SYNC"
+    link_id = real_gas_id if real_gas_id else "LINK_PENDING"
 
     loc_sum = {}
     for c in cluster['data']:
@@ -181,16 +193,14 @@ def render_dispatch_logic(i, cluster, pod_name, is_sent=False):
 
     if is_sent and sent_key in st.session_state:
         log = st.session_state[sent_key]
-        st.info(f"📧 **Sent to:** {log['contractor']} | **Timestamp:** {log['time']}")
+        st.info(f"📧 **Sent to:** {log['contractor']} | **Time:** {log['time']}")
 
     ic_df = st.session_state.ic_df
     v_ics = ic_df[~ic_df.astype(str).apply(lambda x: x.str.contains('Field Agent', case=False, na=False).any(), axis=1)].copy()
     v_ics = v_ics.dropna(subset=['Lat', 'Lng'])
     c_lat, c_lon = cluster['center']
-    if not v_ics.empty:
-        v_ics['d'] = v_ics.apply(lambda x: haversine(c_lat, c_lon, x['Lat'], x['Lng']), axis=1)
-        valid_ics = v_ics[v_ics['d'] <= MAX_DEADHEAD_MILES].sort_values('d').head(5)
-    else: valid_ics = pd.DataFrame()
+    v_ics['d'] = v_ics.apply(lambda x: haversine(c_lat, c_lon, x['Lat'], x['Lng']), axis=1)
+    valid_ics = v_ics[v_ics['d'] <= MAX_DEADHEAD_MILES].sort_values('d').head(5)
 
     if valid_ics.empty:
         st.error("⚠️ No Independent Contractors nearby."); return
@@ -204,7 +214,6 @@ def render_dispatch_logic(i, cluster, pod_name, is_sent=False):
     sel_ic = ic_opts[sel_label]
     mi, t_str, pay, eff_stop = get_metrics(sel_ic['Location'], cluster['data'], rate)
     
-    # 🎯 Visual Logic
     is_critical = eff_stop > REVIEW_PER_STOP_LIMIT
     st.markdown(f"""
         <div style="background-color: {TB_RED if is_critical else '#f8fafc'}; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 15px;">
@@ -214,7 +223,6 @@ def render_dispatch_logic(i, cluster, pod_name, is_sent=False):
         </div>
     """, unsafe_allow_html=True)
 
-    # 🎯 FIX: Signature Re-generated AFTER dynamic pay calculation
     wo_title = f"{sel_ic['Name']} - {datetime.now().strftime('%m%d%Y')}-{i}"
     loc_lines = [f"{idx + 1}. {a} ({count} Tasks)" for idx, (a, count) in enumerate(loc_sum.items())]
     sig = (f"Work Order: {wo_title}\nContractor: {sel_ic['Name']}\nDue Date: {due.strftime('%A, %b %d, %Y')}\n\n"
@@ -223,22 +231,26 @@ def render_dispatch_logic(i, cluster, pod_name, is_sent=False):
     
     st.text_area("Email Payload Preview", sig, height=250, key=f"area_{i}_{pod_name}_{sel_ic['Name']}_{rate}")
 
-    # --- ACTION BUTTONS ---
+    # --- ACTION BUTTONS (FAIL-SAFE GMAIL) ---
     col1, col2 = st.columns(2)
     with col1:
         if not real_gas_id:
             if st.button("☁️ Sync Data", key=f"btn_s_{i}_{pod_name}"):
                 rid = sync_to_sheet(sel_ic, cluster['data'], mi, t_str, pay, wo_title, loc_sum, due)
                 if rid: st.session_state[sync_key] = rid; st.rerun()
-        else: st.button("✅ Synced", disabled=True, key=f"btn_d_{i}_{pod_name}")
+        else: st.button("✅ Synced", disabled=True)
     with col2:
         if real_gas_id:
-            mail = f"https://mail.google.com/mail/?view=cm&fs=1&to={sel_ic['Email']}&su=Route Request | {wo_title}&body={requests.utils.quote(sig)}"
-            if st.button(f"📧 Send Gmail", key=f"log_sent_{i}_{pod_name}"):
-                st.session_state[sent_key] = {"contractor": sel_ic['Name'], "time": datetime.now().strftime("%I:%M %p")}
-                st.markdown(f'<script>window.open("{mail}", "_blank");</script>', unsafe_allow_html=True)
-                st.rerun()
-        else: st.markdown('<div style="background:#e2e8f0;color:#94a3b8;padding:10px;text-align:center;border-radius:4px;font-weight:bold;">📧 Sync First</div>', unsafe_allow_html=True)
+            mail_url = f"https://mail.google.com/mail/?view=cm&fs=1&to={sel_ic['Email']}&su=Route Request | {wo_title}&body={requests.utils.quote(sig)}"
+            # Browser-Friendly Clickable Link (Browsers can't block this)
+            st.markdown(f'<a href="{mail_url}" target="_blank" class="gmail-link">📧 OPEN GMAIL NOW</a>', unsafe_allow_html=True)
+            
+            # Optional: Log as sent after they click the link
+            if st.button("Mark as Sent in App", key=f"mark_sent_{i}"):
+                 st.session_state[sent_key] = {"contractor": sel_ic['Name'], "time": datetime.now().strftime("%I:%M %p")}
+                 st.rerun()
+        else:
+            st.info("Sync first to enable email.")
 
 def run_pod_tab(pod_name):
     st.markdown(f"<h2>{pod_name} Command Center</h2>", unsafe_allow_html=True)
@@ -252,11 +264,9 @@ def run_pod_tab(pod_name):
     for c in clusters:
         c_h = hashlib.md5("".join(sorted([t['id'] for t in c['data']])).encode()).hexdigest()
         if f"sent_log_{c_h}" in st.session_state: sent.append(c); continue
-        
         has_ic = v_ics.apply(lambda x: haversine(c['center'][0], c['center'][1], x['Lat'], x['Lng']), axis=1).le(MAX_DEADHEAD_MILES).any() if not v_ics.empty else False
         _, hrs, _ = fetch_gmaps_directions(f"{c['center'][0]},{c['center'][1]}", tuple([d['full_addr'] for d in c['data'][:10]]))
         gate_avg = (hrs * HOURLY_FLOOR_RATE) / c['unique_count'] if c['unique_count'] > 0 else 0
-        
         if has_ic and gate_avg <= REVIEW_PER_STOP_LIMIT: ready.append(c)
         else: review.append(c)
 
@@ -291,9 +301,8 @@ def run_global_tab():
         p_bar = st.progress(0, text="Initializing Network Sweep...")
         pods = list(POD_CONFIGS.keys())
         for idx, pod in enumerate(pods):
-            progress_step = (idx + 1) / len(pods)
             process_pod_data(pod)
-            p_bar.progress(progress_step, text=f"Synced {pod}...")
+            p_bar.progress((idx + 1) / len(pods), text=f"Synced {pod}...")
         st.success("Global Sync Complete!")
         st.rerun()
 
