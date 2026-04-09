@@ -70,29 +70,25 @@ st.markdown(f"""
     .metric-value {{ font-size: 20px; color: {TB_PURPLE} !important; font-weight: 800; }}
     .stTabs [data-baseweb="tab"] {{ color: #444444 !important; font-weight: 600 !important; }}
     .stTabs [aria-selected="true"] {{ color: {TB_PURPLE} !important; border-bottom: 3px solid {TB_GREEN} !important; }}
-    .stButton>button {{ background-color: {TB_PURPLE} !important; color: #FFFFFF !important; font-weight: 700 !important; border-radius: 6px !important; width: 100%; }}
-    .stButton>button:hover {{ background-color: {TB_GREEN} !important; }}
-    
-    .gmail-link {{
-        display: block;
-        text-align: center;
-        background-color: {TB_GREEN} !important;
-        color: white !important;
-        padding: 10px;
-        border-radius: 6px;
-        text-decoration: none;
-        font-weight: 700;
-        margin-top: 10px;
-    }}
-    .gmail-link:hover {{ background-color: #619a1b !important; }}
+    .gmail-link {{ display: block; text-align: center; background-color: {TB_GREEN} !important; color: white !important; padding: 10px; border-radius: 6px; text-decoration: none; font-weight: 700; margin-top: 10px; }}
     </style>
 """, unsafe_allow_html=True)
 
-# --- UTILITIES ---
-def normalize_state(st_str):
-    if not st_str: return "UNKNOWN"
-    clean = str(st_str).strip().upper()
-    return STATE_MAP.get(clean, clean)
+# --- DATABASE UTILITIES ---
+@st.cache_data(ttl=300)
+def fetch_sent_routes_database():
+    """Fetches all route IDs marked as SENT from the GAS Web App."""
+    try:
+        res = requests.get(f"{GAS_WEB_APP_URL}?action=getSentRoutes")
+        if res.status_code == 200:
+            return set(res.json().get("sentIds", []))
+    except: pass
+    return set()
+
+@st.cache_data(ttl=600)
+def load_ic_database(sheet_url):
+    try: return pd.read_csv(f"{sheet_url.split('/edit')[0]}/export?format=csv&gid=0")
+    except: return None
 
 def haversine(lat1, lon1, lat2, lon2):
     R = 3958.8
@@ -103,44 +99,38 @@ def haversine(lat1, lon1, lat2, lon2):
 @st.cache_data(show_spinner=False, ttl=86400)
 def fetch_gmaps_directions(home, waypoints_tuple):
     url = f"https://maps.googleapis.com/maps/api/directions/json?origin={home}&destination={home}&waypoints=optimize:true|{'|'.join(waypoints_tuple)}&key={GOOGLE_MAPS_KEY}"
-    mi, hrs, t_str = 0, 0, "0h 0m"
     try:
         res = requests.get(url).json()
         if res['status'] == 'OK':
             mi = sum(l['distance']['value'] for l in res['routes'][0]['legs']) * 0.000621371
             hrs = sum(l['duration']['value'] for l in res['routes'][0]['legs']) / 3600
             t_str = f"{int(hrs)}h {int((hrs * 60) % 60)}m"
+            return round(mi, 1), hrs, t_str
     except: pass
-    return round(mi, 1), hrs, t_str
+    return 0, 0, "0h 0m"
 
 def get_metrics(home, cluster_nodes, stop_rate):
     unique_addrs = list(set([c['full_addr'] for c in cluster_nodes]))
     mi, hrs, t_str = fetch_gmaps_directions(home, tuple(unique_addrs[:10]))
     stop_count = len(unique_addrs)
     pay = max(stop_count * stop_rate, hrs * HOURLY_FLOOR_RATE)
-    eff_per_stop = pay / stop_count if stop_count > 0 else 0
-    return mi, t_str, round(pay, 2), round(eff_per_stop, 2)
+    eff_stop = pay / stop_count if stop_count > 0 else 0
+    return mi, t_str, round(pay, 2), round(eff_stop, 2)
 
-def sync_to_sheet(ic, cluster_data, mi, time_str, pay, work_order, loc_sum, due_date):
-    payload = {
-        "icn": str(ic.get('Name', '')), "ice": str(ic.get('Email', '')), "wo": work_order,
-        "due": due_date.strftime('%Y-%m-%d'), "comp": f"{pay:.2f}", "mi": str(mi),
-        "time": str(time_str), "locs": " | ".join([f"{a} ({c})" for a, c in loc_sum.items()]),
-        "lCnt": len(loc_sum), "tCnt": len(cluster_data), "phone": str(ic.get('Phone', '')),
-        "taskIds": ",".join([c['id'] for c in cluster_data])
-    }
+def mark_route_sent_in_sheet(route_id):
+    """Permanently updates the Google Sheet status to SENT."""
     try:
-        res = requests.post(GAS_WEB_APP_URL, json={"action": "saveRoute", "payload": payload}, allow_redirects=True)
-        if res.status_code == 200 and res.json().get("success"): return res.json().get("routeId")
-    except: pass
-    return False
+        requests.post(GAS_WEB_APP_URL, json={"action": "markSent", "routeId": route_id})
+        st.cache_data.clear() # Force app to see new data
+        return True
+    except: return False
 
-@st.cache_data(ttl=600)
-def load_ic_database(sheet_url):
-    try: return pd.read_csv(f"{sheet_url.split('/edit')[0]}/export?format=csv&gid=0")
-    except: return None
+# --- CLUSTERING ---
+def normalize_state(st_str):
+    if not st_str: return "UNKNOWN"
+    clean = str(st_str).strip().upper()
+    return STATE_MAP.get(clean, clean)
 
-# --- PROCESSING ---
 def process_pod_data(pod_name):
     config = POD_CONFIGS[pod_name]
     ui_container = st.empty()
@@ -174,26 +164,22 @@ def process_pod_data(pod_name):
                     group.append(t); unique_locs.add(t['full_addr'])
                 else: rem.append(t)
             pool = rem
-            clusters.append({"data": group, "center": [anchor['lat'], anchor['lon']], "unique_count": len(unique_locs), "city": anchor['city'], "state": anchor['state']})
+            # Create a unique ID for this cluster based on its task IDs
+            cluster_id = hashlib.md5("".join(sorted([t['id'] for t in group])).encode()).hexdigest()
+            clusters.append({"id": cluster_id, "data": group, "center": [anchor['lat'], anchor['lon']], "unique_count": len(unique_locs), "city": anchor['city'], "state": anchor['state']})
         st.session_state[f"clusters_{pod_name}"] = clusters
     ui_container.empty()
 
-# --- DISPATCH RENDER ---
+# --- DISPATCH CARD ---
 def render_dispatch_logic(i, cluster, pod_name, is_sent=False):
-    cluster_hash = hashlib.md5("".join(sorted([t['id'] for t in cluster['data']])).encode()).hexdigest()
-    sync_key, sent_key = f"sync_{cluster_hash}", f"sent_log_{cluster_hash}"
+    sync_key = f"sync_{cluster['id']}"
     real_gas_id = st.session_state.get(sync_key, None)
-    link_id = real_gas_id if real_gas_id else "LINK_PENDING"
-
+    
     loc_sum = {}
     for c in cluster['data']:
         addr = c['full_addr']; loc_sum[addr] = loc_sum.get(addr, 0) + 1
     for addr, count in loc_sum.items(): st.markdown(f"• **{addr}** ({count} Tasks)")
     st.divider()
-
-    if is_sent and sent_key in st.session_state:
-        log = st.session_state[sent_key]
-        st.info(f"📧 **Sent to:** {log['contractor']} | **Time:** {log['time']}")
 
     ic_df = st.session_state.ic_df
     v_ics = ic_df[~ic_df.astype(str).apply(lambda x: x.str.contains('Field Agent', case=False, na=False).any(), axis=1)].copy()
@@ -212,107 +198,87 @@ def render_dispatch_logic(i, cluster, pod_name, is_sent=False):
     due = c_due.date_input("Due Date", datetime.now().date() + timedelta(days=14), key=f"d_{i}_{pod_name}")
     
     sel_ic = ic_opts[sel_label]
-    mi, t_str, pay, eff_stop = get_metrics(sel_ic['Location'], cluster['data'], rate)
+    mi, hrs, t_str = fetch_gmaps_directions(sel_ic['Location'], tuple(list(loc_sum.keys())[:10]))
+    pay = max(cluster['unique_count'] * rate, hrs * HOURLY_FLOOR_RATE)
+    eff_stop = pay / cluster['unique_count'] if cluster['unique_count'] > 0 else 0
     
     is_critical = eff_stop > REVIEW_PER_STOP_LIMIT
     st.markdown(f"""
         <div style="background-color: {TB_RED if is_critical else '#f8fafc'}; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 15px;">
             <span style="color: {'white' if is_critical else '#444444'}; font-weight: 800; font-size: 10px; text-transform: uppercase;">Financials</span><br>
             <span style="color: {'white' if is_critical else 'black'}; font-weight: 700; font-size: 16px;">Comp: <span style="color: {TB_GREEN if not is_critical else '#ffcccc'};">${pay:.2f}</span></span> | 
-            <span style="color: {'white' if is_critical else 'black'}; font-weight: 600;">Time: {t_str}</span> | <span style="color: {'white' if is_critical else 'black'}; font-weight: 600;">Avg: ${eff_stop}/stop</span>
+            <span style="color: {'white' if is_critical else 'black'}; font-weight: 600;">Time: {t_str}</span> | <span style="color: {'white' if is_critical else 'black'}; font-weight: 600;">Avg: ${eff_stop:.2f}/stop</span>
         </div>
     """, unsafe_allow_html=True)
 
-    wo_title = f"{sel_ic['Name']} - {datetime.now().strftime('%m%d%Y')}-{i}"
-    loc_lines = [f"{idx + 1}. {a} ({count} Tasks)" for idx, (a, count) in enumerate(loc_sum.items())]
-    sig = (f"Work Order: {wo_title}\nContractor: {sel_ic['Name']}\nDue Date: {due.strftime('%A, %b %d, %Y')}\n\n"
-           f"Metrics:\n- Unique Stops: {cluster['unique_count']}\n- Mileage: {mi} mi\n- Time: {t_str}\n- Compensation: ${pay:.2f}\n\n"
-           f"STOP LOCATIONS:\n" + "\n".join(loc_lines) + f"\n\nAuthorize here:\n{PORTAL_BASE_URL}?route={link_id}&v2=true")
+    sig = (f"Work Order: {sel_ic['Name']} - {datetime.now().strftime('%m%d%Y')}-{i}\n"
+           f"Contractor: {sel_ic['Name']}\nDue Date: {due}\nMetrics: {mi} mi, {t_str}\n"
+           f"Compensation: ${pay:.2f}\nAuthorize: {PORTAL_BASE_URL}?route={real_gas_id or 'PENDING'}")
     
-    st.text_area("Email Payload Preview", sig, height=250, key=f"area_{i}_{pod_name}_{sel_ic['Name']}_{rate}")
+    st.text_area("Email Preview", sig, height=200, key=f"area_{i}_{pod_name}_{sel_ic['Name']}")
 
-    # --- ACTION BUTTONS (FAIL-SAFE GMAIL) ---
     col1, col2 = st.columns(2)
     with col1:
         if not real_gas_id:
-            if st.button("☁️ Sync Data", key=f"btn_s_{i}_{pod_name}"):
-                rid = sync_to_sheet(sel_ic, cluster['data'], mi, t_str, pay, wo_title, loc_sum, due)
-                if rid: st.session_state[sync_key] = rid; st.rerun()
+            if st.button("☁️ Sync to Sheet", key=f"btn_s_{i}_{pod_name}"):
+                payload = {"icn": sel_ic['Name'], "ice": sel_ic['Email'], "comp": f"{pay:.2f}", "taskIds": ",".join([c['id'] for c in cluster['data']])}
+                res = requests.post(GAS_WEB_APP_URL, json={"action": "saveRoute", "payload": payload}).json()
+                if res.get("success"): st.session_state[sync_key] = res.get("routeId"); st.rerun()
         else: st.button("✅ Synced", disabled=True)
     with col2:
         if real_gas_id:
-            mail_url = f"https://mail.google.com/mail/?view=cm&fs=1&to={sel_ic['Email']}&su=Route Request | {wo_title}&body={requests.utils.quote(sig)}"
-            # Browser-Friendly Clickable Link (Browsers can't block this)
+            mail_url = f"https://mail.google.com/mail/?view=cm&fs=1&to={sel_ic['Email']}&su=Route Request&body={requests.utils.quote(sig)}"
             st.markdown(f'<a href="{mail_url}" target="_blank" class="gmail-link">📧 OPEN GMAIL NOW</a>', unsafe_allow_html=True)
-            
-            # Optional: Log as sent after they click the link
-            if st.button("Mark as Sent in App", key=f"mark_sent_{i}"):
-                 st.session_state[sent_key] = {"contractor": sel_ic['Name'], "time": datetime.now().strftime("%I:%M %p")}
-                 st.rerun()
-        else:
-            st.info("Sync first to enable email.")
+            if st.button("✔️ Mark as Sent Permanently", key=f"perm_{i}"):
+                if mark_route_sent_in_sheet(real_gas_id): st.rerun()
+        else: st.info("Sync to enable email.")
 
 def run_pod_tab(pod_name):
     st.markdown(f"<h2>{pod_name} Command Center</h2>", unsafe_allow_html=True)
     if f"clusters_{pod_name}" not in st.session_state:
         if st.button(f"📥 Initialize {pod_name}", key=f"init_{pod_name}"): process_pod_data(pod_name); st.rerun()
         return
+    
     clusters = st.session_state[f"clusters_{pod_name}"]
+    sent_ids = fetch_sent_routes_database() # 🔍 REAL-TIME GOOGLE SHEET CHECK
     ic_df = st.session_state.ic_df
     v_ics = ic_df[~ic_df.astype(str).apply(lambda x: x.str.contains('Field Agent', case=False, na=False).any(), axis=1)].dropna(subset=['Lat', 'Lng']) if ic_df is not None else pd.DataFrame()
+    
     ready, review, sent = [], [], []
     for c in clusters:
-        c_h = hashlib.md5("".join(sorted([t['id'] for t in c['data']])).encode()).hexdigest()
-        if f"sent_log_{c_h}" in st.session_state: sent.append(c); continue
+        # Check if this cluster's ID exists in the Google Sheet's "Sent" list
+        if c['id'] in sent_ids: 
+            sent.append(c); continue
+        
         has_ic = v_ics.apply(lambda x: haversine(c['center'][0], c['center'][1], x['Lat'], x['Lng']), axis=1).le(MAX_DEADHEAD_MILES).any() if not v_ics.empty else False
         _, hrs, _ = fetch_gmaps_directions(f"{c['center'][0]},{c['center'][1]}", tuple([d['full_addr'] for d in c['data'][:10]]))
         gate_avg = (hrs * HOURLY_FLOOR_RATE) / c['unique_count'] if c['unique_count'] > 0 else 0
         if has_ic and gate_avg <= REVIEW_PER_STOP_LIMIT: ready.append(c)
         else: review.append(c)
 
-    c1, c2, c3, c4, c5 = st.columns(5)
-    c1.markdown(f"<div class='metric-box'><div class='metric-title'>Total</div><div class='metric-value'>{len(clusters)}</div></div>", unsafe_allow_html=True)
-    c2.markdown(f"<div class='metric-box'><div class='metric-title' style='color:{TB_GREEN}'>Ready</div><div class='metric-value'>{len(ready)}</div></div>", unsafe_allow_html=True)
-    c3.markdown(f"<div class='metric-box'><div class='metric-title' style='color:{TB_BLUE}'>Sent</div><div class='metric-value'>{len(sent)}</div></div>", unsafe_allow_html=True)
-    c4.markdown(f"<div class='metric-box'><div class='metric-title' style='color:#f44336'>Review</div><div class='metric-value'>{len(review)}</div></div>", unsafe_allow_html=True)
-    if c5.button("🔄 Refresh", key=f"ref_{pod_name}"): process_pod_data(pod_name); st.rerun()
-
-    m = folium.Map(location=clusters[0]['center'], zoom_start=6, tiles="cartodbpositron")
-    for c in ready: folium.CircleMarker(c['center'], radius=10, color=TB_GREEN, fill=True, opacity=0.7).add_to(m)
-    for c in sent: folium.CircleMarker(c['center'], radius=10, color=TB_BLUE, fill=True, opacity=0.7).add_to(m)
-    for c in review: folium.CircleMarker(c['center'], radius=10, color="#f44336", fill=True, opacity=0.7).add_to(m)
-    st_folium(m, use_container_width=True, height=450, key=f"map_{pod_name}")
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("Total", len(clusters))
+    c2.metric("Ready", len(ready))
+    c3.metric("Sent", len(sent))
+    c4.metric("Review", len(review))
     
-    t1, t2, t3 = st.tabs(["🟢 Ready", "📧 Sent", "🔴 Review"])
+    t1, t2, t3 = st.tabs(["🟢 Ready", "📧 Sent (From Sheet)", "🔴 Review"])
     with t1:
         for i, c in enumerate(ready):
             with st.expander(f"📍 {c['city']}, {c['state']} | {c['unique_count']} Stops"): render_dispatch_logic(i, c, pod_name)
     with t2:
         for i, c in enumerate(sent):
-            with st.expander(f"✅ Sent | {c['city']}, {c['state']} | {c['unique_count']} Stops"): render_dispatch_logic(i+500, c, pod_name, is_sent=True)
+            st.success(f"✅ Route to {c['city']} was successfully logged in the database.")
     with t3:
         for i, c in enumerate(review):
-            with st.expander(f"🔴 Review Required | {c['city']}, {c['state']} | {c['unique_count']} Stops"): render_dispatch_logic(i+1000, c, pod_name)
-
-# --- GLOBAL TAB ---
-def run_global_tab():
-    st.markdown("## 🌎 Global Network Overview")
-    if st.button("🚀 Sync Global Network"):
-        p_bar = st.progress(0, text="Initializing Network Sweep...")
-        pods = list(POD_CONFIGS.keys())
-        for idx, pod in enumerate(pods):
-            process_pod_data(pod)
-            p_bar.progress((idx + 1) / len(pods), text=f"Synced {pod}...")
-        st.success("Global Sync Complete!")
-        st.rerun()
+            with st.expander(f"🔴 Review Required | {c['city']}"): render_dispatch_logic(i+1000, c, pod_name)
 
 # --- MAIN ---
 if "ic_df" not in st.session_state: st.session_state.ic_df = load_ic_database(IC_SHEET_URL)
 st.markdown("<h1>Network Command Center</h1>", unsafe_allow_html=True)
-tabs = st.tabs(["🌎 Global", "🔵 Blue Pod", "🟢 Green Pod", "🟠 Orange Pod", "🟣 Purple Pod", "🔴 Red Pod"])
-with tabs[0]: run_global_tab()
-with tabs[1]: run_pod_tab("Blue Pod")
-with tabs[2]: run_pod_tab("Green Pod")
-with tabs[3]: run_pod_tab("Orange Pod")
-with tabs[4]: run_pod_tab("Purple Pod")
-with tabs[5]: run_pod_tab("Red Pod")
+tabs = st.tabs(["🔵 Blue Pod", "🟢 Green Pod", "🟠 Orange Pod", "🟣 Purple Pod", "🔴 Red Pod"])
+with tabs[0]: run_pod_tab("Blue Pod")
+with tabs[1]: run_pod_tab("Green Pod")
+with tabs[2]: run_pod_tab("Orange Pod")
+with tabs[3]: run_pod_tab("Purple Pod")
+with tabs[4]: run_pod_tab("Red Pod")
