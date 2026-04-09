@@ -1521,6 +1521,11 @@
                 "_subject": `${decision}: WO #${window.payloadData.wo} (${window.payloadData.icn})`
             };
 
+            const dispatcherEmail = window.payloadData.dispatcherEmail;
+            if (dispatcherEmail && dispatcherEmail.toLowerCase() !== PRIMARY_FORMSPREE_EMAIL.toLowerCase()) {
+                formData["_cc"] = dispatcherEmail;
+            }
+
             try {
                 const response = await fetch(formspreeUrl, {
                     method: 'POST',
@@ -1560,7 +1565,7 @@
                     } else if (decision === 'Declined') {
                         if (window.currentRouteId) {
                             try {
-                                fetch(`${webAppUrl}?action=declineRoute&routeId=${encodeURIComponent(window.currentRouteId)}&notes=${encodeURIComponent(notes || 'None')}&counter=${encodeURIComponent(counter || 'N/A')}`);
+                                fetch(`${webAppUrl}?action=declineRoute&routeId=${encodeURIComponent(window.currentRouteId)}`);
                             } catch(e) {}
                         }
                     }
