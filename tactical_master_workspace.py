@@ -50,55 +50,64 @@ headers = {"Authorization": f"Basic {base64.b64encode(f'{ONFLEET_KEY}:'.encode()
 
 st.set_page_config(page_title="Terraboost Tactical Workspace", layout="wide")
 
-# --- UI STYLING (FIXED FOR EMAIL PROMPT CONTRAST) ---
+# --- UI STYLING (FIXED CONTRAST & LEGIBILITY) ---
 st.markdown(f"""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap');
     
-    .stApp {{ background-color: #f4f5f7 !important; color: #000000 !important; font-family: 'Roboto', sans-serif !important; }}
-
-    /* Fix Faint Labels above Input Boxes and Selectboxes */
-    div[data-testid="stWidgetLabel"] p {{ color: #000000 !important; font-weight: 700 !important; font-size: 14px !important; opacity: 1 !important; }}
-
-    /* 🎯 TARGETED FIX: Email Payload Prompt Box and Text */
-    div[data-testid="stTextArea"] label p {{
-        color: #000000 !important;
-        font-weight: 800 !important;
-        font-size: 15px !important;
-        opacity: 1 !important;
+    /* 1. Global App Body */
+    .stApp {{ 
+        background-color: #f4f5f7 !important; 
+        color: #000000 !important; 
+        font-family: 'Roboto', sans-serif !important; 
     }}
+
+    /* 2. Targeted Fix: Widget Labels (Contractor, Rate, etc.) */
+    div[data-testid="stWidgetLabel"] p {{ 
+        color: #000000 !important; 
+        font-weight: 700 !important; 
+        font-size: 14px !important; 
+        opacity: 1 !important; 
+    }}
+
+    /* 3. Targeted Fix: Email Payload Box (image_b8d963 fix) */
     div[data-testid="stTextArea"] textarea {{
         color: #000000 !important;
         background-color: #FFFFFF !important;
-        border: 1px solid #999999 !important;
+        border: 1px solid #323338 !important;
         font-weight: 600 !important;
-        font-family: 'Roboto', sans-serif !important;
+        opacity: 1 !important;
+    }}
+    div[data-testid="stTextArea"] label p {{
+        color: #000000 !important;
+        font-weight: 800 !important;
+    }}
+
+    /* 4. Targeted Fix: Input Boxes & Select Boxes (image_b8e0c1 fix) */
+    .stTextInput input, .stNumberInput input, .stDateInput input, div[data-baseweb="select"] > div {{
+        background-color: #FFFFFF !important;
+        color: #000000 !important;
+        border: 1px solid #323338 !important;
         opacity: 1 !important;
     }}
 
-    /* Fix Faint Metric Values and Labels (Overview Cards) */
+    /* 5. Overview Metric Cards (image_ad879a fix) */
     [data-testid="stMetricValue"] {{ color: #000000 !important; font-weight: 800 !important; }}
     [data-testid="stMetricLabel"] p {{ color: #444444 !important; font-weight: 700 !important; text-transform: uppercase !important; }}
 
-    /* Metric Boxes (Route Financials) */
+    /* 6. Financial Metric Boxes */
     .metric-box {{ border-left: 5px solid {TB_PURPLE}; padding: 12px 15px; margin-bottom: 15px; background: white; border-radius: 0 4px 4px 0; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }}
     .metric-title {{ font-size: 11px; text-transform: uppercase; color: #444444 !important; font-weight: 800; }}
     .metric-value {{ font-size: 20px; color: {TB_PURPLE} !important; font-weight: 800; }}
 
-    /* Headers */
+    /* 7. Headers & Tabs */
     h1, h2, h3 {{ color: {TB_PURPLE} !important; font-weight: 800 !important; }}
-
-    /* Tabs and Expanders */
     .stTabs [data-baseweb="tab"] {{ color: #444444 !important; font-weight: 600 !important; }}
     .stTabs [aria-selected="true"] {{ color: {TB_PURPLE} !important; border-bottom: 3px solid {TB_GREEN} !important; }}
-    div[data-testid="stExpander"] {{ background-color: white !important; border: 1px solid #d0d4e4 !important; border-radius: 8px !important; margin-bottom: 12px; }}
-    div[data-testid="stExpander"] details summary p {{ color: #000000 !important; font-weight: 700 !important; font-size: 16px !important; }}
-    div[data-testid="stExpander"] details summary {{ background-color: {TB_LIGHT_BLUE} !important; padding: 12px !important; border-radius: 8px 8px 0 0 !important; }}
 
-    /* Button and Input Contrast */
+    /* 8. Buttons */
     .stButton>button {{ background-color: {TB_PURPLE} !important; color: #FFFFFF !important; font-weight: 700 !important; border-radius: 6px !important; width: 100%; }}
     .stButton>button:hover {{ background-color: {TB_GREEN} !important; }}
-    .stTextInput input, .stNumberInput input, .stDateInput input {{ color: #000000 !important; border: 1px solid #999999 !important; font-weight: 500 !important; }}
     
     #status {{ display: none !important; }}
     [data-testid="stStatusWidget"] {{ display: none !important; }}
