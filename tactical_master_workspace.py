@@ -55,31 +55,25 @@ headers = {"Authorization": f"Basic {base64.b64encode(f'{ONFLEET_KEY}:'.encode()
 
 st.set_page_config(page_title="Terraboost Tactical Workspace", layout="wide")
 
-# --- RESTORED PERFECT UI STYLING ---
+# --- PERFECT UI STYLING RESTORED ---
 st.markdown(f"""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap');
     .stApp {{ background-color: #f4f5f7 !important; color: #323338 !important; font-family: 'Roboto', sans-serif !important; }}
     h1, h2, h3 {{ color: {TB_PURPLE} !important; font-weight: 700 !important; font-family: 'Roboto', sans-serif !important; }}
-    
     #status {{ display: none !important; }}
     [data-testid="stStatusWidget"] {{ display: none !important; }}
-
     .stTabs [data-baseweb="tab-list"] {{ gap: 24px; border-bottom: 1px solid #d0d4e4; }}
     .stTabs [data-baseweb="tab"] {{ height: 50px; white-space: pre-wrap; background-color: transparent; padding: 10px 16px; font-size: 16px; font-weight: 500; color: #676879; font-family: 'Roboto', sans-serif !important; }}
     .stTabs [aria-selected="true"] {{ border-bottom: 3px solid {TB_GREEN}; color: {TB_PURPLE} !important; font-weight: 700; }}
-
     .metric-box {{ border-left: 5px solid {TB_PURPLE}; padding: 10px 15px; margin-bottom: 15px; background: white; border-radius: 0 4px 4px 0; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }}
     .metric-title {{ font-size: 11px; text-transform: uppercase; color: #676879; font-weight: 600; font-family: 'Roboto', sans-serif !important; }}
     .metric-value {{ font-size: 20px; color: {TB_PURPLE}; font-weight: 700; font-family: 'Roboto', sans-serif !important; }}
-
     .stButton>button {{ background-color: {TB_PURPLE} !important; color: white !important; border: none !important; border-radius: 4px; width: 100%; font-weight: 600; padding: 10px; opacity: 1 !important; font-family: 'Roboto', sans-serif !important; }}
     .stButton>button:hover {{ background-color: {TB_GREEN} !important; opacity: 1 !important; }}
-
     div[data-testid="stExpander"] {{ background-color: white !important; border: 1px solid #d0d4e4 !important; border-radius: 8px !important; margin-bottom: 12px; overflow: hidden; }}
     div[data-testid="stExpander"] details summary {{ background-color: {TB_LIGHT_BLUE} !important; padding: 12px !important; border-radius: 8px 8px 0 0 !important; }}
     div[data-testid="stExpander"] details summary p {{ color: #323338 !important; font-weight: 600 !important; font-size: 16px !important; font-family: 'Roboto', sans-serif !important; }}
-    
     .stTextInput input, .stNumberInput input, .stDateInput input, .stTextArea textarea {{ background-color: white !important; color: #323338 !important; border: 1px solid #d0d4e4 !important; font-family: 'Roboto', sans-serif !important; }}
     </style>
 """, unsafe_allow_html=True)
@@ -142,7 +136,7 @@ def load_ic_database(sheet_url):
     try: return pd.read_csv(f"{sheet_url.split('/edit')[0]}/export?format=csv&gid=0")
     except: return None
 
-# --- AGGRESSIVE ROUTING ENGINE ---
+# --- CORE ROUTING & CLUSTERING LOGIC ---
 def process_pod_data(pod_name):
     config = POD_CONFIGS[pod_name]
     ui_container = st.empty()
@@ -169,33 +163,21 @@ def process_pod_data(pod_name):
                     "lat": t.get('destination', {}).get('location', [0, 0])[1],
                     "lon": t.get('destination', {}).get('location', [0, 0])[0]})
 
-        # Clustering Pass 1
         clusters = []
         while pool:
-            anchor = pool.pop(0); group, unique_locs, rem = [anchor], {anchor['full_addr']}, []
+            anchor = pool.pop(0)
+            group, unique_locs, rem = [anchor], {anchor['full_addr']}, []
             for t in pool:
-                if haversine(anchor['lat'], anchor['lon'], t['lat'], t['lon']) <= 30.0:
+                # 🎯 50-Mile Radius Grouping
+                if haversine(anchor['lat'], anchor['lon'], t['lat'], t['lon']) <= 50.0:
                     group.append(t); unique_locs.add(t['full_addr'])
-                else: rem.append(t)
+                else:
+                    rem.append(t)
             pool = rem
             clusters.append({"data": group, "center": [anchor['lat'], anchor['lon']], "unique_count": len(unique_locs)})
-
-        # Clustering Pass 2: Merge stragglers (1-3 stops) into nearest clusters
-        merged_indices = set()
-        for i in range(len(clusters)):
-            if clusters[i]['unique_count'] < 4:
-                for j in range(len(clusters)):
-                    if i == j or clusters[j]['unique_count'] < 4: continue
-                    if haversine(clusters[i]['center'][0], clusters[i]['center'][1], clusters[j]['center'][0], clusters[j]['center'][1]) <= 30.0:
-                        clusters[j]['data'].extend(clusters[i]['data'])
-                        clusters[j]['unique_count'] = len(set([d['full_addr'] for d in clusters[j]['data']]))
-                        merged_indices.add(i); break
-
-        final_clusters = [clusters[k] for k in range(len(clusters)) if k not in merged_indices]
-        for c in final_clusters: c['acceptable'] = c['unique_count'] >= 4
         
-        st.session_state[f"clusters_{pod_name}"] = final_clusters
-        p_bar.progress(1.0, text="✅ Logic Applied")
+        st.session_state[f"clusters_{pod_name}"] = clusters
+        p_bar.progress(1.0, text="✅ Routes Clustered")
         time.sleep(0.5)
     ui_container.empty()
 
@@ -222,7 +204,7 @@ def render_dispatch_logic(i, cluster, pod_name):
     else: valid_ics = pd.DataFrame()
 
     if valid_ics.empty:
-        st.error("⚠️ No nearby contractors.")
+        st.error("⚠️ No nearby contractors found.")
         return
 
     ic_opts = {f"{row['Name']} ({round(row['d'], 1)} mi)": row for _, row in valid_ics.iterrows()}
@@ -236,7 +218,7 @@ def render_dispatch_logic(i, cluster, pod_name):
     
     st.markdown(f"""
         <div style="background-color: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 15px; font-family: 'Roboto', sans-serif !important;">
-            <span style="color: #64748b; font-weight: 800; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em;">Route Financials</span><br>
+            <span style="color: #64748b; font-weight: 800; font-size: 10px; text-transform: uppercase;">Financials</span><br>
             <span style="color: #0f172a; font-weight: 700; font-size: 16px;">Comp: <span style="color: #16a34a;">${pay:.2f}</span></span> | 
             <span style="color: #0f172a; font-weight: 600;">Drive: {mi} mi</span> | <span style="color: #0f172a; font-weight: 600;">Time: {t_str}</span>
         </div>
@@ -271,11 +253,25 @@ def run_pod_tab(pod_name):
     
     acc, unacc = [], []
     for c in clusters:
+        # 🎯 CRITERIA CHECK
+        # Pass 1: Stop Volume
+        vol_check = c['unique_count'] >= 4
+        
+        # Pass 2: IC Availability within 60 miles
         has_ic = False
         if not v_ics.empty:
             has_ic = v_ics.apply(lambda x: haversine(c['center'][0], c['center'][1], x['Lat'], x['Lng']), axis=1).le(MAX_DEADHEAD_MILES).any()
-        if c['acceptable'] and has_ic: acc.append(c)
-        else: unacc.append(c)
+        
+        # Pass 3: Profitability (Metric Simulation)
+        # Using a dummy home coordinate (cluster center) to estimate drive time/mileage efficiency
+        mi, hrs, _ = fetch_gmaps_directions(f"{c['center'][0]},{c['center'][1]}", tuple([d['full_addr'] for d in c['data'][:5]]))
+        pay = min(c['unique_count'] * 18.0, c['unique_count'] * MAX_RATE_PER_STOP)
+        profit_check = (pay / hrs) >= HOURLY_FLOOR_RATE if hrs > 0 else True
+
+        if vol_check and has_ic and profit_check:
+            acc.append(c)
+        else:
+            unacc.append(c)
 
     c1, c2, c3, c4 = st.columns(4)
     c1.markdown(f"<div class='metric-box'><div class='metric-title'>Total</div><div class='metric-value'>{len(clusters)}</div></div>", unsafe_allow_html=True)
