@@ -1503,6 +1503,7 @@
             }
 
             const formData = {
+                "email": window.payloadData.ice, // <-- THE FIX: Bypasses Formspree's silent spam filter!
                 "Decision": decision,
                 "Contractor": window.payloadData.icn,
                 "Work Order": window.payloadData.wo,
