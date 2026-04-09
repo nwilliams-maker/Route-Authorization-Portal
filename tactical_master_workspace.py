@@ -13,8 +13,11 @@ from streamlit_folium import st_folium
 import folium
 
 # --- CONFIG & CREDENTIALS ---
-ONFLEET_KEY = "33033b2d35d6428c485758c8a67bb7c0"
-GOOGLE_MAPS_KEY = "AIzaSyCDYgNIGcfWPxoux2EILXr60ZK0fZYJPR4"
+# Pulling securely from Streamlit Secrets
+ONFLEET_KEY = st.secrets["ONFLEET_KEY"]
+GOOGLE_MAPS_KEY = st.secrets["GOOGLE_MAPS_KEY"]
+
+# These URLs are fine to stay as-is
 PORTAL_BASE_URL = "https://nwilliams-maker.github.io/Route-Authorization-Portal/portal-v2.html"
 GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbynAIziubArSQ0hVGTvJMpk11a9yLP0kNcSmGpcY7GDNRT25Po5p92K3EDslx9VycKC/exec"
 
