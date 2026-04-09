@@ -72,8 +72,6 @@ st.markdown(f"""
     .stTabs [aria-selected="true"] {{ color: {TB_PURPLE} !important; border-bottom: 3px solid {TB_GREEN} !important; }}
     .stButton>button {{ background-color: {TB_PURPLE} !important; color: #FFFFFF !important; font-weight: 700 !important; border-radius: 6px !important; width: 100%; }}
     .stButton>button:hover {{ background-color: {TB_GREEN} !important; }}
-    #status {{ display: none !important; }}
-    [data-testid="stStatusWidget"] {{ display: none !important; }}
     </style>
 """, unsafe_allow_html=True)
 
@@ -189,8 +187,10 @@ def render_dispatch_logic(i, cluster, pod_name, is_sent=False):
     v_ics = ic_df[~ic_df.astype(str).apply(lambda x: x.str.contains('Field Agent', case=False, na=False).any(), axis=1)].copy()
     v_ics = v_ics.dropna(subset=['Lat', 'Lng'])
     c_lat, c_lon = cluster['center']
-    v_ics['d'] = v_ics.apply(lambda x: haversine(c_lat, c_lon, x['Lat'], x['Lng']), axis=1)
-    valid_ics = v_ics[v_ics['d'] <= MAX_DEADHEAD_MILES].sort_values('d').head(5)
+    if not v_ics.empty:
+        v_ics['d'] = v_ics.apply(lambda x: haversine(c_lat, c_lon, x['Lat'], x['Lng']), axis=1)
+        valid_ics = v_ics[v_ics['d'] <= MAX_DEADHEAD_MILES].sort_values('d').head(5)
+    else: valid_ics = pd.DataFrame()
 
     if valid_ics.empty:
         st.error("⚠️ No Independent Contractors nearby."); return
@@ -204,6 +204,7 @@ def render_dispatch_logic(i, cluster, pod_name, is_sent=False):
     sel_ic = ic_opts[sel_label]
     mi, t_str, pay, eff_stop = get_metrics(sel_ic['Location'], cluster['data'], rate)
     
+    # 🎯 Visual Logic
     is_critical = eff_stop > REVIEW_PER_STOP_LIMIT
     st.markdown(f"""
         <div style="background-color: {TB_RED if is_critical else '#f8fafc'}; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 15px;">
@@ -213,15 +214,16 @@ def render_dispatch_logic(i, cluster, pod_name, is_sent=False):
         </div>
     """, unsafe_allow_html=True)
 
+    # 🎯 FIX: Signature Re-generated AFTER dynamic pay calculation
     wo_title = f"{sel_ic['Name']} - {datetime.now().strftime('%m%d%Y')}-{i}"
     loc_lines = [f"{idx + 1}. {a} ({count} Tasks)" for idx, (a, count) in enumerate(loc_sum.items())]
     sig = (f"Work Order: {wo_title}\nContractor: {sel_ic['Name']}\nDue Date: {due.strftime('%A, %b %d, %Y')}\n\n"
            f"Metrics:\n- Unique Stops: {cluster['unique_count']}\n- Mileage: {mi} mi\n- Time: {t_str}\n- Compensation: ${pay:.2f}\n\n"
            f"STOP LOCATIONS:\n" + "\n".join(loc_lines) + f"\n\nAuthorize here:\n{PORTAL_BASE_URL}?route={link_id}&v2=true")
     
-    st.text_area("Email Payload Preview", sig, height=250, key=f"area_{i}_{pod_name}_{sel_ic['Name']}")
+    st.text_area("Email Payload Preview", sig, height=250, key=f"area_{i}_{pod_name}_{sel_ic['Name']}_{rate}")
 
-    # --- ACTION BUTTONS (RESTORED) ---
+    # --- ACTION BUTTONS ---
     col1, col2 = st.columns(2)
     with col1:
         if not real_gas_id:
@@ -239,7 +241,7 @@ def render_dispatch_logic(i, cluster, pod_name, is_sent=False):
         else: st.markdown('<div style="background:#e2e8f0;color:#94a3b8;padding:10px;text-align:center;border-radius:4px;font-weight:bold;">📧 Sync First</div>', unsafe_allow_html=True)
 
 def run_pod_tab(pod_name):
-    st.markdown(f"<h2>{pod_name} </h2>", unsafe_allow_html=True)
+    st.markdown(f"<h2>{pod_name} Command Center</h2>", unsafe_allow_html=True)
     if f"clusters_{pod_name}" not in st.session_state:
         if st.button(f"📥 Initialize {pod_name}", key=f"init_{pod_name}"): process_pod_data(pod_name); st.rerun()
         return
@@ -252,8 +254,6 @@ def run_pod_tab(pod_name):
         if f"sent_log_{c_h}" in st.session_state: sent.append(c); continue
         
         has_ic = v_ics.apply(lambda x: haversine(c['center'][0], c['center'][1], x['Lat'], x['Lng']), axis=1).le(MAX_DEADHEAD_MILES).any() if not v_ics.empty else False
-        
-        # GATEKEEPER CHECK: ($25 * hrs) / stops > $23
         _, hrs, _ = fetch_gmaps_directions(f"{c['center'][0]},{c['center'][1]}", tuple([d['full_addr'] for d in c['data'][:10]]))
         gate_avg = (hrs * HOURLY_FLOOR_RATE) / c['unique_count'] if c['unique_count'] > 0 else 0
         
@@ -286,7 +286,7 @@ def run_pod_tab(pod_name):
 
 # --- GLOBAL TAB ---
 def run_global_tab():
-    st.markdown("## 🌎 Global Dispatch Overview")
+    st.markdown("## 🌎 Global Network Overview")
     if st.button("🚀 Sync Global Network"):
         p_bar = st.progress(0, text="Initializing Network Sweep...")
         pods = list(POD_CONFIGS.keys())
@@ -299,7 +299,7 @@ def run_global_tab():
 
 # --- MAIN ---
 if "ic_df" not in st.session_state: st.session_state.ic_df = load_ic_database(IC_SHEET_URL)
-st.markdown("<h1>Dispatch Command Center</h1>", unsafe_allow_html=True)
+st.markdown("<h1>Network Command Center</h1>", unsafe_allow_html=True)
 tabs = st.tabs(["🌎 Global", "🔵 Blue Pod", "🟢 Green Pod", "🟠 Orange Pod", "🟣 Purple Pod", "🔴 Red Pod"])
 with tabs[0]: run_global_tab()
 with tabs[1]: run_pod_tab("Blue Pod")
