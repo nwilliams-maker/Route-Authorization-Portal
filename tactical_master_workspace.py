@@ -577,7 +577,7 @@ def run_pod_tab(pod_name):
 def run_global_tab():
     # Apply typography update to the main header
     st.markdown(f"""
-        <h1 style="font-family: 'Roboto', sans-serif !important;">Network Command Center</h1>
+        <h1 style="font-family: 'Roboto', sans-serif !important;">Dispatch Command Center</h1>
     """, unsafe_allow_html=True)
     
     if "global_data" not in st.session_state:
