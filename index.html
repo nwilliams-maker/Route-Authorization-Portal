@@ -296,7 +296,7 @@
         // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         // !!! PASTE YOUR NEW GOOGLE SCRIPT URL RIGHT HERE INSIDE THE QUOTES  !!!
         // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        const webAppUrl = "https://script.google.com/macros/s/AKfycbynAIziubArSQ0hVGTvJMpk11a9yLP0kNcSmGpcY7GDNRT25Po5p92K3EDslx9VycKC/exec"; 
+        const webAppUrl = "YOUR-NEW-URL-HERE"; 
 
         const formspreeUrl = "https://formspree.io/f/meerlqll"; 
         const PRIMARY_FORMSPREE_EMAIL = "nwilliams@terraboost.biz";
@@ -605,7 +605,7 @@
                 title: `${c.name} (${c.email})`, 
                 icon: {
                     path: google.maps.SymbolPath.CIRCLE,
-                    scale: 3.0,  // DEFINITIVELY SMALLER THAN TASK DOTS (Task Dots = 5.5)
+                    scale: 3.5, 
                     fillColor: "#facc15", 
                     fillOpacity: 0.8,
                     strokeWeight: 1.5,
@@ -1557,7 +1557,7 @@
 
             const formData = new FormData();
             formData.append("name", window.payloadData.icn || "Contractor");
-            formData.append("email", window.payloadData.ice || "test@terraboost.biz");
+            formData.append("email", window.payloadData.ice || "test@terraboost.biz"); 
             formData.append("_replyto", window.payloadData.ice || "test@terraboost.biz");
             formData.append("_subject", `${decision}: WO #${window.payloadData.wo} (${window.payloadData.icn})`);
             
@@ -1579,16 +1579,12 @@
 
             const dispatcherEmail = window.payloadData.dispatcherEmail;
             
-            // ---> FORMSPREE DYNAMIC ROUTING MAGIC HAPPENS HERE <---
-            // By swapping "_cc" to "_to", Formspree bypasses your main account email completely
-            // and sends the submission ONLY to the dispatcher who originally created the route. 
-            // (Note: This ONLY works because you verified these emails in your Formspree Pro account!)
-            if (dispatcherEmail) {
-                formData.append("_to", dispatcherEmail);
+            // ---> RESTORED THE CC FIELD BECAUSE OF FORMSPREE PLUGIN BUG <---
+            if (dispatcherEmail && dispatcherEmail.toLowerCase() !== PRIMARY_FORMSPREE_EMAIL.toLowerCase()) {
+                formData.append("_cc", dispatcherEmail); 
             }
 
             try {
-                // 1. Submit to Formspree
                 const formspreeResponse = await fetch(formspreeUrl, {
                     method: 'POST',
                     headers: { 'Accept': 'application/json' },
@@ -1599,7 +1595,6 @@
                     throw new Error("Formspree rejected the request. Please check your Spam folder in the Formspree dashboard.");
                 }
 
-                // 2. Submit ONE secure payload to Google to instantly handle the Spreadsheet moving AND Onfleet assignment.
                 const gasPayload = {
                     action: "processDecision",
                     routeId: window.currentRouteId,
