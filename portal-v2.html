@@ -45,8 +45,7 @@
                         <div class="bg-white p-8 rounded-3xl border border-slate-200 shadow-xl shadow-slate-200/40 relative overflow-hidden">
                             <div class="absolute top-0 left-0 w-1 h-full bg-blue-500"></div>
                             <h3 class="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-6">Route Authorization</h3>
-                            <div id="summaryZone" class="space-y-4 text-sm text-slate-700">
-                                </div>
+                            <div id="summaryZone" class="space-y-4 text-sm text-slate-700"></div>
                         </div>
                         
                         <div class="space-y-4 no-print">
@@ -108,7 +107,6 @@
         const formspreeUrl = "https://formspree.io/f/meerlqll";
         const PRIMARY_FORMSPREE_EMAIL = "nwilliams@terraboost.biz";
 
-        // --- 🎯 THE FIXED DATA FLOW JAVASCRIPT ---
         window.onload = () => {
             const urlParams = new URLSearchParams(window.location.search);
             const routeId = urlParams.get('route'); 
@@ -125,7 +123,6 @@
                         }
                         const d = res.payload; window.payloadData = d;
                         
-                        // RESTORED THE TABLE VIEW METRICS
                         let html = `
                             <div class="flex justify-between border-b border-slate-100 pb-3 mb-3 font-bold uppercase text-[10px] tracking-widest text-slate-400"><span>Route Summary</span></div>
                             <div class="flex justify-between border-b border-slate-100 pb-3 mb-3"><span>Contractor:</span> <span class="font-bold text-slate-900">${d.icn}</span></div>
@@ -151,31 +148,91 @@
             const notes = document.getElementById('ic_notes').value;
 
             if (decision === 'Accepted' && (!sig || !consent)) return alert("Signature and consent required.");
+            
             const btn = document.getElementById('submitBtn');
-            btn.disabled = true; btn.innerHTML = "Processing...";
+            btn.disabled = true; 
+            btn.innerHTML = "<span class='spinner inline-block w-4 h-4 border-2 mr-2' style='border-top-color:transparent;'></span> Saving Response...";
 
             const locationList = (window.payloadData.jobOnly ? window.payloadData.jobOnly.split('|') : []).map((loc, i) => `${i + 1}. ${loc}`).join('\n');
-            const formData = { "Decision": decision, "Contractor": window.payloadData.icn, "Work Order": window.payloadData.wo, "Due Date": window.payloadData.due, "Original Comp": `$${window.payloadData.comp}`, "Counter Offer": counter ? `$${counter}` : "N/A", "IC Notes": notes || "None", "Signature": sig || "N/A", "TASK LOCATION LIST": "\n" + locationList, "_subject": `${decision}: WO #${window.payloadData.wo} (${window.payloadData.icn})` };
+            
+            let emailDate = 'N/A';
+            if (window.payloadData.due) {
+                const parts = window.payloadData.due.split('-');
+                emailDate = parts.length === 3 ? `${parts[1]}/${parts[2]}/${parts[0]}` : window.payloadData.due;
+            }
 
-            const isV2 = new URLSearchParams(window.location.search).get('v2') === 'true';
+            // 1. FORMSPREE PREPARATION
+            const formData = new FormData();
+            formData.append("name", window.payloadData.icn || "Contractor");
+            formData.append("email", window.payloadData.ice || "test@terraboost.biz"); 
+            formData.append("_replyto", window.payloadData.ice || "test@terraboost.biz");
+            formData.append("_subject", `${decision}: WO #${window.payloadData.wo} (${window.payloadData.icn})`);
+            formData.append("Decision", decision);
+            formData.append("Contractor", window.payloadData.icn);
+            formData.append("Work Order", window.payloadData.wo);
+            formData.append("Due Date", emailDate);
+            formData.append("Locations", window.payloadData.lCnt);
+            formData.append("Tasks", window.payloadData.tCnt);
+            formData.append("Kiosks", window.payloadData.kCnt);
+            formData.append("Digital", window.payloadData.dCnt || 0);
+            formData.append("Mileage", window.payloadData.mi);
+            formData.append("Original Comp", `$${window.payloadData.comp}`);
+            formData.append("Counter Offer", counter ? `$${counter}` : "N/A");
+            formData.append("Dispatcher Notes", window.payloadData.notes || "None");
+            formData.append("IC Notes", notes || "None");
+            formData.append("Signature", sig || "N/A");
+            formData.append("TASK LOCATION LIST", "\n" + locationList);
+
+            const dispatcherEmail = window.payloadData.dispatcherEmail;
+            if (dispatcherEmail && dispatcherEmail.toLowerCase() !== PRIMARY_FORMSPREE_EMAIL.toLowerCase()) {
+                formData.append("_cc", dispatcherEmail); 
+            }
+
             try {
-                let success = false;
-                if (isV2) {
-                    const res = await fetch(webAppUrl, { method: 'POST', body: JSON.stringify({ action: 'submitDecisionV2', formData, dispatcherEmail: window.payloadData.dispatcherEmail }) });
-                    const result = await res.json(); success = result.success;
-                } else {
-                    const res = await fetch(formspreeUrl, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }, body: JSON.stringify(formData) });
-                    success = res.ok;
-                }
+                // 2. SEND TO FORMSPREE
+                const formspreeRes = await fetch(formspreeUrl, {
+                    method: 'POST',
+                    headers: { 'Accept': 'application/json' },
+                    body: formData
+                });
+                
+                if (!formspreeRes.ok) throw new Error("Formspree rejected the request.");
 
-                if (success) {
-                    if (decision === 'Accepted' && window.payloadData.phone && window.payloadData.taskIds) {
-                        fetch(`${webAppUrl}?action=assignTasks&phone=${encodeURIComponent(window.payloadData.phone)}&taskIds=${encodeURIComponent(window.payloadData.taskIds)}`);
+                // 3. SEND TO GOOGLE APPS SCRIPT (Decision Logic + Onfleet)
+                const isV2 = new URLSearchParams(window.location.search).get('v2') === 'true';
+                
+                const gasPayload = {
+                    action: isV2 ? "submitDecisionV2" : "processDecision",
+                    routeId: window.currentRouteId,
+                    decision: decision,
+                    phone: window.payloadData.phone,
+                    taskIds: window.payloadData.taskIds,
+                    formData: isV2 ? Object.fromEntries(formData) : null, // Only send full form data if using V2 Direct Email
+                    dispatcherEmail: dispatcherEmail
+                };
+
+                const gasRes = await fetch(webAppUrl, {
+                    method: 'POST',
+                    headers: { "Content-Type": "text/plain;charset=utf-8" },
+                    body: JSON.stringify(gasPayload)
+                });
+
+                const result = await gasRes.json();
+
+                if (result.success) {
+                    if (decision === 'Accepted' && result.onfleetMsg) {
+                        console.log(`✅ Onfleet: ${result.onfleetMsg}`);
                     }
                     document.getElementById('icMode').classList.add('hidden');
                     document.getElementById('successView').classList.remove('hidden');
-                } else throw new Error();
-            } catch (e) { alert("Failed. Try again."); btn.disabled = false; btn.innerText = "Submit Final Response"; }
+                } else {
+                    throw new Error("Google Script failed to process.");
+                }
+
+            } catch (e) {
+                alert("Submission failed. Please try again.");
+                btn.disabled = false; btn.innerText = "Submit Final Response";
+            }
         }
 
         function buildMapsUrl(limit) {
