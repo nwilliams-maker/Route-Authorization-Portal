@@ -52,7 +52,7 @@ headers = {"Authorization": f"Basic {base64.b64encode(f'{ONFLEET_KEY}:'.encode()
 
 st.set_page_config(page_title="Terraboost Tactical Workspace", layout="wide")
 
-# --- UI STYLING (FULL PRESERVATION) ---
+# --- UI STYLING ---
 st.markdown(f"""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap');
@@ -65,8 +65,6 @@ st.markdown(f"""
     .stTextInput input, .stNumberInput input, .stDateInput input, div[data-baseweb="select"] > div {{ background-color: #FFFFFF !important; color: #000000 !important; border: 1px solid #323338 !important; opacity: 1 !important; }}
     div[data-testid="stTextArea"] textarea {{ color: #000000 !important; background-color: #FFFFFF !important; border: 1px solid #323338 !important; font-weight: 600 !important; opacity: 1 !important; }}
     div[data-testid="stTextArea"] label p {{ color: #000000 !important; font-weight: 800 !important; }}
-    [data-testid="stMetricValue"] {{ color: #000000 !important; font-weight: 800 !important; }}
-    [data-testid="stMetricLabel"] p {{ color: #444444 !important; font-weight: 700 !important; text-transform: uppercase !important; }}
     .metric-box {{ border-left: 5px solid {TB_PURPLE}; padding: 12px 15px; margin-bottom: 15px; background: white; border-radius: 0 4px 4px 0; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }}
     .metric-title {{ font-size: 11px; text-transform: uppercase; color: #444444 !important; font-weight: 800; }}
     .metric-value {{ font-size: 20px; color: {TB_PURPLE} !important; font-weight: 800; }}
@@ -74,8 +72,6 @@ st.markdown(f"""
     .stTabs [aria-selected="true"] {{ color: {TB_PURPLE} !important; border-bottom: 3px solid {TB_GREEN} !important; }}
     .stButton>button {{ background-color: {TB_PURPLE} !important; color: #FFFFFF !important; font-weight: 700 !important; border-radius: 6px !important; width: 100%; }}
     .stButton>button:hover {{ background-color: {TB_GREEN} !important; }}
-    #status {{ display: none !important; }}
-    [data-testid="stStatusWidget"] {{ display: none !important; }}
     </style>
 """, unsafe_allow_html=True)
 
@@ -94,37 +90,15 @@ def haversine(lat1, lon1, lat2, lon2):
 @st.cache_data(show_spinner=False, ttl=86400)
 def fetch_gmaps_directions(home, waypoints_tuple):
     url = f"https://maps.googleapis.com/maps/api/directions/json?origin={home}&destination={home}&waypoints=optimize:true|{'|'.join(waypoints_tuple)}&key={GOOGLE_MAPS_KEY}"
-    mi, hrs, t_str = 0, 0, "0h 0m"
     try:
         res = requests.get(url).json()
         if res['status'] == 'OK':
             mi = sum(l['distance']['value'] for l in res['routes'][0]['legs']) * 0.000621371
             hrs = sum(l['duration']['value'] for l in res['routes'][0]['legs']) / 3600
             t_str = f"{int(hrs)}h {int((hrs * 60) % 60)}m"
+            return round(mi, 1), hrs, t_str
     except: pass
-    return round(mi, 1), hrs, t_str
-
-def get_metrics(home, cluster_nodes, stop_rate):
-    unique_addrs = list(set([c['full_addr'] for c in cluster_nodes]))
-    mi, hrs, t_str = fetch_gmaps_directions(home, tuple(unique_addrs[:10]))
-    stop_count = len(unique_addrs)
-    pay = max(stop_count * stop_rate, hrs * HOURLY_FLOOR_RATE)
-    eff_per_stop = pay / stop_count if stop_count > 0 else 0
-    return mi, t_str, round(pay, 2), round(eff_per_stop, 2)
-
-def sync_to_sheet(ic, cluster_data, mi, time_str, pay, work_order, loc_sum, due_date):
-    payload = {
-        "icn": str(ic.get('Name', '')), "ice": str(ic.get('Email', '')), "wo": work_order,
-        "due": due_date.strftime('%Y-%m-%d'), "comp": f"{pay:.2f}", "mi": str(mi),
-        "time": str(time_str), "locs": " | ".join([f"{a} ({c})" for a, c in loc_sum.items()]),
-        "lCnt": len(loc_sum), "tCnt": len(cluster_data), "phone": str(ic.get('Phone', '')),
-        "taskIds": ",".join([c['id'] for c in cluster_data])
-    }
-    try:
-        res = requests.post(GAS_WEB_APP_URL, json={"action": "saveRoute", "payload": payload}, allow_redirects=True)
-        if res.status_code == 200 and res.json().get("success"): return res.json().get("routeId")
-    except: pass
-    return False
+    return 0, 0, "0h 0m"
 
 @st.cache_data(ttl=600)
 def load_ic_database(sheet_url):
@@ -138,7 +112,7 @@ def process_pod_data(pod_name):
     config = POD_CONFIGS[pod_name]
     ui_container = st.empty()
     with ui_container.container():
-        p_bar = st.progress(0, text=f"📡 Synchronizing {pod_name}...")
+        p_bar = st.progress(0, text=f"📡 Syncing {pod_name}...")
         all_tasks = []
         url = f"https://onfleet.com/api/v2/tasks/all?state=0&from={int(time.time() * 1000) - (80 * 24 * 3600 * 1000)}"
         while True:
@@ -169,7 +143,6 @@ def process_pod_data(pod_name):
             pool = rem
             clusters.append({"data": group, "center": [anchor['lat'], anchor['lon']], "unique_count": len(unique_locs), "city": anchor['city'], "state": anchor['state']})
         st.session_state[f"clusters_{pod_name}"] = clusters
-        p_bar.progress(1.0, text="✅ Logic Applied")
     ui_container.empty()
 
 # --- DISPATCH RENDER ---
@@ -206,40 +179,30 @@ def render_dispatch_logic(i, cluster, pod_name, is_sent=False):
     due = c_due.date_input("Due Date", datetime.now().date() + timedelta(days=14), key=f"d_{i}_{pod_name}")
     
     sel_ic = ic_opts[sel_label]
-    mi, t_str, pay, eff_stop = get_metrics(sel_ic['Location'], cluster['data'], rate)
+    mi, hrs, t_str = fetch_gmaps_directions(sel_ic['Location'], tuple(list(loc_sum.keys())[:10]))
     
+    # Calculation Logic
+    stop_count = cluster['unique_count']
+    pay = max(stop_count * rate, hrs * HOURLY_FLOOR_RATE)
+    eff_stop = pay / stop_count if stop_count > 0 else 0
     is_critical = eff_stop > REVIEW_PER_STOP_LIMIT
+
     st.markdown(f"""
         <div style="background-color: {TB_RED if is_critical else '#f8fafc'}; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 15px;">
             <span style="color: {'white' if is_critical else '#444444'}; font-weight: 800; font-size: 10px; text-transform: uppercase;">Financials</span><br>
             <span style="color: {'white' if is_critical else 'black'}; font-weight: 700; font-size: 16px;">Comp: <span style="color: {TB_GREEN if not is_critical else '#ffcccc'};">${pay:.2f}</span></span> | 
-            <span style="color: {'white' if is_critical else 'black'}; font-weight: 600;">Time: {t_str}</span> | <span style="color: {'white' if is_critical else 'black'}; font-weight: 600;">Avg: ${eff_stop}/stop</span>
+            <span style="color: {'white' if is_critical else 'black'}; font-weight: 600;">Time: {t_str}</span> | <span style="color: {'white' if is_critical else 'black'}; font-weight: 600;">Avg: ${eff_stop:.2f}/stop</span>
         </div>
     """, unsafe_allow_html=True)
 
     wo_title = f"{sel_ic['Name']} - {datetime.now().strftime('%m%d%Y')}-{i}"
     loc_lines = [f"{idx + 1}. {a} ({count} Tasks)" for idx, (a, count) in enumerate(loc_sum.items())]
     sig = (f"Work Order: {wo_title}\nContractor: {sel_ic['Name']}\nDue Date: {due.strftime('%A, %b %d, %Y')}\n\n"
-           f"Metrics:\n- Unique Stops: {cluster['unique_count']}\n- Mileage: {mi} mi\n- Time: {t_str}\n- Compensation: ${pay:.2f}\n\n"
+           f"Metrics:\n- Unique Stops: {stop_count}\n- Mileage: {mi} mi\n- Time: {t_str}\n- Compensation: ${pay:.2f}\n\n"
            f"STOP LOCATIONS:\n" + "\n".join(loc_lines) + f"\n\nAuthorize here:\n{PORTAL_BASE_URL}?route={link_id}&v2=true")
     
-    st.text_area("Email Payload Preview", sig, height=250, key=f"area_{i}_{pod_name}_{link_id}")
-
-    col1, col2 = st.columns(2)
-    with col1:
-        if not real_gas_id:
-            if st.button("☁️ Sync Data", key=f"btn_s_{i}_{pod_name}"):
-                rid = sync_to_sheet(sel_ic, cluster['data'], mi, t_str, pay, wo_title, loc_sum, due)
-                if rid: st.session_state[sync_key] = rid; st.rerun()
-        else: st.button("✅ Synced", disabled=True, key=f"btn_d_{i}_{pod_name}")
-    with col2:
-        if real_gas_id:
-            mail = f"https://mail.google.com/mail/?view=cm&fs=1&to={sel_ic['Email']}&su=Route Request | {wo_title}&body={requests.utils.quote(sig)}"
-            if st.button(f"📧 Send Gmail", key=f"log_sent_{i}_{pod_name}"):
-                st.session_state[sent_key] = {"contractor": sel_ic['Name'], "time": datetime.now().strftime("%I:%M %p")}
-                st.markdown(f'<script>window.open("{mail}", "_blank");</script>', unsafe_allow_html=True)
-                st.rerun()
-        else: st.markdown('<div style="background:#e2e8f0;color:#94a3b8;padding:10px;text-align:center;border-radius:4px;font-weight:bold;">📧 Sync First</div>', unsafe_allow_html=True)
+    # 🎯 FIX: tied key to sel_ic['Name'] to ensure refresh on change
+    st.text_area("Email Payload Preview", sig, height=250, key=f"area_{i}_{pod_name}_{sel_ic['Name']}")
 
 def run_pod_tab(pod_name):
     st.markdown(f"<h2>{pod_name} Command Center</h2>", unsafe_allow_html=True)
@@ -253,13 +216,9 @@ def run_pod_tab(pod_name):
     for c in clusters:
         c_h = hashlib.md5("".join(sorted([t['id'] for t in c['data']])).encode()).hexdigest()
         if f"sent_log_{c_h}" in st.session_state: sent.append(c); continue
-        
         has_ic = v_ics.apply(lambda x: haversine(c['center'][0], c['center'][1], x['Lat'], x['Lng']), axis=1).le(MAX_DEADHEAD_MILES).any() if not v_ics.empty else False
-        
-        # GATEKEEPER CHECK: (Hours * $25) / stops > $23
         _, hrs, _ = fetch_gmaps_directions(f"{c['center'][0]},{c['center'][1]}", tuple([d['full_addr'] for d in c['data'][:10]]))
         gate_avg = (hrs * HOURLY_FLOOR_RATE) / c['unique_count'] if c['unique_count'] > 0 else 0
-        
         if has_ic and gate_avg <= REVIEW_PER_STOP_LIMIT: ready.append(c)
         else: review.append(c)
 
@@ -297,7 +256,7 @@ def run_global_tab():
             progress_step = (idx + 1) / len(pods)
             process_pod_data(pod)
             p_bar.progress(progress_step, text=f"Synced {pod}...")
-        st.success("Network Sync Complete!")
+        st.success("Global Sync Complete!")
         st.rerun()
 
 # --- MAIN ---
