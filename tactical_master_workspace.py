@@ -52,7 +52,7 @@ headers = {"Authorization": f"Basic {base64.b64encode(f'{ONFLEET_KEY}:'.encode()
 
 st.set_page_config(page_title="Terraboost Tactical Workspace", layout="wide")
 
-# --- UI STYLING ---
+# --- UI STYLING (FULL PRESERVATION) ---
 st.markdown(f"""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap');
@@ -102,7 +102,10 @@ def fetch_gmaps_directions(home, waypoints_tuple):
 
 @st.cache_data(ttl=600)
 def load_ic_database(url):
-    try: return pd.read_csv(f"{url.split('/edit')[0]}/export?format=csv&gid=0")
+    try: 
+        # Forces a CSV export from the provided Google Sheet URL
+        export_url = f"{url.split('/edit')[0]}/export?format=csv&gid=0"
+        return pd.read_csv(export_url)
     except: return None
 
 # --- PROCESSING ---
@@ -157,6 +160,7 @@ def render_dispatch_logic(i, cluster, pod_name, is_sent=False):
     st.divider()
 
     ic_df = st.session_state.ic_df
+    # Filtering: Exclude Field Agents
     v_ics = ic_df[~ic_df.astype(str).apply(lambda x: x.str.contains('Field Agent', case=False, na=False).any(), axis=1)].dropna(subset=['Lat', 'Lng']).copy()
     c_lat, c_lon = cluster['center']
     v_ics['d'] = v_ics.apply(lambda x: haversine(c_lat, c_lon, x['Lat'], x['Lng']), axis=1)
@@ -174,7 +178,7 @@ def render_dispatch_logic(i, cluster, pod_name, is_sent=False):
     sel_ic = ic_opts[sel_label]
     mi, hrs, t_str = fetch_gmaps_directions(sel_ic['Location'], tuple(list(loc_sum.keys())[:10]))
     
-    # 🎯 REACTIVE CALCULATION: Recalculates immediately on 'rate' change
+    # 🎯 REACTIVE DYNAMIC COMPENSATION
     stop_count = cluster['unique_count']
     pay = max(stop_count * rate, hrs * HOURLY_FLOOR_RATE)
     eff_stop = pay / stop_count if stop_count > 0 else 0
@@ -244,7 +248,7 @@ def run_pod_tab(pod_name):
         for i, c in enumerate(review):
             with st.expander(f"🔴 Review Required | {c['city']}, {c['state']}"): render_dispatch_logic(i+1000, c, pod_name)
 
-# --- MAIN ---
+# --- MAIN RUNNER ---
 if "ic_df" not in st.session_state:
     st.session_state.ic_df = load_ic_database(IC_SHEET_URL)
 
