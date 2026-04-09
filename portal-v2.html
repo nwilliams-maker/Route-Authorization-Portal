@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Work Order Dispatch | Terraboost Media</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCDYgNIGcfWPxoux2EILXr60ZK0fZYJPR4&libraries=geometry,drawing"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@600&family=Inter:wght@400;500;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { background-color: #f1f5f9; font-family: 'Inter', sans-serif; color: #0f172a; }
+        .brand-gradient { background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); }
+        .form-card { border-radius: 24px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15); border: 1px solid #e2e8f0; background: #ffffff; }
+        
+        #map { height: 650px; width: 100%; border-radius: 16px; border: 1px solid #e2e8f0; transition: all 0.3s ease; }
+        .map-control-glass { background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(12px); border: 1px solid rgba(226, 232, 240, 0.8); }
+        
+        label { color: #64748b; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; font-size: 0.65rem; display: block; margin-bottom: 8px; }
+        input, textarea, select { 
+            border: 1px solid #cbd5e1; border-radius: 12px !important; padding: 14px 16px; 
+            font-size: 14px; width: 100%; background: #f8fafc; transition: all 0.2s ease;
+            box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.02);
+        }
+        input:focus, select:focus, textarea:focus { border-color: #3b82f6; outline: none; background: #ffffff; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
+        
+        .signature-font { font-family: 'Dancing Script', cursive; font-size: 3.5rem; color: #0f172a; border-bottom: 2px solid #94a3b8; background: transparent; width: 100%; padding: 0; height: auto; line-height: 1; box-shadow: none !important; }
+        .signature-font:focus { box-shadow: none !important; border-color: #3b82f6; }
+        
+        .spinner { border: 3px solid rgba(255,255,255,0.3); border-radius: 50%; border-top: 3px solid #3b82f6; width: 30px; height: 30px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        .status-pill { border: 2px solid #e2e8f0; transition: all 0.2s; cursor: pointer; background: #f8fafc; }
+        input[type="radio"]:checked + .status-pill { border-color: currentColor; transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); background: #ffffff; }
+        
+        .btn-modern { transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
+        .btn-modern:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); }
+        .btn-modern:active:not(:disabled) { transform: translateY(0); box-shadow: none; }
+        
+        @media print { .no-print { display: none !important; } }
+    </style>
+</head>
+<body class="p-4 md:p-8 lg:p-12">
+
+    <div id="captureArea" class="max-w-[1400px] mx-auto form-card">
+        <div class="brand-gradient p-8 md:p-10 text-white flex justify-between items-center no-print">
+            <div class="flex items-center gap-6">
+                <div class="bg-white p-2.5 rounded-xl shadow-lg">
+                    <div class="bg-slate-900 text-white font-black text-3xl px-4 py-2 rounded-lg">TBM</div>
+                </div>
+                <div>
+                    <h1 class="text-3xl md:text-4xl font-extrabold tracking-tight">Terraboost Media</h1>
+                    <p class="text-blue-400 text-[10px] md:text-xs uppercase font-black tracking-[0.25em] opacity-90 mt-1">Route Authorization Portal</p>
+                </div>
+            </div>
+            <button type="button" onclick="clearFullForm()" class="btn-modern text-[10px] text-red-300 font-bold border border-red-500/30 px-4 py-2 rounded-lg hover:bg-red-500 hover:text-white transition-all hidden md:block">RESET PORTAL</button>
+        </div>
+
+        <form id="dispatchForm" class="p-6 md:p-10 lg:p-12 space-y-12">
+            
+            <div id="setupFields" class="space-y-10">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8">
+                    <div>
+                        <label>Dispatcher Email</label>
+                        <select id="d_email" class="cursor-pointer" onchange="clearError(this)">
+                            <option value="" disabled selected>Select dispatcher...</option>
+                            <option value="nwilliams@terraboost.biz">nwilliams@terraboost.biz</option>
+                            <option value="aengelhardt@terraboost.biz">aengelhardt@terraboost.biz</option>
+                            <option value="kgallardo@terraboost.biz">kgallardo@terraboost.biz</option>
+                            <option value="mespinoza@terraboost.biz">mespinoza@terraboost.biz</option>
+                            <option value="dborochov@terraboost.biz">dborochov@terraboost.biz</option>
+                            <option value="kheiden@terraboost.biz">kheiden@terraboost.biz</option>
+                            <option value="installteam@terraboost.biz">installteam@terraboost.biz</option>
+                        </select>
+                    </div>
+                    
+                    <div class="relative">
+                        <label>Contractor Email Search</label>
+                        <input type="email" id="ic_email_setup" list="ic_email_list" placeholder="Start typing email..." oninput="filterEmails(this.value); clearError(this);" onblur="lookupContractor(this.value)">
+                        <datalist id="ic_email_list"></datalist>
+                    </div>
+
+                    <div><label>Contractor Name</label><input type="text" id="ic_name_setup" placeholder="Auto-filled" class="font-medium text-slate-700" oninput="clearError(this)"></div>
+                    <div><label>Work Order #</label><input type="text" id="task_num" placeholder="TBM-XXXXX" class="font-bold text-blue-700" oninput="clearError(this)"></div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-6 lg:gap-8 bg-slate-50 p-6 rounded-2xl border border-slate-100">
+                    <div class="md:col-span-2 relative">
+                        <label>Contractor Home Address (Origin)</label>
+                        <div class="flex gap-3">
+                            <input type="text" id="ic_address" class="flex-grow" placeholder="123 Main St, City, State..." oninput="handleManualEdit(); clearError(this);" onchange="calculateLargeRoute()">
+                            <button type="button" id="saveBtn" onclick="saveToDatabase()" disabled class="opacity-30 grayscale cursor-not-allowed bg-emerald-600 text-white px-5 py-2 rounded-xl text-[10px] font-black uppercase transition-all">Save</button>
+                        </div>
+                    </div>
+                    <div><label>Compensation ($)</label><input type="number" id="comp" placeholder="0.00" class="text-emerald-700 font-bold" oninput="clearError(this)"></div>
+                    <div><label>Target Due Date</label><input type="date" id="due_date" class="cursor-pointer" onchange="clearError(this)"></div>
+                    
+                    <div class="md:col-span-4">
+                        <label>Special Instructions / Route Notes (Optional)</label>
+                        <textarea id="dispatch_notes" rows="2" placeholder="e.g., Special case work order, gate codes, specific pickup instructions..."></textarea>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 xl:grid-cols-12 gap-8 items-start pt-6">
+                    
+                    <div class="xl:col-span-4 space-y-6">
+                        
+                        <div class="brand-gradient rounded-2xl p-6 text-white shadow-xl relative overflow-hidden">
+                            <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 via-emerald-400 to-blue-500 opacity-50"></div>
+                            <div id="loaderOverlay" class="absolute inset-0 bg-slate-900/90 hidden flex-col items-center justify-center gap-3 z-10">
+                                <div class="spinner"></div>
+                                <span class="text-[10px] font-black tracking-widest text-blue-400 uppercase">Loading Data...</span>
+                            </div>
+                            
+                            <div class="flex justify-between items-center">
+                                <div>
+                                    <p class="text-slate-400 text-[9px] uppercase font-black tracking-widest mb-1">Total Mileage</p>
+                                    <div class="flex items-baseline gap-1">
+                                        <span id="mileage_display" class="text-4xl font-black text-emerald-400 tracking-tighter">0.0</span>
+                                        <span class="text-xs text-emerald-600 font-bold">mi</span>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <p class="text-slate-400 text-[9px] uppercase font-black tracking-widest text-white mb-1">Est. Drive Time</p>
+                                    <span id="time_display" class="text-3xl font-black text-blue-400 tracking-tighter">--</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="map-control-glass p-5 rounded-2xl shadow-sm space-y-5">
+                            
+                            <div class="flex justify-between items-center">
+                                <label class="text-blue-600 font-black tracking-widest text-[10px] mb-0 whitespace-nowrap">Map Controls</label>
+                                <span id="sync_status" class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Not Synced</span>
+                            </div>
+                            
+                            <div class="grid grid-cols-3 gap-2">
+                                <select id="podFilter" onchange="applyMapFilters()" class="py-2.5 px-2 text-[9px] font-bold uppercase cursor-pointer bg-white border border-slate-200 rounded-xl outline-none focus:border-blue-500">
+                                    <option value="All">🌎 All Pods</option>
+                                    <option value="Orange">🟠 Orange Pod</option>
+                                    <option value="Green">🟢 Green Pod</option>
+                                    <option value="Red">🔴 Red Pod</option>
+                                    <option value="Blue">🔵 Blue Pod</option>
+                                    <option value="Purple">🟣 Purple Pod</option>
+                                </select>
+                                
+                                <button type="button" id="digitalToggleBtn" value="Hide" onclick="toggleDigital()" class="py-2.5 px-2 text-[9px] font-bold uppercase cursor-pointer bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-all text-slate-700 flex justify-center items-center gap-1 select-none">
+                                    🚫 No Digital
+                                </button>
+
+                                <button type="button" id="kioskToggleBtn" value="Include" onclick="toggleKiosk()" class="py-2.5 px-2 text-[9px] font-bold uppercase cursor-pointer bg-emerald-50 border border-emerald-200 rounded-xl transition-all text-emerald-700 flex justify-center items-center gap-1 select-none shadow-inner">
+                                    ➕ Inc. Kiosk
+                                </button>
+                            </div>
+
+                            <div>
+                                <input type="text" id="keywordFilter" oninput="applyMapFilters()" placeholder="🔍 Keyword Filter (e.g. Name, Store, Phone)" class="w-full py-2.5 px-3 text-[10px] font-bold uppercase bg-white border border-slate-200 rounded-xl focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all placeholder-slate-400">
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-3">
+                                <button type="button" onclick="fetchOnfleetTasks(true)" class="btn-modern bg-blue-600 text-white text-[10px] font-black py-2.5 rounded-xl uppercase shadow-md">🔄 Add All Tasks</button>
+                                <button type="button" onclick="fetchOnfleetTasks(false)" class="btn-modern bg-emerald-600 text-white text-[10px] font-black py-2.5 rounded-xl uppercase shadow-md">📍 Sync 40 Mi</button>
+                            </div>
+                        </div>
+
+                        <div class="relative">
+                            <div class="flex justify-between items-end mb-2">
+                                <label class="mb-0">Selected Task Routing List</label>
+                                <div class="flex gap-4">
+                                    <button type="button" onclick="unDimPendingTasks()" class="text-blue-500 hover:text-blue-700 text-[9px] transition-colors font-bold uppercase flex items-center gap-1"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>Un-Hide Pending Tasks</button>
+                                    <button type="button" onclick="confirmClearList()" class="text-red-500 hover:text-red-700 text-[9px] transition-colors font-bold uppercase">🗑️ Clear List</button>
+                                </div>
+                            </div>
+                            
+                            <div class="flex gap-2 flex-wrap mb-3 min-h-[24px]">
+                                <span id="digital_count_badge" class="bg-purple-100 text-purple-700 px-3 py-1 rounded-full text-[9px] font-bold hidden shadow-sm">0 Digital Service</span>
+                                <span id="kiosk_count_badge" class="bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full text-[9px] font-bold hidden shadow-sm">0 Kiosk Installs</span>
+                                <span id="location_count_badge" class="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-[9px] font-bold hidden shadow-sm">0 Stops</span>
+                            </div>
+
+                            <textarea id="locations" rows="11" class="font-mono text-[11px] leading-relaxed resize-none shadow-inner" placeholder="Use the Map Polygon Tool to lasso tasks. They will populate here automatically..." oninput="calculateLargeRoute(); clearError(this);"></textarea>
+                        </div>
+                    </div>
+
+                    <div class="xl:col-span-8 space-y-4 h-full flex flex-col">
+                        <div class="flex justify-between items-center flex-wrap gap-4">
+                            <p class="text-[11px] font-bold text-slate-500 uppercase tracking-wide">Select tasks using the <span class="text-blue-600 font-black">Polygon Tool</span> (Top Center)</p>
+                            
+                            <div class="flex flex-wrap items-center gap-3 text-[10px] font-black uppercase text-slate-600 bg-white px-4 py-2 rounded-full shadow-sm border border-slate-200">
+                                <span class="flex items-center gap-2"><div class="w-3.5 h-3.5 rounded-full bg-red-500 shadow-sm"></div> Escalation</span>
+                                <span class="flex items-center gap-2"><div class="w-3.5 h-3.5 rounded-full bg-orange-500 shadow-sm"></div> Boosted</span>
+                                <span class="flex items-center gap-2"><div class="w-3.5 h-3.5 rounded-full bg-blue-500 shadow-sm"></div> CVS Kiosk Removal</span>
+                                <span class="flex items-center gap-2"><div class="w-3.5 h-3.5 rounded-full bg-emerald-500 shadow-sm"></div> Kiosk Install</span>
+                                <span class="flex items-center gap-2"><div class="w-3.5 h-3.5 rounded-full bg-purple-500 shadow-sm"></div> Digital Service</span>
+                                
+                                <button type="button" id="btn_thrive" onclick="toggleCampaign('thrive')" class="flex items-center gap-2 px-2 py-1 rounded-full transition-all border border-transparent hover:bg-slate-100 outline-none focus:outline-none cursor-pointer">
+                                    <div class="w-3.5 h-3.5 rounded-full bg-pink-500 shadow-sm"></div> Thrive
+                                </button>
+                                <button type="button" id="btn_function" onclick="toggleCampaign('function health')" class="flex items-center gap-2 px-2 py-1 rounded-full transition-all border border-transparent hover:bg-slate-100 outline-none focus:outline-none cursor-pointer">
+                                    <div class="w-3.5 h-3.5 rounded-full bg-indigo-500 shadow-sm"></div> Function Health
+                                </button>
+
+                                <span class="flex items-center gap-2"><div class="w-3.5 h-3.5 rounded-full bg-slate-300 border border-slate-400 shadow-sm"></div> Pending</span>
+
+                                <span class="flex items-center gap-2">
+                                    <div class="w-3.5 h-3.5 rounded-full bg-yellow-400 shadow-sm border border-black"></div> 
+                                    Contractor <span id="ic_counter" class="text-slate-400 font-bold ml-1 tracking-normal"></span>
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <div class="p-2 bg-white border border-slate-200 rounded-2xl shadow-sm flex-grow">
+                            <div id="map"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="pt-6">
+                    <button id="generateBtn" type="button" onclick="generateCertifiedLink()" class="btn-modern w-full brand-gradient text-white font-black py-6 rounded-2xl shadow-xl text-sm uppercase tracking-[0.25em] hover:shadow-blue-900/20 transition-all">Generate Authorization Link</button>
+                </div>
+            </div>
+
+            <div id="icMode" class="hidden space-y-12">
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-10">
+                    
+                    <div class="lg:col-span-5 space-y-8">
+                        <div class="bg-white p-8 rounded-3xl border border-slate-200 shadow-xl shadow-slate-200/40 relative overflow-hidden">
+                            <div class="absolute top-0 left-0 w-1 h-full bg-blue-500"></div>
+                            <h3 class="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-6">Route Authorization</h3>
+                            <div id="summaryZone" class="space-y-4 text-sm text-slate-700"></div>
+                        </div>
+                        
+                        <div class="space-y-4 no-print">
+                            <button type="button" onclick="viewRoute(11)" class="btn-modern w-full bg-slate-900 text-white font-black py-4 rounded-xl shadow-lg uppercase tracking-widest text-xs flex justify-center items-center gap-2">
+                                <span>🗺️</span> View Route Preview <span class="text-[9px] text-slate-400 normal-case tracking-normal font-normal ml-1">(Up to 9 stops)</span>
+                            </button>
+                            <button type="button" id="copyBtn" onclick="copyMapUrl()" class="btn-modern w-full bg-white border-2 border-slate-200 text-slate-600 hover:text-blue-600 hover:border-blue-300 font-black py-4 rounded-xl text-[10px] uppercase tracking-[0.15em] flex justify-center items-center gap-2">
+                                <span>🔗</span> Copy Browser Link <span class="text-[9px] text-slate-400 normal-case tracking-normal font-normal ml-1">(Up to 20 stops)</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="lg:col-span-7 space-y-8 bg-white p-8 md:p-10 rounded-3xl border border-slate-200 shadow-xl shadow-slate-200/40">
+                        <div class="grid grid-cols-2 gap-5">
+                            <label class="relative">
+                                <input type="radio" name="ic_decision" value="Accepted" class="sr-only" checked onchange="toggleDecisionView()">
+                                <div class="status-pill text-center py-5 rounded-2xl text-emerald-600 font-black text-xs uppercase tracking-widest">Accept Route</div>
+                            </label>
+                            <label class="relative">
+                                <input type="radio" name="ic_decision" value="Declined" class="sr-only" onchange="toggleDecisionView()">
+                                <div class="status-pill text-center py-5 rounded-2xl text-red-600 font-black text-xs uppercase tracking-widest">Decline Route</div>
+                            </label>
+                        </div>
+
+                        <div id="reason_block" class="hidden animate-in fade-in slide-in-from-top-2 space-y-6 pt-4">
+                            <div><label>Counter Offer ($) (Optional)</label><input type="number" id="ic_counter_val" placeholder="0.00" class="text-lg"></div>
+                            <div><label>Reason for Decline / Notes</label><textarea id="ic_notes" rows="4" placeholder="Please provide details..."></textarea></div>
+                        </div>
+
+                        <div id="signature_block" class="pt-4">
+                            <label class="text-blue-600 font-black mb-6 uppercase text-[10px] tracking-widest">Electronic Signature</label>
+                            <input type="text" id="typed_sig" placeholder="Click Here, Type Legal Name" class="signature-font focus:border-blue-500 transition-colors" oninput="updateLiveSignature(this.value)">
+                            
+                            <div class="flex items-start gap-4 p-6 bg-blue-50/50 rounded-2xl border border-blue-100 mt-8">
+                                <input type="checkbox" id="legal_consent" class="mt-1 h-5 w-5 rounded text-blue-600 focus:ring-blue-500 cursor-pointer">
+                                <label for="legal_consent" class="normal-case font-medium text-xs text-slate-700 leading-relaxed cursor-pointer select-none">
+                                    I, <span id="live_sig_text" class="text-blue-800 font-black italic border-b border-blue-200 px-1">________________</span>, hereby certify that I am an Independent Contractor. I have reviewed the proposed route locations, expected deliverables, and the offered compensation.
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="pt-4">
+                            <button type="button" id="submitBtn" onclick="submitFinalResponse()" class="btn-modern bg-blue-600 text-white font-black py-6 rounded-2xl shadow-xl shadow-blue-600/20 text-sm uppercase tracking-[0.2em] w-full">Submit Final Response</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="successView" class="hidden text-center py-32 animate-in fade-in zoom-in duration-500">
+                <div class="text-7xl mb-6 transform transition-transform hover:scale-110 duration-300">✅</div>
+                <h2 class="text-4xl font-black uppercase text-slate-900 tracking-tight">Response Recorded</h2>
+                <p class="text-slate-500 mt-4 font-medium">You may now close this window.</p>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        let map, directionsService, directionsRenderer, inputTimer, drawingManager;
+        let currentLocCount = 0, currentTaskCount = 0, currentKioskCount = 0, currentDigitalCount = 0;
+        let allOnfleetMarkers = [];
+        let icMarkers = []; 
+        
+        let currentGlobalRate = 30; 
+        let allContractors = [];
+        let activeCampaignFilter = ""; 
+        
+        const webAppUrl = "https://script.google.com/macros/s/AKfycbynAIziubArSQ0hVGTvJMpk11a9yLP0kNcSmGpcY7GDNRT25Po5p92K3EDslx9VycKC/exec"; 
+        const formspreeUrl = "https://formspree.io/f/meerlqll"; 
+        const PRIMARY_FORMSPREE_EMAIL = "nwilliams@terraboost.biz";
+
+        const podData = {
+            "AK": "Orange", "ALASKA": "Orange", "AZ": "Orange", "ARIZONA": "Orange", "CA": "Orange", "CALIFORNIA": "Orange", 
+            "HI": "Orange", "HAWAII": "Orange", "ID": "Orange", "IDAHO": "Orange", "NV": "Orange", "NEVADA": "Orange", 
+            "OR": "Orange", "OREGON": "Orange", "WA": "Orange", "WASHINGTON": "Orange",
+            "CO": "Green", "COLORADO": "Green", "DC": "Green", "DISTRICT OF COLUMBIA": "Green", "WASHINGTON DC": "Green", 
+            "GA": "Green", "GEORGIA": "Green", "IN": "Green", "INDIANA": "Green", "KY": "Green", "KENTUCKY": "Green", 
+            "MD": "Green", "MARYLAND": "Green", "NJ": "Green", "NEW JERSEY": "Green", "OH": "Green", "OHIO": "Green", "UT": "Green", "UTAH": "Green",
+            "CT": "Red", "CONNECTICUT": "Red", "DE": "Red", "DELAWARE": "Red", "MA": "Red", "MASSACHUSETTS": "Red", 
+            "ME": "Red", "MAINE": "Red", "NH": "Red", "NEW HAMPSHIRE": "Red", "NY": "Red", "NEW YORK": "Red", 
+            "PA": "Red", "PENNSYLVANIA": "Red", "RI": "Red", "RHODE ISLAND": "Red", "VA": "Red", "VIRGINIA": "Red", 
+            "VT": "Red", "VERMONT": "Red", "WV": "Red", "WEST VIRGINIA": "Red",
+            "AL": "Blue", "ALABAMA": "Blue", "AR": "Blue", "ARKANSAS": "Blue", "FL": "Blue", "FLORIDA": "Blue", 
+            "IA": "Blue", "IOWA": "Blue", "IL": "Blue", "ILLINOIS": "Blue", "LA": "Blue", "LOUISIANA": "Blue", 
+            "MI": "Blue", "MICHIGAN": "Blue", "MN": "Blue", "MINNESOTA": "Blue", "MO": "Blue", "MISSOURI": "Blue", 
+            "MS": "Blue", "MISSISSIPPI": "Blue", "NC": "Blue", "NORTH CAROLINA": "Blue", "SC": "Blue", "SOUTH CAROLINA": "Blue", "WI": "Blue", "WISCONSIN": "Blue",
+            "KS": "Purple", "KANSAS": "Purple", "MT": "Purple", "MONTANA": "Purple", "ND": "Purple", "NORTH DAKOTA": "Purple", 
+            "NE": "Purple", "NEBRASKA": "Purple", "NM": "Purple", "NEW MEXICO": "Purple", "OK": "Purple", "OKLAHOMA": "Purple", 
+            "SD": "Purple", "SOUTH DAKOTA": "Purple", "TN": "Purple", "TENNESSEE": "Purple", "TX": "Purple", "TEXAS": "Purple", "WY": "Purple", "WYOMING": "Purple"
+        };
+
+        function initMap() {
+            if (typeof google === 'undefined') return;
+            map = new google.maps.Map(document.getElementById('map'), { 
+                zoom: 4, 
+                center: { lat: 39.8, lng: -98.5 },
+                mapTypeControl: false,
+                streetViewControl: false,
+                fullscreenControl: true
+            });
+            
+            directionsService = new google.maps.DirectionsService();
+            directionsRenderer = new google.maps.DirectionsRenderer({ 
+                map: map,
+                suppressMarkers: false,
+                polylineOptions: { strokeColor: '#3b82f6', strokeWeight: 5, strokeOpacity: 0.8 } 
+            });
+
+            drawingManager = new google.maps.drawing.DrawingManager({
+                drawingMode: null,
+                drawingControl: true,
+                drawingControlOptions: {
+                    position: google.maps.ControlPosition.TOP_CENTER,
+                    drawingModes: [google.maps.drawing.OverlayType.POLYGON]
+                },
+                polygonOptions: { fillColor: '#3b82f6', fillOpacity: 0.15, strokeWeight: 2, strokeColor: '#2563eb', clickable: false, zIndex: 1 }
+            });
+            drawingManager.setMap(map);
+
+            google.maps.event.addListener(drawingManager, 'polygoncomplete', function(polygon) {
+                processPolygonSelection(polygon);
+                drawingManager.setDrawingMode(null);
+            });
+        }
+
+        function clearError(element) {
+            element.classList.remove('border-red-500', 'ring-2', 'ring-red-200');
+        }
+
+        function filterEmails(query) {
+            const datalist = document.getElementById('ic_email_list');
+            datalist.innerHTML = ''; 
+            if (query.length < 2) return; 
+            const matches = allContractors.filter(c => c.email.toLowerCase().includes(query.toLowerCase())).slice(0, 3);
+            matches.forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c.email;
+                datalist.appendChild(opt);
+            });
+        }
+
+        function toggleDigital() {
+            const btn = document.getElementById('digitalToggleBtn');
+            if (btn.value === "Hide") {
+                btn.value = "Include";
+                btn.innerHTML = "➕ Inc. Digital";
+                btn.className = "py-2.5 px-2 text-[9px] font-bold uppercase cursor-pointer bg-blue-50 border border-blue-200 rounded-xl transition-all text-blue-700 flex justify-center items-center gap-1 select-none shadow-inner";
+            } else if (btn.value === "Include") {
+                btn.value = "Only";
+                btn.innerHTML = "🟣 Only Digital";
+                btn.className = "py-2.5 px-2 text-[9px] font-bold uppercase cursor-pointer bg-purple-50 border border-purple-200 rounded-xl transition-all text-purple-700 flex justify-center items-center gap-1 select-none shadow-inner";
+            } else {
+                btn.value = "Hide";
+                btn.innerHTML = "🚫 No Digital";
+                btn.className = "py-2.5 px-2 text-[9px] font-bold uppercase cursor-pointer bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-all text-slate-700 flex justify-center items-center gap-1 select-none";
+            }
+            applyMapFilters();
+        }
+
+        function toggleKiosk() {
+            const btn = document.getElementById('kioskToggleBtn');
+            if (btn.value === "Include") {
+                btn.value = "Only";
+                btn.innerHTML = "🟢 Only Kiosk";
+                btn.className = "py-2.5 px-2 text-[9px] font-bold uppercase cursor-pointer bg-emerald-100 border border-emerald-300 rounded-xl transition-all text-emerald-800 flex justify-center items-center gap-1 select-none shadow-inner";
+            } else if (btn.value === "Only") {
+                btn.value = "Hide";
+                btn.innerHTML = "🚫 No Kiosk";
+                btn.className = "py-2.5 px-2 text-[9px] font-bold uppercase cursor-pointer bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-all text-slate-700 flex justify-center items-center gap-1 select-none";
+            } else {
+                btn.value = "Include";
+                btn.innerHTML = "➕ Inc. Kiosk";
+                btn.className = "py-2.5 px-2 text-[9px] font-bold uppercase cursor-pointer bg-emerald-50 border border-emerald-200 rounded-xl transition-all text-emerald-700 flex justify-center items-center gap-1 select-none shadow-inner";
+            }
+            applyMapFilters();
+        }
+
+        function toggleCampaign(campaignName) {
+            const btnThrive = document.getElementById('btn_thrive');
+            const btnFunction = document.getElementById('btn_function');
+            if (activeCampaignFilter === campaignName) {
+                activeCampaignFilter = "";
+                btnThrive.classList.remove('bg-pink-50', 'border-pink-200');
+                btnThrive.classList.add('border-transparent');
+                btnFunction.classList.remove('bg-indigo-50', 'border-indigo-200');
+                btnFunction.classList.add('border-transparent');
+            } else {
+                activeCampaignFilter = campaignName;
+                if (campaignName === 'thrive') {
+                    btnThrive.classList.add('bg-pink-50', 'border-pink-200');
+                    btnThrive.classList.remove('border-transparent');
+                    btnFunction.classList.remove('bg-indigo-50', 'border-indigo-200');
+                    btnFunction.classList.add('border-transparent');
+                } else if (campaignName === 'function health') {
+                    btnFunction.classList.add('bg-indigo-50', 'border-indigo-200');
+                    btnFunction.classList.remove('border-transparent');
+                    btnThrive.classList.remove('bg-pink-50', 'border-pink-200');
+                    btnThrive.classList.add('border-transparent');
+                }
+            }
+            applyMapFilters();
+        }
+
+        function applyMapFilters() {
+            const selectedPod = document.getElementById('podFilter').value;
+            const digitalMode = document.getElementById('digitalToggleBtn').value;
+            const kioskMode = document.getElementById('kioskToggleBtn').value;
+            const keyword = document.getElementById('keywordFilter') ? document.getElementById('keywordFilter').value.toLowerCase().trim() : "";
+
+            allOnfleetMarkers.forEach(marker => {
+                const task = marker.taskData;
+                const stateStr = task.state ? task.state.toUpperCase().trim() : "";
+                let matchedPod = podData[stateStr] || "Unknown";
+                task.pod = matchedPod; 
+
+                let show = true;
+                if (selectedPod !== "All" && task.pod !== selectedPod) show = false;
+                if (digitalMode === "Hide" && task.isDigital) show = false;
+                if (digitalMode === "Only" && !task.isDigital) show = false;
+                if (kioskMode === "Hide" && task.isKiosk) show = false;
+                if (kioskMode === "Only" && !task.isKiosk) show = false;
+                if (keyword !== "" && task.searchString && !task.searchString.includes(keyword)) show = false;
+                if (activeCampaignFilter !== "" && task.searchString && !task.searchString.includes(activeCampaignFilter)) show = false;
+
+                marker.setVisible(show);
+            });
+            
+            icMarkers.forEach(marker => {
+                const ic = marker.icData;
+                let show = true;
+                if (selectedPod !== "All" && ic.pod !== selectedPod) show = false;
+                if (keyword !== "" && ic.searchString && !ic.searchString.includes(keyword)) show = false;
+                marker.setVisible(show);
+            });
+        }
+
+        async function autoLoadICMarkers() {
+            const needGeocode = allContractors.filter(c => c.address && c.address.length >= 5 && (!c.lat || !c.lng));
+            const totalValid = allContractors.filter(c => c.address && c.address.length >= 5).length;
+            let loadedICs = icMarkers.length; 
+            const counterEl = document.getElementById('ic_counter');
+
+            const updateCounter = () => {
+                if (counterEl) counterEl.innerText = (loadedICs < totalValid) ? `${loadedICs}/${totalValid}` : `${totalValid}/${totalValid}`;
+            };
+
+            updateCounter(); 
+            if (needGeocode.length === 0) return;
+
+            for (let i = 0; i < needGeocode.length; i++) {
+                const c = needGeocode[i];
+                const cacheKey = 'tbm_geo_' + btoa(encodeURIComponent(c.address));
+                const cachedCoords = localStorage.getItem(cacheKey);
+                if (cachedCoords) {
+                    const coords = JSON.parse(cachedCoords);
+                    c.lat = coords.lat; c.lng = coords.lng;
+                    addICMarker(c); loadedICs++; updateCounter(); continue; 
+                }
+
+                try {
+                    const res = await fetch(`${webAppUrl}?action=geocode&address=${encodeURIComponent(c.address)}`);
+                    const geoData = await res.json();
+                    if (geoData.success) {
+                        c.lat = geoData.lat; c.lng = geoData.lng;
+                        localStorage.setItem(cacheKey, JSON.stringify({lat: c.lat, lng: c.lng}));
+                        addICMarker(c);
+                    }
+                    loadedICs++; updateCounter();
+                    await new Promise(r => setTimeout(r, 200)); 
+                } catch (e) { loadedICs++; updateCounter(); }
+            }
+        }
+
+        function addICMarker(c) {
+            const marker = new google.maps.Marker({
+                position: { lat: c.lat, lng: c.lng },
+                map: map,
+                icon: { path: google.maps.SymbolPath.CIRCLE, scale: 3, fillColor: "#facc15", fillOpacity: 1, strokeWeight: 1, strokeColor: "#000000" },
+                zIndex: 10 
+            });
+            marker.icData = c; 
+            if (document.getElementById('podFilter').value !== "All" && c.pod !== document.getElementById('podFilter').value) marker.setVisible(false);
+            icMarkers.push(marker);
+        }
+
+        function setDefaultDate() {
+            const today = new Date(); today.setDate(today.getDate() + 14);
+            document.getElementById('due_date').value = today.toISOString().split('T')[0];
+        }
+
+        function lookupContractor(email) {
+            if (!email) return;
+            const c = allContractors.find(ic => ic.email.toLowerCase() === email.toLowerCase());
+            if (c) {
+                document.getElementById('ic_name_setup').value = c.name || "";
+                document.getElementById('ic_address').value = c.address || "";
+                if (c.rate) currentGlobalRate = c.rate;
+                window.currentContractorPhone = c.phone || ""; 
+                calculateLargeRoute();
+                document.getElementById('saveBtn').disabled = true;
+                document.getElementById('saveBtn').classList.add('opacity-30', 'grayscale');
+            } else {
+                handleManualEdit();
+            }
+        }
+
+        async function saveToDatabase() {
+            const p = { email: document.getElementById('ic_email_setup').value, name: document.getElementById('ic_name_setup').value, address: document.getElementById('ic_address').value };
+            try { await fetch(webAppUrl, { method: 'POST', headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(p) }); document.getElementById('saveBtn').disabled = true; } catch (e) { alert("Save failed"); }
+        }
+
+        function handleManualEdit() {
+            const btn = document.getElementById('saveBtn'); btn.disabled = false;
+            btn.classList.remove('opacity-30', 'grayscale', 'cursor-not-allowed'); btn.classList.add('opacity-100');
+        }
+
+        async function fetchOnfleetTasks(isGlobal) {
+            const homeAddress = document.getElementById('ic_address').value;
+            if (!isGlobal && !homeAddress) return alert("Please lookup a contractor or enter a home address first.");
+            const loader = document.getElementById('loaderOverlay'); loader.classList.remove('hidden'); loader.classList.add('flex');
+            let url = `${webAppUrl}?action=getOnfleetTasks`;
+            if (homeAddress) url += `&homeAddress=${encodeURIComponent(homeAddress)}`;
+
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                if (data.error) throw new Error(data.error);
+                const tasks = Array.isArray(data) ? data : (data.tasks || []); 
+                if (data.rate) currentGlobalRate = data.rate;
+                const pendingIds = data.pendingIds || [];
+                allOnfleetMarkers.forEach(m => m.setMap(null)); allOnfleetMarkers = [];
+                const selectedAddresses = {};
+                let homeLoc = data.homeLoc ? new google.maps.LatLng(data.homeLoc.lat, data.homeLoc.lng) : null;
+                let localBounds = new google.maps.LatLngBounds();
+                if (homeLoc) localBounds.extend(homeLoc);
+
+                tasks.forEach(task => {
+                    const taskLatLng = new google.maps.LatLng(task.lat, task.lng);
+                    let pinColor = "#94a3b8"; 
+                    let tName = task.team ? task.team.toLowerCase() : "";
+                    task.searchString = task.rawSearch || JSON.stringify(task).toLowerCase();
+                    if (tName.includes("escalation")) pinColor = "#ef4444"; 
+                    else if (tName.includes("boosted")) pinColor = "#f97316"; 
+                    else if (tName.includes("cvs kiosk removal")) pinColor = "#3b82f6"; 
+                    else if (task.isKiosk) pinColor = "#10b981";
+                    else if (task.isDigital) pinColor = "#8b5cf6";
+                    else if (task.searchString.includes("thrive")) pinColor = "#ec4899"; 
+                    else if (task.searchString.includes("function health")) pinColor = "#6366f1"; 
+                    
+                    let isPending = pendingIds.includes(task.id);
+                    task.isPending = isPending;
+                    const marker = new google.maps.Marker({
+                        position: taskLatLng, map: map,
+                        icon: { path: google.maps.SymbolPath.CIRCLE, scale: isPending ? 4.5 : 5.5, fillColor: isPending ? "#cbd5e1" : pinColor, fillOpacity: isPending ? 0.6 : 1, strokeWeight: isPending ? 2 : 1.5, strokeColor: isPending ? "#94a3b8" : "#ffffff" },
+                        zIndex: isPending ? 50 : 100 
+                    });
+                    marker.taskData = task; allOnfleetMarkers.push(marker);
+                });
+
+                applyMapFilters();
+                allOnfleetMarkers.forEach(marker => {
+                    if (!isGlobal && homeLoc && marker.getVisible() && !marker.taskData.isPending) {
+                        const distanceMeters = google.maps.geometry.spherical.computeDistanceBetween(homeLoc, marker.getPosition());
+                        if ((distanceMeters * 0.000621371) <= 40) {
+                            const task = marker.taskData;
+                            if (!selectedAddresses[task.addr]) selectedAddresses[task.addr] = { count: 0, kioskCount: 0, digitalCount: 0 };
+                            selectedAddresses[task.addr].count++;
+                            if (task.isKiosk) selectedAddresses[task.addr].kioskCount++;
+                            if (task.isDigital) selectedAddresses[task.addr].digitalCount++;
+                            localBounds.extend(marker.getPosition());
+                            marker.isSelected = true;
+                            let icon = marker.getIcon(); icon.strokeColor = "#1e293b"; icon.strokeWeight = 2; icon.scale = 7;
+                            marker.setIcon(icon); marker.setZIndex(200);
+                        }
+                    }
+                });
+
+                const syncStatusEl = document.getElementById('sync_status');
+                const now = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                if (!isGlobal && homeLoc) {
+                    const formatted = Object.keys(selectedAddresses).map(addr => {
+                        const d = selectedAddresses[addr];
+                        let entry = addr;
+                        if (d.kioskCount > 0) entry += ` [${d.kioskCount} Kiosk Install]`;
+                        if (d.digitalCount > 0) entry += ` [${d.digitalCount} Digital Service]`;
+                        entry += ` (${d.count} Tasks)`; return entry;
+                    }).join('\n');
+                    document.getElementById('locations').value = formatted;
+                    map.fitBounds(localBounds); calculateLargeRoute();
+                    syncStatusEl.innerHTML = formatted.length === 0 ? `<span class="text-amber-500">⚠ ${tasks.length} PULLED (0 IN 40MI) @ ${now}</span>` : `<span class="text-emerald-500">✓ ${tasks.length} PULLED @ ${now}</span>`;
+                } else {
+                    map.setCenter({ lat: 39.8, lng: -98.5 }); map.setZoom(4);
+                    syncStatusEl.innerHTML = `<span class="text-emerald-500">✓ ${tasks.length} PULLED @ ${now}</span>`;
+                }
+            } catch (e) { alert("Sync Error: " + e.message); } finally { loader.classList.add('hidden'); }
+        }
+
+        function processPolygonSelection(polygon) {
+            const selectedAddresses = {};
+            allOnfleetMarkers.forEach(marker => {
+                if (marker.getVisible() && !marker.taskData.isPending && google.maps.geometry.poly.containsLocation(marker.getPosition(), polygon)) {
+                    const t = marker.taskData;
+                    if (!selectedAddresses[t.addr]) selectedAddresses[t.addr] = { count: 0, kioskCount: 0, digitalCount: 0 };
+                    selectedAddresses[t.addr].count++;
+                    if (t.isKiosk) selectedAddresses[t.addr].kioskCount++;
+                    if (t.isDigital) selectedAddresses[t.addr].digitalCount++;
+                    marker.isSelected = true;
+                    let icon = marker.getIcon(); icon.strokeColor = "#1e293b"; icon.strokeWeight = 2; icon.scale = 7;
+                    marker.setIcon(icon); marker.setZIndex(200);
+                }
+            });
+            const formatted = Object.keys(selectedAddresses).map(addr => {
+                const d = selectedAddresses[addr];
+                let entry = addr;
+                if (d.kioskCount > 0) entry += ` [${d.kioskCount} Kiosk Install]`;
+                if (d.digitalCount > 0) entry += ` [${d.digitalCount} Digital Service]`;
+                entry += ` (${d.count} Tasks)`; return entry;
+            }).join('\n');
+            const area = document.getElementById('locations');
+            area.value = (area.value ? area.value + "\n" : "") + formatted;
+            clearError(area); calculateLargeRoute(); polygon.setMap(null);
+        }
+
+        function unDimPendingTasks() {
+            let count = 0;
+            allOnfleetMarkers.forEach(marker => {
+                if (marker.taskData && marker.taskData.isPending) {
+                    marker.taskData.isPending = false; count++;
+                    let task = marker.taskData;
+                    let tName = (task.team || "").toLowerCase();
+                    let pinColor = "#94a3b8";
+                    if (tName.includes("escalation")) pinColor = "#ef4444"; 
+                    else if (tName.includes("boosted")) pinColor = "#f97316"; 
+                    else if (tName.includes("cvs kiosk removal")) pinColor = "#3b82f6"; 
+                    else if (task.isKiosk) pinColor = "#10b981";
+                    else if (task.isDigital) pinColor = "#8b5cf6";
+                    else if (task.searchString.includes("thrive")) pinColor = "#ec4899"; 
+                    else if (task.searchString.includes("function health")) pinColor = "#6366f1";
+                    let icon = marker.getIcon(); icon.fillColor = pinColor; icon.strokeColor = "#ffffff"; icon.fillOpacity = 1; icon.scale = 5.5; icon.strokeWeight = 1.5;
+                    marker.setIcon(icon); marker.setZIndex(100);
+                }
+            });
+            if (count > 0) alert(`✅ Successfully restored ${count} pending tasks.`);
+        }
+
+        function updateBadges(locCount, taskCount, kioskCount, digitalCount = 0) {
+            currentLocCount = locCount; currentTaskCount = taskCount; currentKioskCount = kioskCount; currentDigitalCount = digitalCount;
+            const lBadge = document.getElementById('location_count_badge');
+            const kBadge = document.getElementById('kiosk_count_badge');
+            const dBadge = document.getElementById('digital_count_badge');
+            if (locCount > 0) { lBadge.innerText = `${locCount} Locations | ${taskCount} Total Tasks`; lBadge.classList.replace('hidden', 'inline-block'); } else lBadge.classList.replace('inline-block', 'hidden');
+            if (kioskCount > 0) { kBadge.innerText = `${kioskCount} Kiosk Installs`; kBadge.classList.replace('hidden', 'inline-block'); } else kBadge.classList.replace('inline-block', 'hidden');
+            if (digitalCount > 0) { dBadge.innerText = `${digitalCount} Digital Service`; dBadge.classList.replace('hidden', 'inline-block'); } else dBadge.classList.replace('inline-block', 'hidden');
+        }
+
+        async function calculateLargeRoute() {
+            clearTimeout(inputTimer);
+            const mileageDisplay = document.getElementById('mileage_display');
+            const timeDisplay = document.getElementById('time_display');
+            const compInput = document.getElementById('comp');
+            const home = document.getElementById('ic_address').value.trim();
+            const textArea = document.getElementById('locations');
+            const lines = textArea.value.split('\n').filter(l => l.trim().length > 5);
+            if (lines.length > 0) {
+                let totalT = 0, totalK = 0, totalD = 0;
+                lines.forEach(line => {
+                    const tMatch = line.match(/\((\d+)\sTasks\)/i);
+                    const kMatch = line.match(/\[(\d+)\sKiosk\sInstall\]/i);
+                    const dMatch = line.match(/\[(\d+)\sDigital\sService\]/i);
+                    let lineK = kMatch ? parseInt(kMatch[1]) : (line.toLowerCase().includes('kiosk install') ? 1 : 0);
+                    let lineD = dMatch ? parseInt(dMatch[1]) : (line.toLowerCase().includes('digital service') ? 1 : 0);
+                    totalT += tMatch ? parseInt(tMatch[1]) : (lineK + lineD || 1);
+                    totalK += lineK; totalD += lineD;
+                });
+                updateBadges(lines.length, totalT, totalK, totalD);
+            } else updateBadges(0, 0, 0, 0);
+
+            if (lines.length === 0) return;
+            inputTimer = setTimeout(async () => {
+                if (!home) return;
+                const stops = lines.map(s => s.replace(/\s[\(\[].*$/, "").trim());
+                if (stops.length <= 25) {
+                    directionsService.route({ origin: home, destination: home, waypoints: stops.map(l => ({location: l, stopover: true})), optimizeWaypoints: true, travelMode: google.maps.TravelMode.DRIVING }, (result, status) => {
+                        if (status === 'OK') {
+                            directionsRenderer.setDirections(result);
+                            let totalM = 0, totalS = 0;
+                            result.routes[0].legs.forEach(leg => { totalM += leg.distance.value; totalS += leg.duration.value; });
+                            mileageDisplay.innerText = (totalM * 0.000621371).toFixed(1);
+                            const h = Math.floor(totalS / 3600), m = Math.floor((totalS % 3600) / 60);
+                            timeDisplay.innerText = h > 0 ? h + "h " + m + "m" : m + "m";
+                            compInput.placeholder = `Sug: $${(totalS / 3600 * currentGlobalRate).toFixed(2)}`;
+                            window.optimizedSequence = [home, ...result.routes[0].waypoint_order.map(i => stops[i]), home];
+                        }
+                    });
+                } else {
+                    mileageDisplay.innerText = "..."; timeDisplay.innerText = "Calc...";
+                    let homePos = null;
+                    const c = allContractors.find(ic => ic.address && ic.address.toLowerCase().trim() === home.toLowerCase().trim());
+                    if (c && c.lat && c.lng) homePos = new google.maps.LatLng(c.lat, c.lng);
+                    else { const f = allOnfleetMarkers.find(m => m.taskData.addr === stops[0]); if (f) homePos = f.getPosition(); }
+                    
+                    let sortedStops = stops;
+                    if (homePos) {
+                        let unvisited = []; stops.forEach(addr => { let m = allOnfleetMarkers.find(marker => marker.taskData.addr === addr); if (m) unvisited.push({ addr: addr, pos: m.getPosition() }); });
+                        if (unvisited.length === stops.length) {
+                            sortedStops = []; let current = homePos;
+                            while (unvisited.length > 0) {
+                                let cIdx = 0, minD = Infinity;
+                                for (let i = 0; i < unvisited.length; i++) { let d = google.maps.geometry.spherical.computeDistanceBetween(current, unvisited[i].pos); if (d < minD) { minD = d; cIdx = i; } }
+                                sortedStops.push(unvisited[cIdx].addr); current = unvisited[cIdx].pos; unvisited.splice(cIdx, 1);
+                            }
+                        }
+                    }
+                    const allPoints = [home, ...sortedStops, home];
+                    let totalM = 0, totalS = 0, success = true;
+                    for (let i = 0; i < allPoints.length - 1; i += 25) {
+                        const origin = allPoints[i]; const destIdx = Math.min(i + 25, allPoints.length - 1);
+                        const waypoints = []; for (let j = i + 1; j < destIdx; j++) waypoints.push({ location: allPoints[j], stopover: true });
+                        try {
+                            const res = await new Promise((resolve, reject) => { directionsService.route({ origin, destination: allPoints[destIdx], waypoints, optimizeWaypoints: false, travelMode: google.maps.TravelMode.DRIVING }, (r, s) => s === 'OK' ? resolve(r) : reject(s)); });
+                            res.routes[0].legs.forEach(leg => { totalM += leg.distance.value; totalS += leg.duration.value; });
+                            await new Promise(r => setTimeout(r, 300));
+                        } catch (e) { success = false; break; }
+                    }
+                    if (success) {
+                        mileageDisplay.innerText = (totalM * 0.000621371).toFixed(1);
+                        const h = Math.floor(totalS / 3600), m = Math.floor((totalS % 3600) / 60);
+                        timeDisplay.innerText = h > 0 ? h + "h " + m + "m" : m + "m";
+                        compInput.placeholder = `Sug: $${(totalS / 3600 * currentGlobalRate).toFixed(2)}`;
+                        window.optimizedSequence = allPoints;
+                    } else { mileageDisplay.innerText = "Err"; timeDisplay.innerText = "Err"; }
+                }
+            }, 800);
+        }
+
+        async function generateCertifiedLink() {
+            const btn = document.getElementById('generateBtn');
+            const requiredFields = [ { id: 'd_email', name: 'Dispatcher' }, { id: 'ic_email_setup', name: 'Email' }, { id: 'ic_name_setup', name: 'Name' }, { id: 'task_num', name: 'WO#' }, { id: 'ic_address', name: 'Address' }, { id: 'comp', name: 'Comp' }, { id: 'due_date', name: 'Date' } ];
+            let isValid = true;
+            requiredFields.forEach(f => { const el = document.getElementById(f.id); if (!el.value) { el.classList.add('border-red-500'); isValid = false; } else el.classList.remove('border-red-500'); });
+            const lines = document.getElementById('locations').value.split('\n').filter(l => l.trim().length > 5);
+            if (lines.length === 0) { document.getElementById('locations').classList.add('border-red-500'); isValid = false; }
+            if (!isValid) return alert("Fill required fields.");
+
+            let selectedIds = [];
+            lines.forEach(line => {
+                const addrOnly = line.replace(/\s[\(\[].*$/, "").trim();
+                allOnfleetMarkers.forEach(m => { if (m.taskData.addr === addrOnly && m.getVisible() && !m.taskData.isPending) selectedIds.push(m.taskData.id); });
+            });
+            const uniqueIds = [...new Set(selectedIds)];
+            if (uniqueIds.length === 0) return alert("Lasso actual pins.");
+
+            btn.disabled = true; btn.innerHTML = "SAVING...";
+            try {
+                const d = { icn: document.getElementById('ic_name_setup').value, ice: document.getElementById('ic_email_setup').value, wo: document.getElementById('task_num').value, due: document.getElementById('due_date').value, comp: document.getElementById('comp').value, mi: document.getElementById('mileage_display').innerText, time: document.getElementById('time_display').innerText, locs: window.optimizedSequence ? window.optimizedSequence.join('|') : "", lCnt: currentLocCount, tCnt: currentTaskCount, kCnt: currentKioskCount, dCnt: currentDigitalCount, jobOnly: lines.join('|'), phone: window.currentContractorPhone, taskIds: uniqueIds.join(','), notes: document.getElementById('dispatch_notes').value.trim(), dispatcherEmail: document.getElementById('d_email').value };
+                const res = await fetch(webAppUrl, { method: 'POST', body: JSON.stringify({ action: "saveRoute", payload: d }) });
+                const result = await res.json();
+                if (result.success) {
+                    const link = `${window.location.origin}${window.location.pathname}?route=${result.routeId}`;
+                    const sub = `Action Required: Route Request | WO #${d.wo}`;
+                    const body = `Dear ${d.icn},\n\nRoute:\n- Due: ${d.due}\n- Miles: ${d.mi}\n- Comp: $${d.comp}\n\nReview: ${link}`;
+                    window.open(`https://mail.google.com/mail/?view=cm&fs=1&to=${d.ice}&su=${encodeURIComponent(sub)}&body=${encodeURIComponent(body)}`, '_blank');
+                    allOnfleetMarkers.forEach(m => { if (uniqueIds.includes(m.taskData.id)) { m.taskData.isPending = true; m.setIcon({ ...m.getIcon(), fillColor: "#cbd5e1", fillOpacity: 0.6 }); } });
+                    document.getElementById('locations').value = ''; updateBadges(0, 0, 0, 0);
+                    btn.innerText = "SUCCESS"; setTimeout(() => { btn.disabled = false; btn.innerText = "Generate Authorization Link"; }, 3000);
+                }
+            } catch (err) { btn.disabled = false; btn.innerText = "Generate Authorization Link"; }
+        }
+
+        // --- THE SMART SWITCH FUNCTION ---
+        async function submitFinalResponse() {
+            const decision = document.querySelector('input[name="ic_decision"]:checked').value;
+            const sig = document.getElementById('typed_sig').value;
+            const consent = document.getElementById('legal_consent').checked;
+            const counter = document.getElementById('ic_counter_val').value;
+            const notes = document.getElementById('ic_notes').value;
+
+            if (decision === 'Accepted' && (!sig || !consent)) return alert("Signature and consent required.");
+            const btn = document.getElementById('submitBtn');
+            btn.disabled = true; btn.innerHTML = "Processing...";
+
+            const locationList = (window.payloadData.jobOnly ? window.payloadData.jobOnly.split('|') : []).map((loc, i) => `${i + 1}. ${loc}`).join('\n');
+            const formData = { "Decision": decision, "Contractor": window.payloadData.icn, "Work Order": window.payloadData.wo, "Due Date": window.payloadData.due, "Original Comp": `$${window.payloadData.comp}`, "Counter Offer": counter ? `$${counter}` : "N/A", "IC Notes": notes || "None", "Signature": sig || "N/A", "TASK LOCATION LIST": "\n" + locationList, "_subject": `${decision}: WO #${window.payloadData.wo} (${window.payloadData.icn})` };
+
+            const isV2 = new URLSearchParams(window.location.search).get('v2') === 'true';
+            try {
+                let success = false;
+                if (isV2) {
+                    const res = await fetch(webAppUrl, { method: 'POST', body: JSON.stringify({ action: 'submitDecisionV2', formData, dispatcherEmail: window.payloadData.dispatcherEmail }) });
+                    const result = await res.json(); success = result.success;
+                } else {
+                    if (window.payloadData.dispatcherEmail && window.payloadData.dispatcherEmail.toLowerCase() !== PRIMARY_FORMSPREE_EMAIL.toLowerCase()) formData["_cc"] = window.payloadData.dispatcherEmail;
+                    const res = await fetch(formspreeUrl, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }, body: JSON.stringify(formData) });
+                    success = res.ok;
+                }
+
+                if (success) {
+                    if (decision === 'Accepted' && window.payloadData.phone && window.payloadData.taskIds) {
+                        fetch(`${webAppUrl}?action=assignTasks&phone=${encodeURIComponent(window.payloadData.phone)}&taskIds=${encodeURIComponent(window.payloadData.taskIds)}`);
+                        if (window.currentRouteId) fetch(`${webAppUrl}?action=acceptRoute&routeId=${encodeURIComponent(window.currentRouteId)}`);
+                    } else if (decision === 'Declined' && window.currentRouteId) {
+                        fetch(`${webAppUrl}?action=declineRoute&routeId=${encodeURIComponent(window.currentRouteId)}`);
+                    }
+                    document.getElementById('icMode').classList.add('hidden');
+                    document.getElementById('successView').classList.remove('hidden');
+                } else throw new Error();
+            } catch (e) { alert("Failed. Try again."); btn.disabled = false; btn.innerText = "Submit Final Response"; }
+        }
+
+        window.onload = () => {
+            const routeId = new URLSearchParams(window.location.search).get('route'); 
+            if (routeId) {
+                window.currentRouteId = routeId; 
+                document.getElementById('setupFields').remove(); document.getElementById('icMode').classList.remove('hidden');
+                document.getElementById('summaryZone').innerHTML = "Loading...";
+                fetch(`${webAppUrl}?action=getRoute&routeId=${routeId}`).then(r => r.json()).then(res => {
+                    const d = res.payload; window.payloadData = d;
+                    document.getElementById('summaryZone').innerHTML = `<div class="font-bold">Contractor: ${d.icn}</div><div>WO: ${d.wo}</div><div class="text-2xl text-emerald-600 mt-4">$${d.comp}</div>`;
+                });
+            } else { initMap(); setDefaultDate(); fetch(`${webAppUrl}?action=getAllContractors`).then(r => r.json()).then(data => { allContractors = data.contractors; autoLoadICMarkers(); }); }
+        };
+
+        function buildMapsUrl(limit) {
+            if (!window.payloadData || !window.payloadData.locs) return null;
+            const stops = window.payloadData.locs.split('|').slice(0, limit);
+            const origin = encodeURIComponent(stops[0]); const dest = encodeURIComponent(stops[stops.length-1]);
+            const waypoints = stops.slice(1, -1).map(w => encodeURIComponent(w)).join('|');
+            return `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${dest}&waypoints=${waypoints}`;
+        }
+        function viewRoute(limit) { const url = buildMapsUrl(limit); if (url) window.open(url, '_blank'); }
+        function copyMapUrl() { const url = buildMapsUrl(25); if (url) { navigator.clipboard.writeText(url); alert("Link Copied"); } }
+        function confirmClearList() { if (confirm("Clear?")) { document.getElementById('locations').value = ''; updateBadges(0, 0, 0, 0); allOnfleetMarkers.forEach(m => { m.isSelected = false; m.setIcon({ ...m.getIcon(), strokeColor: "#ffffff", scale: 5.5 }); }); } }
+        function clearFullForm() { location.reload(); }
+        function toggleDecisionView() { const d = document.querySelector('input[name="ic_decision"]:checked').value; document.getElementById('reason_block').classList.toggle('hidden', d !== 'Declined'); document.getElementById('signature_block').classList.toggle('hidden', d === 'Declined'); }
+        function updateLiveSignature(v) { document.getElementById('live_sig_text').innerText = v || "________________"; }
+    </script>
+</body>
+</html>
