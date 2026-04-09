@@ -1521,12 +1521,6 @@
                 "_subject": `${decision}: WO #${window.payloadData.wo} (${window.payloadData.icn})`
             };
 
-            const dispatcherEmail = window.payloadData.dispatcherEmail;
-            if (dispatcherEmail && dispatcherEmail.toLowerCase() !== PRIMARY_FORMSPREE_EMAIL.toLowerCase()) {
-                // CC IS RESTORED HERE BECAUSE EMAILS ARE VERIFIED!
-                formData["_cc"] = dispatcherEmail;
-            }
-
             try {
                 const response = await fetch(formspreeUrl, {
                     method: 'POST',
