@@ -18,7 +18,7 @@ IC_SHEET_URL = "https://docs.google.com/spreadsheets/d/1y6wX0x93iDc3gdK_nZKLD-2Q
 
 MAX_DEADHEAD_MILES = 60
 HOURLY_FLOOR_RATE = 25.00
-REVIEW_PER_STOP_LIMIT = 23.00 # NEW STRICT LIMIT
+REVIEW_PER_STOP_LIMIT = 23.00 
 
 TB_PURPLE = "#633094"
 TB_GREEN = "#76bc21"
@@ -102,18 +102,15 @@ def fetch_gmaps_directions(home, waypoints_tuple):
             hrs = sum(l['duration']['value'] for l in res['routes'][0]['legs']) / 3600
             t_str = f"{int(hrs)}h {int((hrs * 60) % 60)}m"
     except: pass
-    return mi, hrs, t_str
+    return round(mi, 1), hrs, t_str
 
 def get_metrics(home, cluster_nodes, stop_rate):
     unique_addrs = list(set([c['full_addr'] for c in cluster_nodes]))
     mi, hrs, t_str = fetch_gmaps_directions(home, tuple(unique_addrs[:10]))
     stop_count = len(unique_addrs)
-    
-    # PAY CALCULATOR: Correct Logic
     pay = max(stop_count * stop_rate, hrs * HOURLY_FLOOR_RATE)
-    
     eff_per_stop = pay / stop_count if stop_count > 0 else 0
-    return round(mi, 1), t_str, round(pay, 2), round(eff_per_stop, 2)
+    return mi, t_str, round(pay, 2), round(eff_per_stop, 2)
 
 def sync_to_sheet(ic, cluster_data, mi, time_str, pay, work_order, loc_sum, due_date):
     payload = {
@@ -131,7 +128,9 @@ def sync_to_sheet(ic, cluster_data, mi, time_str, pay, work_order, loc_sum, due_
 
 @st.cache_data(ttl=600)
 def load_ic_database(sheet_url):
-    try: return pd.read_csv(f"{sheet_url.split('/edit')[0]}/export?format=csv&gid=0")
+    try:
+        export_url = f"{sheet_url.split('/edit')[0]}/export?format=csv&gid=0"
+        return pd.read_csv(export_url)
     except: return None
 
 # --- PROCESSING ---
@@ -176,7 +175,7 @@ def process_pod_data(pod_name):
 # --- DISPATCH RENDER ---
 def render_dispatch_logic(i, cluster, pod_name, is_sent=False):
     cluster_hash = hashlib.md5("".join(sorted([t['id'] for t in cluster['data']])).encode()).hexdigest()
-    sync_key = f"sync_{cluster_hash}"; sent_key = f"sent_log_{cluster_hash}"
+    sync_key, sent_key = f"sync_{cluster_hash}", f"sent_log_{cluster_hash}"
     real_gas_id = st.session_state.get(sync_key, None)
     link_id = real_gas_id if real_gas_id else "LINK_GENERATED_UPON_SYNC"
 
@@ -194,10 +193,8 @@ def render_dispatch_logic(i, cluster, pod_name, is_sent=False):
     v_ics = ic_df[~ic_df.astype(str).apply(lambda x: x.str.contains('Field Agent', case=False, na=False).any(), axis=1)].copy()
     v_ics = v_ics.dropna(subset=['Lat', 'Lng'])
     c_lat, c_lon = cluster['center']
-    if not v_ics.empty:
-        v_ics['d'] = v_ics.apply(lambda x: haversine(c_lat, c_lon, x['Lat'], x['Lng']), axis=1)
-        valid_ics = v_ics[v_ics['d'] <= MAX_DEADHEAD_MILES].sort_values('d').head(5)
-    else: valid_ics = pd.DataFrame()
+    v_ics['d'] = v_ics.apply(lambda x: haversine(c_lat, c_lon, x['Lat'], x['Lng']), axis=1)
+    valid_ics = v_ics[v_ics['d'] <= MAX_DEADHEAD_MILES].sort_values('d').head(5)
 
     if valid_ics.empty:
         st.error("⚠️ No Independent Contractors nearby."); return
@@ -205,22 +202,18 @@ def render_dispatch_logic(i, cluster, pod_name, is_sent=False):
     ic_opts = {f"{row['Name']} ({round(row['d'], 1)} mi)": row for _, row in valid_ics.iterrows()}
     c_ic, c_rate, c_due = st.columns([2, 1, 1])
     sel_label = c_ic.selectbox("Contractor", list(ic_opts.keys()), key=f"s_{i}_{pod_name}")
-    rate = c_rate.number_input("Rate/Stop", 16.0, 100.0, 18.0, 0.5, key=f"r_{i}_{pod_name}")
+    rate = c_rate.number_input("Rate/Stop", 16.0, 150.0, 18.0, 0.5, key=f"r_{i}_{pod_name}")
     due = c_due.date_input("Due Date", datetime.now().date() + timedelta(days=14), key=f"d_{i}_{pod_name}")
     
     sel_ic = ic_opts[sel_label]
     mi, t_str, pay, eff_stop = get_metrics(sel_ic['Location'], cluster['data'], rate)
     
-    # Visual Red if Over requested $23/stop limit
     is_critical = eff_stop > REVIEW_PER_STOP_LIMIT
-    box_color = TB_RED if is_critical else "#f8fafc"
-    txt_c = "white" if is_critical else "black"
-
     st.markdown(f"""
-        <div style="background-color: {box_color}; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 15px;">
-            <span style="color: {'white' if is_critical else '#444444'}; font-weight: 800; font-size: 10px; text-transform: uppercase;">Route Financials</span><br>
-            <span style="color: {txt_c}; font-weight: 700; font-size: 16px;">Comp: <span style="color: {TB_GREEN if not is_critical else '#ffcccc'};">${pay:.2f}</span></span> | 
-            <span style="color: {txt_c}; font-weight: 600;">Time: {t_str}</span> | <span style="color: {txt_c}; font-weight: 600;">Avg: ${eff_stop}/stop</span>
+        <div style="background-color: {TB_RED if is_critical else '#f8fafc'}; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 15px;">
+            <span style="color: {'white' if is_critical else '#444444'}; font-weight: 800; font-size: 10px; text-transform: uppercase;">Financials</span><br>
+            <span style="color: {'white' if is_critical else 'black'}; font-weight: 700; font-size: 16px;">Comp: <span style="color: {TB_GREEN if not is_critical else '#ffcccc'};">${pay:.2f}</span></span> | 
+            <span style="color: {'white' if is_critical else 'black'}; font-weight: 600;">Time: {t_str}</span> | <span style="color: {'white' if is_critical else 'black'}; font-weight: 600;">Avg: ${eff_stop}/stop</span>
         </div>
     """, unsafe_allow_html=True)
 
@@ -263,18 +256,12 @@ def run_pod_tab(pod_name):
         
         has_ic = v_ics.apply(lambda x: haversine(c['center'][0], c['center'][1], x['Lat'], x['Lng']), axis=1).le(MAX_DEADHEAD_MILES).any() if not v_ics.empty else False
         
-        # 🎯 THE GATEKEEPER LOGIC:
-        mi, hrs, _ = fetch_gmaps_directions(f"{c['center'][0]},{c['center'][1]}", tuple([d['full_addr'] for d in c['data'][:10]]))
+        # GATEKEEPER CHECK: (Hours * $25) / stops > $23
+        _, hrs, _ = fetch_gmaps_directions(f"{c['center'][0]},{c['center'][1]}", tuple([d['full_addr'] for d in c['data'][:10]]))
+        gate_avg = (hrs * HOURLY_FLOOR_RATE) / c['unique_count'] if c['unique_count'] > 0 else 0
         
-        # Calculation: (Hours * $25) / Stops
-        total_time_cost = hrs * HOURLY_FLOOR_RATE
-        avg_per_stop = total_time_cost / c['unique_count'] if c['unique_count'] > 0 else 0
-        
-        # Check against $23/stop limit
-        if has_ic and avg_per_stop <= REVIEW_PER_STOP_LIMIT:
-            ready.append(c)
-        else: 
-            review.append(c)
+        if has_ic and gate_avg <= REVIEW_PER_STOP_LIMIT: ready.append(c)
+        else: review.append(c)
 
     c1, c2, c3, c4, c5 = st.columns(5)
     c1.markdown(f"<div class='metric-box'><div class='metric-title'>Total</div><div class='metric-value'>{len(clusters)}</div></div>", unsafe_allow_html=True)
@@ -300,10 +287,24 @@ def run_pod_tab(pod_name):
         for i, c in enumerate(review):
             with st.expander(f"🔴 Review Required | {c['city']}, {c['state']} | {c['unique_count']} Stops"): render_dispatch_logic(i+1000, c, pod_name)
 
+# --- GLOBAL TAB ---
+def run_global_tab():
+    st.markdown("## 🌎 Global Network Overview")
+    if st.button("🚀 Sync Global Network"):
+        p_bar = st.progress(0, text="Initializing Network Sweep...")
+        pods = list(POD_CONFIGS.keys())
+        for idx, pod in enumerate(pods):
+            progress_step = (idx + 1) / len(pods)
+            process_pod_data(pod)
+            p_bar.progress(progress_step, text=f"Synced {pod}...")
+        st.success("Network Sync Complete!")
+        st.rerun()
+
 # --- MAIN ---
 if "ic_df" not in st.session_state: st.session_state.ic_df = load_ic_database(IC_SHEET_URL)
 st.markdown("<h1>Network Command Center</h1>", unsafe_allow_html=True)
 tabs = st.tabs(["🌎 Global", "🔵 Blue Pod", "🟢 Green Pod", "🟠 Orange Pod", "🟣 Purple Pod", "🔴 Red Pod"])
+with tabs[0]: run_global_tab()
 with tabs[1]: run_pod_tab("Blue Pod")
 with tabs[2]: run_pod_tab("Green Pod")
 with tabs[3]: run_pod_tab("Orange Pod")
