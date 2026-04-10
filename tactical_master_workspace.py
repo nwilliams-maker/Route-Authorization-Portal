@@ -26,28 +26,13 @@ TB_GRAY_BG = "#cbd5e1"
 TB_OFF_WHITE = "#f8fafc"
 TB_LIGHT_BLUE = "#f0f7ff"
 
-# Pod Configuration
+# Pod Configuration with Fill and Dark Text Colors
 POD_CONFIGS = {
-    "Blue": {
-        "states": {"AL", "AR", "FL", "IL", "IA", "LA", "MI", "MN", "MS", "MO", "NC", "SC", "WI"},
-        "bg": "#dbeafe", "text": "#1e3a8a"
-    },
-    "Green": {
-        "states": {"CO", "DC", "GA", "IN", "KY", "MD", "NJ", "OH", "UT"},
-        "bg": "#dcfce7", "text": "#064e3b"
-    },
-    "Orange": {
-        "states": {"AK", "AZ", "CA", "HI", "ID", "NV", "OR", "WA"},
-        "bg": "#ffedd5", "text": "#7c2d12"
-    },
-    "Purple": {
-        "states": {"KS", "MT", "NE", "NM", "ND", "OK", "SD", "TN", "TX", "WY"},
-        "bg": "#f3e8ff", "text": "#581c87"
-    },
-    "Red": {
-        "states": {"CT", "DE", "ME", "MA", "NH", "NY", "PA", "RI", "VT", "VA", "WV"},
-        "bg": "#fee2e2", "text": "#7f1d1d"
-    }
+    "Blue": {"states": {"AL", "AR", "FL", "IL", "IA", "LA", "MI", "MN", "MS", "MO", "NC", "SC", "WI"}, "bg": "#dbeafe", "text": "#1e3a8a"},
+    "Green": {"states": {"CO", "DC", "GA", "IN", "KY", "MD", "NJ", "OH", "UT"}, "bg": "#dcfce7", "text": "#064e3b"},
+    "Orange": {"states": {"AK", "AZ", "CA", "HI", "ID", "NV", "OR", "WA"}, "bg": "#ffedd5", "text": "#7c2d12"},
+    "Purple": {"states": {"KS", "MT", "NE", "NM", "ND", "OK", "SD", "TN", "TX", "WY"}, "bg": "#f3e8ff", "text": "#581c87"},
+    "Red": {"states": {"CT", "DE", "ME", "MA", "NH", "NY", "PA", "RI", "VT", "VA", "WV"}, "bg": "#fee2e2", "text": "#7f1d1d"}
 }
 
 STATE_MAP = {
@@ -64,10 +49,6 @@ STATE_MAP = {
     "WEST VIRGINIA": "WV", "WISCONSIN": "WI", "WYOMING": "WY", "DISTRICT OF COLUMBIA": "DC"
 }
 
-MAX_DEADHEAD_MILES = 60
-HOURLY_FLOOR_RATE = 25.00
-REVIEW_PER_STOP_LIMIT = 23.00 
-
 headers = {"Authorization": f"Basic {base64.b64encode(f'{ONFLEET_KEY}:'.encode()).decode()}"}
 
 st.set_page_config(page_title="Terraboost Tactical Workspace", layout="wide")
@@ -80,22 +61,20 @@ st.markdown(f"""
     .main .block-container {{ max-width: 1200px; padding-top: 2rem; }}
     h1 {{ color: {TB_PURPLE} !important; font-weight: 800 !important; text-align: center; text-transform: uppercase; letter-spacing: 2px; }}
 
-    /* TAB DYNAMICS */
+    /* TAB DYNAMICS - Robust targeting for colors */
     .stTabs [data-baseweb="tab-list"] {{ justify-content: center; gap: 8px; background-color: rgba(255, 255, 255, 0.4); padding: 10px; border-radius: 15px; }}
     .stTabs [data-baseweb="tab"] {{ border-radius: 10px !important; padding: 12px 24px !important; font-weight: 700 !important; border: none !important; }}
+    
     .stTabs [data-baseweb="tab"]:nth-of-type(1) {{ background-color: #ffffff !important; color: {TB_PURPLE} !important; }}
     .stTabs [data-baseweb="tab"]:nth-of-type(2) {{ background-color: #dbeafe !important; color: #1e3a8a !important; }}
     .stTabs [data-baseweb="tab"]:nth-of-type(3) {{ background-color: #dcfce7 !important; color: #064e3b !important; }}
     .stTabs [data-baseweb="tab"]:nth-of-type(4) {{ background-color: #ffedd5 !important; color: #7c2d12 !important; }}
     .stTabs [data-baseweb="tab"]:nth-of-type(5) {{ background-color: #f3e8ff !important; color: #581c87 !important; }}
     .stTabs [data-baseweb="tab"]:nth-of-type(6) {{ background-color: #fee2e2 !important; color: #7f1d1d !important; }}
+    
     .stTabs [aria-selected="true"] {{ transform: scale(1.05); box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important; border: 2px solid {TB_PURPLE} !important; }}
 
-    /* Card Styling */
-    div[data-testid="stExpander"] {{ border: none !important; border-radius: 15px !important; background-color: #FFFFFF !important; margin-bottom: 20px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1) !important; }}
-    div[data-testid="stExpander"] details summary p {{ color: #000000 !important; font-weight: 800 !important; font-size: 18px !important; }}
-
-    /* Inputs */
+    /* Inputs - No dark hover */
     div[data-baseweb="select"] > div, div[data-testid="stNumberInput"] input, div[data-testid="stDateInput"] input {{
         background-color: #ffffff !important; color: #000000 !important; border: 1.5px solid #cbd5e1 !important; border-radius: 8px !important;
     }}
@@ -106,6 +85,11 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # --- UTILITIES ---
+def normalize_state(st_str):
+    if not st_str: return "UNKNOWN"
+    clean = str(st_str).strip().upper()
+    return STATE_MAP.get(clean, clean)
+
 @st.cache_data(ttl=300)
 def load_sent_records_from_sheet(sheet_url):
     try:
@@ -122,11 +106,6 @@ def load_sent_records_from_sheet(sheet_url):
                 except: continue
         return sent_tasks
     except: return set()
-
-def normalize_state(st_str):
-    if not st_str: return "UNKNOWN"
-    clean = str(st_str).strip().upper()
-    return STATE_MAP.get(clean, clean)
 
 def haversine(lat1, lon1, lat2, lon2):
     R = 3958.8
@@ -153,11 +132,12 @@ def load_ic_database(sheet_url):
         return pd.read_csv(export_url)
     except: return None
 
+# --- PROCESSING ---
 def process_pod_data(pod_name):
     config = POD_CONFIGS[pod_name]
     ui_container = st.empty()
     with ui_container.container():
-        st.write(f"📡 Syncing {pod_name} Pod...")
+        st.write(f"📡 Syncing {pod_name} Pod database...")
         all_tasks = []
         url = f"https://onfleet.com/api/v2/tasks/all?state=0&from={int(time.time() * 1000) - (80 * 24 * 3600 * 1000)}"
         while True:
@@ -206,7 +186,7 @@ def render_dispatch_logic(i, cluster, pod_name, is_sent=False):
     ic_df = st.session_state.ic_df
     v_ics = ic_df[~ic_df.astype(str).apply(lambda x: x.str.contains('Field Agent', case=False, na=False).any(), axis=1)].dropna(subset=['Lat', 'Lng'])
     v_ics['d'] = v_ics.apply(lambda x: haversine(cluster['center'][0], cluster['center'][1], x['Lat'], x['Lng']), axis=1)
-    valid_ics = v_ics[v_ics['d'] <= MAX_DEADHEAD_MILES].sort_values('d').head(5)
+    valid_ics = v_ics[v_ics['d'] <= 60].sort_values('d').head(5)
 
     if valid_ics.empty:
         st.warning("No contractors within 60 miles."); return
@@ -219,34 +199,21 @@ def render_dispatch_logic(i, cluster, pod_name, is_sent=False):
     
     sel_ic = ic_opts[sel_label]
     mi, hrs, t_str = fetch_gmaps_directions(sel_ic['Location'], tuple(list(loc_sum.keys())[:10]))
-    pay = round(max(cluster['unique_count'] * rate, hrs * HOURLY_FLOOR_RATE), 2)
+    pay = round(max(cluster['unique_count'] * rate, hrs * 25.00), 2)
     eff_stop = round(pay / cluster['unique_count'], 2) if cluster['unique_count'] > 0 else 0
 
     m1, m2 = st.columns(2)
-    with m1: st.markdown(f"<div style='background:{TB_OFF_WHITE}; border:1px solid #e2e8f0; border-radius:12px; padding:15px; margin-bottom:10px;'><p style='font-size:11px; font-weight:800; color:#64748b; text-transform:uppercase;'>Financials</p><p style='margin:0; font-size:24px; font-weight:800; color:{TB_GREEN if eff_stop <= REVIEW_PER_STOP_LIMIT else '#ef4444'};'>Total: ${pay:,.2f}</p><p style='margin:0; font-size:13px;'>Effective: ${eff_stop}/stop</p></div>", unsafe_allow_html=True)
-    with m2: st.markdown(f"<div style='background:{TB_OFF_WHITE}; border:1px solid #e2e8f0; border-radius:12px; padding:15px; margin-bottom:10px;'><p style='font-size:11px; font-weight:800; color:#64748b; text-transform:uppercase;'>Logistics</p><p style='margin:0; font-size:24px; font-weight:800;'>{t_str}</p><p style='margin:0; font-size:13px;'>Round Trip: {mi} mi</p></div>", unsafe_allow_html=True)
+    with m1: st.markdown(f"<div style='background:{TB_OFF_WHITE}; border:1px solid #e2e8f0; border-radius:12px; padding:15px; margin-bottom:10px;'><p style='font-size:11px; font-weight:800; color:#64748b; text-transform:uppercase;'>Financials</p><p style='margin:0; font-size:24px; font-weight:800; color:{TB_GREEN if eff_stop <= 23.00 else '#ef4444'};'>Total: ${pay:,.2f}</p><p style='margin:0; font-size:13px; color:black;'>Effective: ${eff_stop}/stop</p></div>", unsafe_allow_html=True)
+    with m2: st.markdown(f"<div style='background:{TB_OFF_WHITE}; border:1px solid #e2e8f0; border-radius:12px; padding:15px; margin-bottom:10px;'><p style='font-size:11px; font-weight:800; color:#64748b; text-transform:uppercase;'>Logistics</p><p style='margin:0; font-size:24px; font-weight:800; color:black;'>{t_str}</p><p style='margin:0; font-size:13px; color:black;'>Round Trip: {mi} mi</p></div>", unsafe_allow_html=True)
 
-    wo_title = f"{sel_ic['Name']} - {datetime.now().strftime('%m%d%Y')}-{i}"
-    sig = (f"Work Order: {wo_title}\nContractor: {sel_ic['Name']}\nDue Date: {due.strftime('%A, %b %d, %Y')}\n\n"
-           f"Metrics:\n- Stops: {cluster['unique_count']}\n- Mileage: {mi} mi\n- Time: {t_str}\n- Compensation: ${pay:.2f}\n\n"
-           f"LOCATIONS:\n" + "\n".join([f"• {a} ({c} Tasks)" for a,c in loc_sum.items()]) + f"\n\nAuthorize here:\n{PORTAL_BASE_URL}?route={link_id}&v2=true")
-    st.text_area("Email Content", sig, height=200, key=f"area_{i}_{pod_name}_{sel_ic['Name']}")
+    sig = (f"Work Order: {sel_ic['Name']} - {datetime.now().strftime('%m%d%Y')}-{i}\nContractor: {sel_ic['Name']}\nDue Date: {due.strftime('%A, %b %d, %Y')}\n\nAuthorize here:\n{PORTAL_BASE_URL}?route={link_id}&v2=true")
+    st.text_area("Email Content", sig, height=180, key=f"area_{i}_{pod_name}")
 
-    col1, col2 = st.columns(2)
-    with col1:
-        if not real_gas_id:
-            if st.button("☁️ Sync Work Order", key=f"sync_btn_{i}_{pod_name}"):
-                home = sel_ic['Location']
-                payload = {"icn": sel_ic['Name'], "ice": sel_ic['Email'], "wo": wo_title, "due": due.strftime('%Y-%m-%d'), "comp": pay, "lCnt": cluster['unique_count'], "tCnt": len(cluster['data']), "mi": mi, "time": t_str, "locs": " | ".join([home] + list(loc_sum.keys()) + [home]), "taskIds": ",".join(cluster_task_ids), "phone": str(sel_ic['Phone']), "jobOnly": " | ".join([f"{a} ({c} Tasks)" for a,c in loc_sum.items()])}
-                res = requests.post(GAS_WEB_APP_URL, json={"action": "saveRoute", "payload": payload}).json()
-                if res.get("success"): st.session_state[sync_key] = res.get("routeId"); st.rerun()
-        else: st.button("✅ Data Synced", disabled=True, key=f"synced_{i}_{pod_name}")
-    with col2:
-        if real_gas_id:
-            gmail_url = f"https://mail.google.com/mail/?view=cm&fs=1&to={sel_ic['Email']}&su=Route Request: {wo_title}&body={requests.utils.quote(sig)}"
-            st.markdown(f'<a href="{gmail_url}" target="_blank" class="gmail-btn">🚀 SEND GMAIL NOW</a>', unsafe_allow_html=True)
-            if st.button("✔️ Mark Sent Permanently", key=f"mksent_{i}_{pod_name}"):
-                requests.post(GAS_WEB_APP_URL, json={"action": "markSent", "routeId": real_gas_id}); st.rerun()
+    if st.button("☁️ Sync Work Order", key=f"sync_btn_{i}_{pod_name}"):
+        home = sel_ic['Location']
+        payload = {"icn": sel_ic['Name'], "ice": sel_ic['Email'], "due": due.strftime('%Y-%m-%d'), "comp": pay, "lCnt": cluster['unique_count'], "mi": mi, "time": t_str, "locs": " | ".join([home] + list(loc_sum.keys()) + [home]), "taskIds": ",".join(cluster_task_ids)}
+        res = requests.post(GAS_WEB_APP_URL, json={"action": "saveRoute", "payload": payload}).json()
+        if res.get("success"): st.session_state[sync_key] = res.get("routeId"); st.rerun()
 
 def run_pod_tab(pod_name):
     st.markdown(f"<h2 style='text-align:center;'>{pod_name} Pod Dashboard</h2>", unsafe_allow_html=True)
@@ -255,42 +222,35 @@ def run_pod_tab(pod_name):
         return
     clusters = st.session_state[f"clusters_{pod_name}"]
     if not clusters: st.info("No tasks found for this pod."); return
+    
     sent_db = st.session_state.get("sent_db", set())
     ready, review, sent = [], [], []
     for c in clusters:
         ids = [str(t['id']).strip() for t in c['data']]
         if any(tid in sent_db for tid in ids): sent.append(c); continue
         hrs = fetch_gmaps_directions(f"{c['center'][0]},{c['center'][1]}", tuple([d['full_addr'] for d in c['data'][:10]]))[1]
-        if ((hrs * HOURLY_FLOOR_RATE) / c['unique_count'] if c['unique_count'] > 0 else 0) <= REVIEW_PER_STOP_LIMIT: ready.append(c)
+        if ((hrs * 25.0) / c['unique_count'] if c['unique_count'] > 0 else 0) <= 23.0: ready.append(c)
         else: review.append(c)
     
     c1, c2, c3, c4, c5 = st.columns(5)
     cfg = POD_CONFIGS[pod_name]
     for col, t, v in zip([c1, c2, c3, c4], ["Volume", "Ready", "Active", "Flagged"], [len(clusters), len(ready), len(sent), len(review)]):
         col.markdown(f"<div style='background:{cfg['bg']}; border:1px solid {cfg['text']}44; border-radius:12px; padding:15px; text-align:center;'><p style='margin:0; font-size:10px; font-weight:800; color:{cfg['text']}; text-transform:uppercase;'>{t}</p><p style='margin:0; font-size:24px; font-weight:800; color:{cfg['text']};'>{v}</p></div>", unsafe_allow_html=True)
-    c5.button("🔄 Sync", key=f"ref_{pod_name}", on_click=process_pod_data, args=(pod_name,))
+    c5.button("🔄 Reload", key=f"ref_{pod_name}", on_click=process_pod_data, args=(pod_name,))
 
     m = folium.Map(location=clusters[0]['center'], zoom_start=6, tiles="cartodbpositron")
     for c in ready: folium.CircleMarker(c['center'], radius=10, color=TB_GREEN, fill=True, opacity=0.8).add_to(m)
-    for c in sent: folium.CircleMarker(c['center'], radius=10, color="#3b82f6", fill=True, opacity=0.8).add_to(m)
-    for c in review: folium.CircleMarker(c['center'], radius=10, color="#ef4444", fill=True, opacity=0.8).add_to(m)
     st_folium(m, use_container_width=True, height=400, key=f"map_{pod_name}")
     
     t1, t2, t3 = st.tabs(["Dispatch Ready", "Active Outbox", "Under Review"])
     with t1:
         for i, c in enumerate(ready):
             with st.expander(f"📍 {c['city']}, {c['state']} | {c['unique_count']} Stops"): render_dispatch_logic(i, c, pod_name)
-    with t2:
-        for i, c in enumerate(sent):
-            with st.expander(f"✓ {c['city']}, {c['state']} | {c['unique_count']} Stops"): render_dispatch_logic(i+500, c, pod_name, is_sent=True)
-    with t3:
-        for i, c in enumerate(review):
-            with st.expander(f"⚠ {c['city']}, {c['state']} | {c['unique_count']} Stops"): render_dispatch_logic(i+1000, c, pod_name)
 
 if "ic_df" not in st.session_state: st.session_state.ic_df = load_ic_database(IC_SHEET_URL)
 if "sent_db" not in st.session_state: st.session_state.sent_db = load_sent_records_from_sheet(IC_SHEET_URL)
 
-st.markdown("<h1>Terraboost Media Dispatch Command</h1>", unsafe_allow_html=True)
+st.markdown("<h1>Terraboost Media Command</h1>", unsafe_allow_html=True)
 tabs = st.tabs(["Global", "Blue", "Green", "Orange", "Purple", "Red"])
 with tabs[0]: 
     st.markdown("<h2 style='text-align:center;'>Global Overview</h2>", unsafe_allow_html=True)
