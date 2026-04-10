@@ -70,9 +70,16 @@ st.markdown(f"""
     .stTabs [data-baseweb="tab"]:nth-of-type(6) {{ background-color: #fee2e2 !important; color: #000000 !important; }}
     .stTabs [aria-selected="true"] {{ transform: scale(1.05); border: 2px solid {TB_PURPLE} !important; }}
 
-    /* Expander Cards - Pure White */
-    div[data-testid="stExpander"] {{ border: 1px solid #cbd5e1 !important; border-radius: 15px !important; background: #ffffff !important; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05); margin-bottom: 20px; }}
+    /* Expander Cards - Pure White Base */
+    div[data-testid="stExpander"] {{ border: 1px solid #cbd5e1 !important; border-radius: 15px !important; background: #ffffff !important; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05); margin-bottom: 20px; overflow: hidden; }}
     div[data-testid="stExpander"] details summary p {{ color: #000000 !important; font-weight: 800 !important; }}
+    
+    /* OVERRIDE CARD HEADER HOVER */
+    div[data-testid="stExpander"] details summary:hover,
+    div[data-testid="stExpander"] details summary:focus,
+    div[data-testid="stExpander"] details summary:active {{
+        background-color: #ffffff !important;
+    }}
     
     /* Input Fields Base */
     div[data-baseweb="select"] > div, div[data-testid="stNumberInput"] input, div[data-testid="stDateInput"] input {{ 
