@@ -16,6 +16,9 @@ PORTAL_BASE_URL = "https://nwilliams-maker.github.io/Route-Authorization-Portal/
 GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbynAIziubArSQ0hVGTvJMpk11a9yLP0kNcSmGpcY7GDNRT25Po5p92K3EDslx9VycKC/exec"
 IC_SHEET_URL = "https://docs.google.com/spreadsheets/d/1y6wX0x93iDc3gdK_nZKLD-2QcGkUHkcM75u90ffRO6k/edit#gid=0"
 
+# GID for the "Saved_Routes" tab - update this if your sheet GID is different
+SAVED_ROUTES_GID = "1477617688" 
+
 MAX_DEADHEAD_MILES = 60
 HOURLY_FLOOR_RATE = 25.00
 REVIEW_PER_STOP_LIMIT = 23.00 
@@ -52,6 +55,7 @@ headers = {"Authorization": f"Basic {base64.b64encode(f'{ONFLEET_KEY}:'.encode()
 
 st.set_page_config(page_title="Terraboost Tactical Workspace", layout="wide")
 
+# --- UI STYLING ---
 st.markdown(f"""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap');
@@ -73,6 +77,20 @@ st.markdown(f"""
     .stButton>button:hover {{ background-color: {TB_GREEN} !important; }}
     </style>
 """, unsafe_allow_html=True)
+
+# --- UTILITIES ---
+@st.cache_data(ttl=300)
+def load_sent_records_from_sheet(sheet_url):
+    try:
+        export_url = f"{sheet_url.split('/edit')[0]}/export?format=csv&gid={SAVED_ROUTES_GID}"
+        df = pd.read_csv(export_url)
+        sent_tasks = set()
+        # Look for the taskIds column and split by comma
+        for ids in df['taskIds'].dropna():
+            sent_tasks.update(str(ids).split(','))
+        return sent_tasks
+    except Exception as e:
+        return set()
 
 def normalize_state(st_str):
     if not st_str: return "UNKNOWN"
@@ -105,6 +123,7 @@ def load_ic_database(sheet_url):
         return pd.read_csv(export_url)
     except: return None
 
+# --- PROCESSING ---
 def process_pod_data(pod_name):
     config = POD_CONFIGS[pod_name]
     ui_container = st.empty()
@@ -142,6 +161,7 @@ def process_pod_data(pod_name):
         st.session_state[f"clusters_{pod_name}"] = clusters
     ui_container.empty()
 
+# --- DISPATCH RENDER ---
 def render_dispatch_logic(i, cluster, pod_name, is_sent=False):
     cluster_hash = hashlib.md5("".join(sorted([t['id'] for t in cluster['data']])).encode()).hexdigest()
     sync_key, sent_key = f"sync_{cluster_hash}", f"sent_log_{cluster_hash}"
@@ -154,9 +174,8 @@ def render_dispatch_logic(i, cluster, pod_name, is_sent=False):
     for addr, count in loc_sum.items(): st.markdown(f"• **{addr}** ({count} Tasks)")
     st.divider()
 
-    if is_sent and sent_key in st.session_state:
-        log = st.session_state[sent_key]
-        st.info(f"📧 **Sent to:** {log['contractor']} | **Timestamp:** {log['time']}")
+    if is_sent:
+        st.info("📧 **This route is in the Sent group (Records found in Saved_Routes).**")
 
     ic_df = st.session_state.ic_df
     v_ics = ic_df[~ic_df.astype(str).apply(lambda x: x.str.contains('Field Agent', case=False, na=False).any(), axis=1)].copy()
@@ -179,7 +198,7 @@ def render_dispatch_logic(i, cluster, pod_name, is_sent=False):
     
     stop_count = cluster['unique_count']
     pay = round(max(stop_count * rate, hrs * HOURLY_FLOOR_RATE), 2)
-    eff_stop = pay / stop_count if stop_count > 0 else 0
+    eff_stop = round(pay / stop_count, 2) if stop_count > 0 else 0
     is_critical = eff_stop > REVIEW_PER_STOP_LIMIT
 
     st.markdown(f"""
@@ -245,11 +264,22 @@ def run_pod_tab(pod_name):
         return
     clusters = st.session_state[f"clusters_{pod_name}"]
     ic_df = st.session_state.ic_df
+    sent_db = st.session_state.get("sent_db", set())
+    
     v_ics = ic_df[~ic_df.astype(str).apply(lambda x: x.str.contains('Field Agent', case=False, na=False).any(), axis=1)].dropna(subset=['Lat', 'Lng']) if ic_df is not None else pd.DataFrame()
     ready, review, sent = [], [], []
+    
     for c in clusters:
-        c_h = hashlib.md5("".join(sorted([t['id'] for t in c['data']])).encode()).hexdigest()
-        if f"sent_log_{c_h}" in st.session_state: sent.append(c); continue
+        # Cross-reference with Saved_Routes taskIds
+        cluster_task_ids = [t['id'] for t in c['data']]
+        already_sent_in_sheet = any(tid in sent_db for tid in cluster_task_ids)
+        
+        c_h = hashlib.md5("".join(sorted(cluster_task_ids)).encode()).hexdigest()
+        
+        if f"sent_log_{c_h}" in st.session_state or already_sent_in_sheet: 
+            sent.append(c)
+            continue
+            
         has_ic = v_ics.apply(lambda x: haversine(c['center'][0], c['center'][1], x['Lat'], x['Lng']), axis=1).le(MAX_DEADHEAD_MILES).any() if not v_ics.empty else False
         _, hrs, _ = fetch_gmaps_directions(f"{c['center'][0]},{c['center'][1]}", tuple([d['full_addr'] for d in c['data'][:10]]))
         gate_avg = (hrs * HOURLY_FLOOR_RATE) / c['unique_count'] if c['unique_count'] > 0 else 0
@@ -261,7 +291,10 @@ def run_pod_tab(pod_name):
     c2.markdown(f"<div class='metric-box'><div class='metric-title' style='color:{TB_GREEN}'>Ready</div><div class='metric-value'>{len(ready)}</div></div>", unsafe_allow_html=True)
     c3.markdown(f"<div class='metric-box'><div class='metric-title' style='color:{TB_BLUE}'>Sent</div><div class='metric-value'>{len(sent)}</div></div>", unsafe_allow_html=True)
     c4.markdown(f"<div class='metric-box'><div class='metric-title' style='color:#f44336'>Review</div><div class='metric-value'>{len(review)}</div></div>", unsafe_allow_html=True)
-    if c5.button("🔄 Refresh", key=f"ref_{pod_name}"): process_pod_data(pod_name); st.rerun()
+    if c5.button("🔄 Refresh", key=f"ref_{pod_name}"): 
+        st.session_state.sent_db = load_sent_records_from_sheet(IC_SHEET_URL) # Update sent cache on refresh
+        process_pod_data(pod_name)
+        st.rerun()
 
     m = folium.Map(location=clusters[0]['center'], zoom_start=6, tiles="cartodbpositron")
     for c in ready: folium.CircleMarker(c['center'], radius=10, color=TB_GREEN, fill=True, opacity=0.7).add_to(m)
@@ -275,7 +308,7 @@ def run_pod_tab(pod_name):
             with st.expander(f"📍 {c['city']}, {c['state']} | {c['unique_count']} Stops"): render_dispatch_logic(i, c, pod_name)
     with t2:
         for i, c in enumerate(sent):
-            with st.expander(f"✅ Sent | {c['city']}, {c['state']} | {c['unique_count']} Stops"): render_dispatch_logic(i+500, c, pod_name, is_sent=True)
+            with st.expander(f"✅ Sent Record | {c['city']}, {c['state']} | {c['unique_count']} Stops"): render_dispatch_logic(i+500, c, pod_name, is_sent=True)
     with t3:
         for i, c in enumerate(review):
             with st.expander(f"🔴 Review Required | {c['city']}, {c['state']} | {c['unique_count']} Stops"): render_dispatch_logic(i+1000, c, pod_name)
@@ -285,13 +318,17 @@ def run_global_tab():
     if st.button("🚀 Sync Global Network"):
         p_bar = st.progress(0, text="Initializing Network Sweep...")
         pods = list(POD_CONFIGS.keys())
+        st.session_state.sent_db = load_sent_records_from_sheet(IC_SHEET_URL)
         for idx, pod in enumerate(pods):
             process_pod_data(pod)
             p_bar.progress((idx + 1) / len(pods), text=f"Synced {pod}...")
         st.success("Global Sync Complete!")
         st.rerun()
 
+# --- MAIN ---
 if "ic_df" not in st.session_state: st.session_state.ic_df = load_ic_database(IC_SHEET_URL)
+if "sent_db" not in st.session_state: st.session_state.sent_db = load_sent_records_from_sheet(IC_SHEET_URL)
+
 st.markdown("<h1>Network Command Center</h1>", unsafe_allow_html=True)
 tabs = st.tabs(["🌎 Global", "🔵 Blue Pod", "🟢 Green Pod", "🟠 Orange Pod", "🟣 Purple Pod", "🔴 Red Pod"])
 with tabs[0]: run_global_tab()
