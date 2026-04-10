@@ -21,9 +21,11 @@ SAVED_ROUTES_GID = "1477617688"
 # Terraboost Media Brand Palette
 TB_PURPLE = "#633094"
 TB_GREEN = "#76bc21"
-TB_GRAY_BG = "#cbd5e1"
+TB_NEW_FILL = "#cbd5e1"
+TB_APP_BG = "#f1f5f9"    
 TB_OFF_WHITE = "#f8fafc"
 TB_LIGHT_BLUE = "#f0f7ff"
+TB_HOVER_GRAY = "#e2e8f0" # The slightly darker lightgray for hovers
 
 POD_CONFIGS = {
     "Blue": {"states": {"AL", "AR", "FL", "IL", "IA", "LA", "MI", "MN", "MS", "MO", "NC", "SC", "WI"}},
@@ -55,7 +57,7 @@ st.set_page_config(page_title="Tactical Command", layout="wide")
 st.markdown(f"""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
-    .stApp {{ background-color: #f1f5f9 !important; color: #000000 !important; font-family: 'Inter', sans-serif !important; }}
+    .stApp {{ background-color: {TB_APP_BG} !important; color: #000000 !important; font-family: 'Inter', sans-serif !important; }}
     .main .block-container {{ max-width: 1100px !important; padding-top: 2rem; }}
     
     h1, h2, h3, h4, h5, h6 {{ color: #000000 !important; font-weight: 800 !important; }}
@@ -69,17 +71,31 @@ st.markdown(f"""
     .stTabs [data-baseweb="tab"]:nth-of-type(4) {{ background-color: #ffedd5 !important; color: #000000 !important; }}
     .stTabs [data-baseweb="tab"]:nth-of-type(5) {{ background-color: #f3e8ff !important; color: #000000 !important; }}
     .stTabs [data-baseweb="tab"]:nth-of-type(6) {{ background-color: #fee2e2 !important; color: #000000 !important; }}
-    .stTabs [aria-selected="true"] {{ transform: scale(1.05); border: 2px solid {TB_PURPLE} !important; }}
+    .stTabs [aria-selected="true"] {{ transform: scale(1.05); border: 2px solid {TB_NEW_FILL} !important; }}
 
     div[data-testid="stExpander"] {{ border: 1px solid #94a3b8 !important; border-radius: 15px !important; background: #fff !important; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05); margin-bottom: 20px; }}
     div[data-testid="stExpander"] details summary p {{ color: #000000 !important; font-weight: 800 !important; }}
     
-    div[data-baseweb="select"] > div, div[data-testid="stNumberInput"] input, div[data-testid="stDateInput"] input {{ background-color: #ffffff !important; color: #000000 !important; border: 1.5px solid #cbd5e1 !important; }}
+    /* Input Fields Base */
+    div[data-baseweb="select"] > div, div[data-testid="stNumberInput"] input, div[data-testid="stDateInput"] input {{ 
+        background-color: #ffffff !important; color: #000000 !important; border: 1.5px solid #cbd5e1 !important; 
+    }}
     
-    .stButton>button {{ background-color: {TB_PURPLE} !important; color: #FFFFFF !important; font-weight: 800 !important; border-radius: 12px !important; width: 100%; border: none !important; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: all 0.2s ease; }}
-    .stButton>button:hover {{ transform: translateY(-2px); box-shadow: 0 6px 10px rgba(0,0,0,0.15); }}
+    /* Hover Fix for Inputs and Dropdowns */
+    div[data-baseweb="select"] > div:hover, 
+    div[data-testid="stNumberInput"] input:hover, 
+    div[data-testid="stDateInput"] input:hover,
+    li[role="option"]:hover,
+    ul[role="listbox"] li:hover {{
+        background-color: {TB_HOVER_GRAY} !important;
+        color: #000000 !important;
+    }}
     
-    .gmail-btn {{ text-align: center; background-color: {TB_GREEN} !important; color: white !important; padding: 12px; border-radius: 12px; font-weight: 800; display: block; text-decoration: none; border: none !important; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }}
+    .stButton>button {{ background-color: {TB_NEW_FILL} !important; color: #000000 !important; font-weight: 800 !important; border-radius: 12px !important; width: 100%; border: 1px solid #94a3b8 !important; box-shadow: 0 2px 4px rgba(0,0,0,0.05); transition: all 0.2s ease; }}
+    .stButton>button:hover {{ background-color: {TB_HOVER_GRAY} !important; transform: translateY(-2px); box-shadow: 0 6px 10px rgba(0,0,0,0.15); }}
+    
+    .gmail-btn {{ text-align: center; background-color: {TB_NEW_FILL} !important; color: #000000 !important; padding: 12px; border-radius: 12px; font-weight: 800; display: block; text-decoration: none; border: 1px solid #94a3b8 !important; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: all 0.2s ease; }}
+    .gmail-btn:hover {{ background-color: {TB_HOVER_GRAY} !important; transform: translateY(-2px); box-shadow: 0 6px 10px rgba(0,0,0,0.15); }}
     
     div[data-testid="stMetricValue"] > div {{ color: #000000 !important; }}
     </style>
@@ -101,12 +117,9 @@ def fetch_sent_records_from_sheet():
     try:
         url = f"{IC_SHEET_URL.split('/edit')[0]}/export?format=csv&gid={SAVED_ROUTES_GID}"
         df = pd.read_csv(url)
-        # CRITICAL FIX: Normalize column headers to lowercase and strip whitespace
         df.columns = [str(c).strip().lower() for c in df.columns]
         
         sent_dict = {}
-        
-        # Primary check: JSON Payload column
         if 'json payload' in df.columns:
             for payload_str in df['json payload'].dropna():
                 try:
@@ -119,7 +132,6 @@ def fetch_sent_records_from_sheet():
                                 sent_dict[tid.strip()] = contractor_name
                 except: continue
         
-        # Fallback check: Direct taskIds column if JSON parsing fails or isn't found
         if 'taskids' in df.columns and not sent_dict:
             for idx, row in df.iterrows():
                 tids = str(row.get('taskids', '')).replace('|', ',').split(',')
