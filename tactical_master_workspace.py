@@ -26,7 +26,7 @@ TB_GRAY_BG = "#cbd5e1"
 TB_OFF_WHITE = "#f8fafc"
 TB_LIGHT_BLUE = "#f0f7ff"
 
-# Pod Configuration with Fill and Dark Text Colors
+# Pod Configuration
 POD_CONFIGS = {
     "Blue": {
         "states": {"AL", "AR", "FL", "IL", "IA", "LA", "MI", "MN", "MS", "MO", "NC", "SC", "WI"},
@@ -50,15 +50,11 @@ POD_CONFIGS = {
     }
 }
 
-MAX_DEADHEAD_MILES = 60
-HOURLY_FLOOR_RATE = 25.00
-REVIEW_PER_STOP_LIMIT = 23.00 
-
 headers = {"Authorization": f"Basic {base64.b64encode(f'{ONFLEET_KEY}:'.encode()).decode()}"}
 
 st.set_page_config(page_title="Terraboost Tactical Workspace", layout="wide")
 
-# --- UI STYLING ---
+# --- UI STYLING (Color-Coded Tabs Fix) ---
 st.markdown(f"""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
@@ -66,18 +62,38 @@ st.markdown(f"""
     .stApp {{ background-color: {TB_GRAY_BG} !important; color: #000000 !important; font-family: 'Inter', sans-serif !important; }}
     h1, h2, h3 {{ color: {TB_PURPLE} !important; font-weight: 800 !important; }}
 
-    /* Tabs */
-    .stTabs [data-baseweb="tab"] {{ color: #475569 !important; font-weight: 700 !important; }}
-    .stTabs [aria-selected="true"] {{ color: {TB_PURPLE} !important; border-bottom-color: {TB_PURPLE} !important; }}
+    /* TAB DYNAMICS */
+    .stTabs [data-baseweb="tab-list"] {{ gap: 8px; }}
+    
+    .stTabs [data-baseweb="tab"] {{
+        border-radius: 8px 8px 0 0 !important;
+        padding: 10px 20px !important;
+        font-weight: 700 !important;
+        border: 1px solid #94a3b8 !important;
+    }}
 
-    /* Cards */
+    /* Specific Tab Fills */
+    .stTabs [data-baseweb="tab"]:nth-of-type(1) {{ background-color: #f1f5f9 !important; color: #475569 !important; }}
+    .stTabs [data-baseweb="tab"]:nth-of-type(2) {{ background-color: #dbeafe !important; color: #1e3a8a !important; }}
+    .stTabs [data-baseweb="tab"]:nth-of-type(3) {{ background-color: #dcfce7 !important; color: #064e3b !important; }}
+    .stTabs [data-baseweb="tab"]:nth-of-type(4) {{ background-color: #ffedd5 !important; color: #7c2d12 !important; }}
+    .stTabs [data-baseweb="tab"]:nth-of-type(5) {{ background-color: #f3e8ff !important; color: #581c87 !important; }}
+    .stTabs [data-baseweb="tab"]:nth-of-type(6) {{ background-color: #fee2e2 !important; color: #7f1d1d !important; }}
+
+    .stTabs [aria-selected="true"] {{
+        border-bottom: 4px solid {TB_PURPLE} !important;
+        transform: translateY(-2px);
+    }}
+
+    /* Expander Styling */
     div[data-testid="stExpander"] {{ 
-        border: 1px solid #94a3b8 !important; 
+        border: 1.5px solid #94a3b8 !important; 
         border-radius: 12px !important; 
         background-color: #FFFFFF !important;
         margin-bottom: 12px; 
     }}
-    div[data-testid="stExpander"] details summary p {{ color: #000000 !important; font-weight: 800 !important; font-size: 18px !important; }}
+    
+    div[data-testid="stExpander"] details summary p {{ color: #000000 !important; font-weight: 800 !important; }}
 
     /* Inputs */
     div[data-baseweb="select"] > div, 
@@ -87,15 +103,6 @@ st.markdown(f"""
         color: #000000 !important;
         border: 1.5px solid #cbd5e1 !important;
         border-radius: 8px !important;
-        font-weight: 600 !important;
-    }}
-    
-    /* Specific Email Text Area */
-    div[data-testid="stTextArea"] textarea {{
-        background-color: {TB_LIGHT_BLUE} !important;
-        color: #000000 !important;
-        border: 1px solid #cbd5e1 !important;
-        border-radius: 12px !important;
     }}
 
     .stButton>button {{ 
@@ -109,8 +116,6 @@ st.markdown(f"""
         text-align: center; background-color: {TB_GREEN} !important; color: white !important; 
         padding: 12px; border-radius: 12px; font-weight: 800; text-decoration: none; display: block;
     }}
-    
-    div[data-testid="stWidgetLabel"] p {{ color: #000000 !important; font-weight: 700 !important; }}
     </style>
 """, unsafe_allow_html=True)
 
@@ -163,7 +168,7 @@ def process_pod_data(pod_name):
     config = POD_CONFIGS[pod_name]
     ui_container = st.empty()
     with ui_container.container():
-        p_bar = st.progress(0, text=f"📡 Syncing {pod_name} Pod...")
+        st.write(f"📡 Processing {pod_name} Pod...")
         all_tasks = []
         url = f"https://onfleet.com/api/v2/tasks/all?state=0&from={int(time.time() * 1000) - (80 * 24 * 3600 * 1000)}"
         while True:
@@ -198,21 +203,20 @@ def process_pod_data(pod_name):
 def render_dispatch_logic(i, cluster, pod_name, is_sent=False):
     cluster_task_ids = [str(t['id']).strip() for t in cluster['data']]
     cluster_hash = hashlib.md5("".join(sorted(cluster_task_ids)).encode()).hexdigest()
-    sync_key, sent_key = f"sync_{cluster_hash}", f"sent_log_{cluster_hash}"
+    sync_key = f"sync_{cluster_hash}"
     real_gas_id = st.session_state.get(sync_key, None)
     link_id = real_gas_id if real_gas_id else "LINK_PENDING"
 
     loc_sum = {c['full_addr']: 0 for c in cluster['data']}
     for c in cluster['data']: loc_sum[c['full_addr']] += 1
     
-    st.markdown("### 📍 Route Stops")
     for addr, count in loc_sum.items(): st.markdown(f"**{addr}** ({count} Tasks)")
     st.divider()
 
     ic_df = st.session_state.ic_df
     v_ics = ic_df[~ic_df.astype(str).apply(lambda x: x.str.contains('Field Agent', case=False, na=False).any(), axis=1)].dropna(subset=['Lat', 'Lng'])
     v_ics['d'] = v_ics.apply(lambda x: haversine(cluster['center'][0], cluster['center'][1], x['Lat'], x['Lng']), axis=1)
-    valid_ics = v_ics[v_ics['d'] <= MAX_DEADHEAD_MILES].sort_values('d').head(5)
+    valid_ics = v_ics[v_ics['d'] <= 60].sort_values('d').head(5)
 
     if valid_ics.empty:
         st.error("⚠️ No contractors found within 60 miles."); return
@@ -225,13 +229,12 @@ def render_dispatch_logic(i, cluster, pod_name, is_sent=False):
     
     sel_ic = ic_opts[sel_label]
     mi, hrs, t_str = fetch_gmaps_directions(sel_ic['Location'], tuple(list(loc_sum.keys())[:10]))
-    pay = round(max(cluster['unique_count'] * rate, hrs * HOURLY_FLOOR_RATE), 2)
+    pay = round(max(cluster['unique_count'] * rate, hrs * 25.00), 2)
     eff_stop = round(pay / cluster['unique_count'], 2) if cluster['unique_count'] > 0 else 0
-    is_critical = eff_stop > REVIEW_PER_STOP_LIMIT
 
     m1, m2 = st.columns(2)
     with m1:
-        st.markdown(f"<div style='background:{TB_OFF_WHITE}; border:1px solid #e2e8f0; border-radius:12px; padding:15px; margin-bottom:10px;'><p style='font-size:11px; font-weight:800; color:#64748b; text-transform:uppercase;'>Financials</p><p style='margin:0; font-size:24px; font-weight:800; color:{TB_GREEN if not is_critical else '#ef4444'};'>Total: ${pay:,.2f}</p><p style='margin:0; font-size:13px;'>Effective: ${eff_stop}/stop</p></div>", unsafe_allow_html=True)
+        st.markdown(f"<div style='background:{TB_OFF_WHITE}; border:1px solid #e2e8f0; border-radius:12px; padding:15px; margin-bottom:10px;'><p style='font-size:11px; font-weight:800; color:#64748b; text-transform:uppercase;'>Financials</p><p style='margin:0; font-size:24px; font-weight:800; color:{TB_GREEN if eff_stop <= 23.00 else '#ef4444'};'>Total: ${pay:,.2f}</p><p style='margin:0; font-size:13px;'>Effective: ${eff_stop}/stop</p></div>", unsafe_allow_html=True)
     with m2:
         st.markdown(f"<div style='background:{TB_OFF_WHITE}; border:1px solid #e2e8f0; border-radius:12px; padding:15px; margin-bottom:10px;'><p style='font-size:11px; font-weight:800; color:#64748b; text-transform:uppercase;'>Logistics</p><p style='margin:0; font-size:24px; font-weight:800;'>{t_str}</p><p style='margin:0; font-size:13px;'>Round Trip: {mi} mi</p></div>", unsafe_allow_html=True)
 
@@ -254,7 +257,7 @@ def render_dispatch_logic(i, cluster, pod_name, is_sent=False):
         if real_gas_id:
             gmail_url = f"https://mail.google.com/mail/?view=cm&fs=1&to={sel_ic['Email']}&su=Route Request: {wo_title}&body={requests.utils.quote(sig)}"
             st.markdown(f'<a href="{gmail_url}" target="_blank" class="gmail-btn">🚀 SEND GMAIL NOW</a>', unsafe_allow_html=True)
-            if st.button("✔️ Mark Sent Permanently", key=f"mksent_{i}_{pod_name}"):
+            if st.button("✔️ Mark Sent", key=f"mksent_{i}_{pod_name}"):
                 requests.post(GAS_WEB_APP_URL, json={"action": "markSent", "routeId": real_gas_id}); st.rerun()
 
 def run_pod_tab(pod_name):
@@ -262,35 +265,30 @@ def run_pod_tab(pod_name):
     if f"clusters_{pod_name}" not in st.session_state:
         if st.button(f"📥 Initialize {pod_name}", key=f"init_{pod_name}"): process_pod_data(pod_name); st.rerun()
         return
-    clusters = st.session_state[f"clusters_{pod_name}"]; sent_db = st.session_state.get("sent_db", set())
+    
+    clusters = st.session_state[f"clusters_{pod_name}"]
+    if not clusters:
+        st.info("No tasks found for this pod area."); return
+
+    sent_db = st.session_state.get("sent_db", set())
     ready, review, sent = [], [], []
     for c in clusters:
         cluster_task_ids = [str(t['id']).strip() for t in c['data']]
         if any(tid in sent_db for tid in cluster_task_ids): sent.append(c); continue
         hrs = fetch_gmaps_directions(f"{c['center'][0]},{c['center'][1]}", tuple([d['full_addr'] for d in c['data'][:10]]))[1]
-        gate_avg = (hrs * HOURLY_FLOOR_RATE) / c['unique_count'] if c['unique_count'] > 0 else 0
-        if gate_avg <= REVIEW_PER_STOP_LIMIT: ready.append(c)
+        gate_avg = (hrs * 25.00) / c['unique_count'] if c['unique_count'] > 0 else 0
+        if gate_avg <= 23.00: ready.append(c)
         else: review.append(c)
 
-    # Overhead Metric Boxes with Tone-on-Tone Colors
     c1, c2, c3, c4, c5 = st.columns(5)
-    config = POD_CONFIGS[pod_name]
-    titles = ["Volume", "Ready", "Active", "Flagged"]
-    vals = [len(clusters), len(ready), len(sent), len(review)]
-    
-    for col, title, val in zip([c1, c2, c3, c4], titles, vals):
-        col.markdown(f"""
-            <div style='background:{config['bg']}; border:1px solid {config['text']}44; border-radius:12px; padding:15px; margin-bottom:15px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);'>
-                <p style='margin:0; font-size:10px; font-weight:800; color:{config['text']}; text-transform:uppercase; opacity:0.8;'>{title}</p>
-                <p style='margin:0; font-size:24px; font-weight:800; color:{config['text']};'>{val}</p>
-            </div>
-        """, unsafe_allow_html=True)
-    
-    if c5.button("🔄 Sync Network"): st.session_state.sent_db = load_sent_records_from_sheet(IC_SHEET_URL); process_pod_data(pod_name); st.rerun()
+    cfg = POD_CONFIGS[pod_name]
+    for col, title, val in zip([c1, c2, c3, c4], ["Volume", "Ready", "Active", "Flagged"], [len(clusters), len(ready), len(sent), len(review)]):
+        col.markdown(f"<div style='background:{cfg['bg']}; border:1px solid {cfg['text']}44; border-radius:12px; padding:15px; margin-bottom:15px;'><p style='margin:0; font-size:10px; font-weight:800; color:{cfg['text']}; text-transform:uppercase;'>{title}</p><p style='margin:0; font-size:24px; font-weight:800; color:{cfg['text']};'>{val}</p></div>", unsafe_allow_html=True)
+    if c5.button("🔄 Sync", key=f"ref_{pod_name}"): st.session_state.sent_db = load_sent_records_from_sheet(IC_SHEET_URL); process_pod_data(pod_name); st.rerun()
 
     m = folium.Map(location=clusters[0]['center'], zoom_start=6, tiles="cartodbpositron")
     for c in ready: folium.CircleMarker(c['center'], radius=10, color=TB_GREEN, fill=True, opacity=0.8).add_to(m)
-    for c in sent: folium.CircleMarker(c['center'], radius=10, color=TB_BLUE, fill=True, opacity=0.8).add_to(m)
+    for c in sent: folium.CircleMarker(c['center'], radius=10, color="#3b82f6", fill=True, opacity=0.8).add_to(m)
     for c in review: folium.CircleMarker(c['center'], radius=10, color="#ef4444", fill=True, opacity=0.8).add_to(m)
     st_folium(m, use_container_width=True, height=400, key=f"map_{pod_name}")
     
@@ -303,7 +301,7 @@ def run_pod_tab(pod_name):
             with st.expander(f"✓ {c['city']}, {c['state']} | {c['unique_count']} Stops"): render_dispatch_logic(i+500, c, pod_name, is_sent=True)
     with t3:
         for i, c in enumerate(review):
-            with st.expander(f"🔴 {c['city']}, {c['state']} | {c['unique_count']} Stops"): render_dispatch_logic(i+1000, c, pod_name)
+            with st.expander(f"⚠ {c['city']}, {c['state']} | {c['unique_count']} Stops"): render_dispatch_logic(i+1000, c, pod_name)
 
 if "ic_df" not in st.session_state: st.session_state.ic_df = load_ic_database(IC_SHEET_URL)
 if "sent_db" not in st.session_state: st.session_state.sent_db = load_sent_records_from_sheet(IC_SHEET_URL)
