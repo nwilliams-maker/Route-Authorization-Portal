@@ -49,7 +49,7 @@ STATE_MAP = {
 
 headers = {"Authorization": f"Basic {base64.b64encode(f'{ONFLEET_KEY}:'.encode()).decode()}"}
 
-st.set_page_config(page_title="Terraboost Tactical Command", layout="wide")
+st.set_page_config(page_title="Tactical Command", layout="wide")
 
 # --- UI STYLING ---
 st.markdown(f"""
@@ -58,29 +58,22 @@ st.markdown(f"""
     .stApp {{ background-color: {TB_GRAY_BG} !important; color: #000000 !important; font-family: 'Inter', sans-serif !important; }}
     .main .block-container {{ max-width: 1100px !important; padding-top: 2rem; }}
     
-    /* Navigation Tabs */
     .stTabs [data-baseweb="tab-list"] {{ justify-content: center; gap: 8px; background: rgba(255,255,255,0.4); padding: 10px; border-radius: 15px; }}
     .stTabs [data-baseweb="tab"] {{ border-radius: 10px !important; padding: 10px 20px !important; font-weight: 700 !important; }}
     
-    /* Tab Colors */
     .stTabs [data-baseweb="tab"]:nth-of-type(1) {{ background-color: #ffffff !important; color: {TB_PURPLE} !important; }}
     .stTabs [data-baseweb="tab"]:nth-of-type(2) {{ background-color: #dbeafe !important; color: #1e3a8a !important; }}
     .stTabs [data-baseweb="tab"]:nth-of-type(3) {{ background-color: #dcfce7 !important; color: #064e3b !important; }}
     .stTabs [data-baseweb="tab"]:nth-of-type(4) {{ background-color: #ffedd5 !important; color: #7c2d12 !important; }}
     .stTabs [data-baseweb="tab"]:nth-of-type(5) {{ background-color: #f3e8ff !important; color: #581c87 !important; }}
     .stTabs [data-baseweb="tab"]:nth-of-type(6) {{ background-color: #fee2e2 !important; color: #7f1d1d !important; }}
-    .stTabs [aria-selected="true"] {{ transform: scale(1.05); box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important; border: 2px solid {TB_PURPLE} !important; }}
+    .stTabs [aria-selected="true"] {{ transform: scale(1.05); border: 2px solid {TB_PURPLE} !important; }}
 
-    /* Expanders & Inputs */
     div[data-testid="stExpander"] {{ border: none !important; border-radius: 15px !important; background: #fff !important; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); margin-bottom: 20px; }}
-    div[data-testid="stExpander"] details summary p {{ color: #000 !important; font-weight: 800 !important; font-size: 16px !important; }}
-    div[data-baseweb="select"] > div, div[data-testid="stNumberInput"] input, div[data-testid="stDateInput"] input {{
-        background-color: #ffffff !important; color: #000000 !important; border: 1.5px solid #cbd5e1 !important; border-radius: 8px !important;
-    }}
+    div[data-testid="stExpander"] details summary p {{ color: #000 !important; font-weight: 800 !important; }}
+    div[data-baseweb="select"] > div, div[data-testid="stNumberInput"] input, div[data-testid="stDateInput"] input {{ background-color: #ffffff !important; color: #000000 !important; border: 1.5px solid #cbd5e1 !important; }}
     .stButton>button {{ background-color: {TB_PURPLE} !important; color: #FFFFFF !important; font-weight: 700 !important; border-radius: 12px !important; width: 100%; }}
-    .gmail-btn {{ text-align: center; background-color: {TB_GREEN} !important; color: white !important; padding: 12px; border-radius: 12px; font-weight: 800; display: block; text-decoration: none; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }}
-    
-    div[data-testid="stMetricValue"] > div {{ color: #000000 !important; }}
+    .gmail-btn {{ text-align: center; background-color: {TB_GREEN} !important; color: white !important; padding: 12px; border-radius: 12px; font-weight: 800; display: block; text-decoration: none; }}
     </style>
 """, unsafe_allow_html=True)
 
@@ -96,7 +89,6 @@ def normalize_state(st_str):
     clean = str(st_str).strip().upper()
     return STATE_MAP.get(clean, clean)
 
-# Dedicated manual fetch function without caching to ensure real-time pull for Sent routes
 def fetch_sent_records_from_sheet():
     try:
         url = f"{IC_SHEET_URL.split('/edit')[0]}/export?format=csv&gid={SAVED_ROUTES_GID}"
@@ -133,11 +125,10 @@ def load_ic_database(sheet_url):
         return pd.read_csv(export_url)
     except: return None
 
-# --- CORE LOGIC ---
+# --- CORE LOGIC (With Route Pruning) ---
 def process_pod(pod_name):
     config = POD_CONFIGS[pod_name]
-    progress_bar = st.progress(0, text=f"📥 Extracting {pod_name} Pod task data...")
-    
+    progress_bar = st.progress(0, text=f"📥 Extracting {pod_name} tasks & evaluating dense routes...")
     try:
         all_tasks = []
         url = f"https://onfleet.com/api/v2/tasks/all?state=0&from={int(time.time()*1000)-(80*24*3600*1000)}"
@@ -145,7 +136,7 @@ def process_pod(pod_name):
             res = requests.get(url, headers=headers).json()
             all_tasks.extend(res.get('tasks', []))
             url = f"https://onfleet.com/api/v2/tasks/all?state=0&from={int(time.time()*1000)-(80*24*3600*1000)}&lastId={res['lastId']}" if res.get('lastId') else None
-            progress_bar.progress(min(len(all_tasks)/500, 0.9))
+            progress_bar.progress(min(len(all_tasks)/500, 0.4))
 
         pool = []
         for t in all_tasks:
@@ -159,19 +150,72 @@ def process_pod(pod_name):
                 })
         
         clusters = []
+        total_pool = len(pool)
+        
         while pool:
+            # Update progress bar dynamically based on remaining pool
+            prog_val = 0.4 + (0.6 * (1 - (len(pool) / total_pool if total_pool > 0 else 1)))
+            progress_bar.progress(min(prog_val, 0.99), text=f"🗺️ Auto-routing {pod_name}... ({len(pool)} tasks remaining)")
+            
             anc = pool.pop(0)
-            group, rem = [anc], []
+            candidates = []
+            rem = []
+            
+            # Find all tasks within 50 miles
             for t in pool:
-                if haversine(anc['lat'], anc['lon'], t['lat'], t['lon']) <= 50: group.append(t)
+                d = haversine(anc['lat'], anc['lon'], t['lat'], t['lon'])
+                if d <= 50: candidates.append((d, t))
                 else: rem.append(t)
+            
+            # Sort candidates by distance to anchor (closest first)
+            candidates.sort(key=lambda x: x[0])
+            group = [anc] + [c[1] for c in candidates]
+            
+            # Helper to check financial viability of a group
+            def check_viability(grp):
+                # Get unique locations preserving order
+                seen = set(); unique_locs = []
+                for x in grp:
+                    if x['full'] not in seen:
+                        seen.add(x['full']); unique_locs.append(x['full'])
+                if not unique_locs: return 0, 0
+                waypts = unique_locs[:25] # Limit for API
+                _, hrs, _ = get_gmaps(f"{anc['lat']},{anc['lon']}", waypts)
+                avg = (hrs * 25.0) / len(unique_locs) if len(unique_locs) > 0 else 0
+                return avg, len(unique_locs)
+            
+            gate_avg, u_count = check_viability(group)
+            status = "Ready"
+            
+            # THE PRUNING LOGIC: If unacceptable, drop up to 3 farthest stops
+            if gate_avg > 23.0 and len(group) > 1:
+                removed_stops = []
+                passed = False
+                for _ in range(min(3, len(group) - 1)):
+                    removed_stops.append(group.pop()) # Removes the farthest stop
+                    new_avg, _ = check_viability(group)
+                    if new_avg <= 23.0:
+                        passed = True
+                        break
+                
+                if passed:
+                    # Pruning worked! Send the removed stops back to the pool
+                    rem.extend(removed_stops)
+                    status = "Ready"
+                else:
+                    # Pruning failed. Put them back in the group and flag it.
+                    group.extend(removed_stops[::-1])
+                    status = "Flagged"
+            
             pool = rem
             clusters.append({
                 "data": group, 
                 "center": [anc['lat'], anc['lon']], 
                 "stops": len(set(x['full'] for x in group)), 
-                "city": anc['city'], "state": anc['state']
+                "city": anc['city'], "state": anc['state'],
+                "status": status
             })
+            
         st.session_state[f"clusters_{pod_name}"] = clusters
         progress_bar.empty()
     except Exception as e:
@@ -202,7 +246,6 @@ def render_dispatch(i, cluster, pod_name, is_sent=False):
         st.error("No contractors found within 60 miles."); return
 
     ic_opts = {f"{r['Name']} ({round(r['d'],1)} mi)": r for _, r in v_ics.iterrows()}
-    
     col_a, col_b, col_c = st.columns([2,1,1])
     
     default_idx = 0
@@ -217,7 +260,8 @@ def render_dispatch(i, cluster, pod_name, is_sent=False):
     due = col_c.date_input("Deadline", datetime.now().date()+timedelta(14), key=f"dd_{i}_{pod_name}")
 
     ic = ic_opts[sel_label]
-    mi, hrs, t_str = get_gmaps(ic['Location'], list(loc_sum.keys()))
+    # Slice to 25 to prevent Google Maps API crash on giant routes
+    mi, hrs, t_str = get_gmaps(ic['Location'], list(loc_sum.keys())[:25])
     pay = round(max(cluster['stops'] * rate, hrs * 25.0), 2)
     eff_stop = round(pay / cluster['stops'], 2) if cluster['stops'] > 0 else 0
 
@@ -268,7 +312,6 @@ def run_pod_tab(pod_name):
             process_pod(pod_name); st.rerun()
         return
     
-    # Analyze routing vs Sent DB logic
     sent_db = st.session_state.get("sent_db", {})
     ready, review, sent = [], [], []
     
@@ -280,12 +323,10 @@ def run_pod_tab(pod_name):
             c['contractor_name'] = matched_contractors[0]
             sent.append(c)
         else:
-            hrs = get_gmaps(f"{c['center'][0]},{c['center'][1]}", [d['full'] for d in c['data'][:10]])[1]
-            gate_avg = (hrs * 25.0) / c['stops'] if c['stops'] > 0 else 0
-            if gate_avg <= 23.0: ready.append(c)
+            if c.get('status') == "Ready": ready.append(c)
             else: review.append(c)
     
-    # 3 ITEMS OVERVIEW: Standard styling for all pods
+    # Standardized 3 Items Overview
     c1, c2, c3, c4 = st.columns([1,1,1, 1.2])
     for col, title, val in zip([c1, c2, c3], ["Ready", "Sent", "Flagged"], [len(ready), len(sent), len(review)]):
         col.markdown(f"""
@@ -314,17 +355,14 @@ def run_pod_tab(pod_name):
     t_ready, t_out, t_rev = st.tabs(["Dispatch Ready", "Sent", "Flagged"])
     with t_ready:
         for i, c in enumerate(ready):
-            with st.expander(f"📍 {c['city']}, {c['state']} | {c['stops']} Stops"): 
-                render_dispatch(i, c, pod_name)
+            with st.expander(f"📍 {c['city']}, {c['state']} | {c['stops']} Stops"): render_dispatch(i, c, pod_name)
     with t_out:
         for i, c in enumerate(sent):
             ic_name = c.get('contractor_name', 'Unknown')
-            with st.expander(f"✓ {ic_name} | {c['city']}, {c['state']} | {c['stops']} Stops"): 
-                render_dispatch(i+500, c, pod_name, is_sent=True)
+            with st.expander(f"✓ {ic_name} | {c['city']}, {c['state']} | {c['stops']} Stops"): render_dispatch(i+500, c, pod_name, is_sent=True)
     with t_rev:
         for i, c in enumerate(review):
-            with st.expander(f"🔴 {c['city']}, {c['state']} | {c['stops']} Stops"): 
-                render_dispatch(i+1000, c, pod_name)
+            with st.expander(f"🔴 {c['city']}, {c['state']} | {c['stops']} Stops"): render_dispatch(i+1000, c, pod_name)
 
 # --- START ---
 if "ic_df" not in st.session_state:
@@ -341,8 +379,7 @@ with tabs[0]:
     c_btn = st.columns([1,2,1])[1]
     if c_btn.button("🚀 Initialize All Pods", use_container_width=True):
         st.session_state.sent_db = fetch_sent_records_from_sheet()
-        for p in POD_CONFIGS.keys(): 
-            process_pod(p)
+        for p in POD_CONFIGS.keys(): process_pod(p)
         st.rerun()
 
 for i, pod in enumerate(["Blue", "Green", "Orange", "Purple", "Red"], 1):
