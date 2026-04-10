@@ -55,7 +55,7 @@ headers = {"Authorization": f"Basic {base64.b64encode(f'{ONFLEET_KEY}:'.encode()
 
 st.set_page_config(page_title="Network Command Center", layout="wide")
 
-# --- UI STYLING (Cool Gray BG + Darker Titles + Light Blue Prompt Box) ---
+# --- UI STYLING (Gray BG + Pure White Cards + Black Text) ---
 st.markdown(f"""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap');
@@ -69,23 +69,30 @@ st.markdown(f"""
     
     h1, h2, h3 {{ color: {TB_PURPLE} !important; font-weight: 800 !important; }}
     
-    /* Expander styling - White cards with dark borders */
+    /* Expander styling - Clean White Cards */
     div[data-testid="stExpander"] {{ 
-        border: 1px solid #64748b !important; 
+        border: 1px solid #94a3b8 !important; 
         border-radius: 12px !important; 
         background-color: #FFFFFF !important;
         margin-bottom: 12px; 
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
     }}
     
-    /* Darker summary text for the cards */
+    /* Dark Header for Expanders (No light blue bg) */
+    div[data-testid="stExpander"] details summary {{ 
+        background-color: #FFFFFF !important; 
+        padding: 12px !important; 
+        border-radius: 12px !important; 
+    }}
+    
+    /* Deep Black text for card titles */
     div[data-testid="stExpander"] details summary p {{ 
         color: #000000 !important; 
         font-weight: 800 !important; 
         font-size: 16px !important; 
     }}
     
-    /* Prompt Box (TextArea) specific styling */
+    /* Specific Prompt Box (TextArea) in Light Blue */
     div[data-testid="stTextArea"] textarea {{
         background-color: {TB_LIGHT_BLUE} !important;
         color: #000000 !important;
@@ -94,7 +101,6 @@ st.markdown(f"""
         font-weight: 500 !important;
     }}
 
-    /* Metrics Boxes */
     .metric-box {{ 
         border-left: 5px solid {TB_PURPLE}; 
         padding: 12px 15px; 
@@ -106,18 +112,15 @@ st.markdown(f"""
     .metric-title {{ font-size: 11px; text-transform: uppercase; color: #000000 !important; font-weight: 800; }}
     .metric-value {{ font-size: 20px; color: #000000 !important; font-weight: 800; }}
     
-    /* Buttons */
     .stButton>button {{ 
         background-color: {TB_PURPLE} !important; 
         color: #FFFFFF !important; 
         font-weight: 700 !important; 
         border-radius: 8px !important; 
-        width: 100%; 
         border: none !important;
     }}
     .stButton>button:hover {{ background-color: {TB_GREEN} !important; color: #000000 !important; }}
     
-    /* Tab color consistency */
     .stTabs [data-baseweb="tab"] {{ color: #000000 !important; font-weight: 700 !important; }}
     div[data-testid="stWidgetLabel"] p {{ color: #000000 !important; font-weight: 800 !important; }}
     </style>
