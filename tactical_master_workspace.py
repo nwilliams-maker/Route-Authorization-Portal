@@ -55,7 +55,7 @@ headers = {"Authorization": f"Basic {base64.b64encode(f'{ONFLEET_KEY}:'.encode()
 
 st.set_page_config(page_title="Network Command Center", layout="wide")
 
-# --- UI STYLING (Fixed Input Visibility) ---
+# --- UI STYLING (Removed Dark Hover + Input Stability) ---
 st.markdown(f"""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
@@ -69,79 +69,88 @@ st.markdown(f"""
     /* Modern Nav Pills */
     .stTabs [data-baseweb="tab-list"] {{
         gap: 8px;
-        background-color: rgba(15, 23, 42, 0.05);
-        padding: 8px;
-        border-radius: 12px;
+        background-color: rgba(15, 23, 42, 0.08);
+        padding: 10px;
+        border-radius: 16px;
     }}
 
     .stTabs [data-baseweb="tab"] {{
         background-color: transparent;
-        border-radius: 8px;
+        border-radius: 10px;
         color: #475569 !important;
-        font-weight: 600;
+        font-weight: 700;
         border: none !important;
-        padding: 8px 16px;
+        padding: 10px 20px;
     }}
 
     .stTabs [aria-selected="true"] {{
         background-color: white !important;
         color: {TB_PURPLE} !important;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        box-shadow: 0 4px 10px rgba(0,0,0,0.1);
     }}
 
-    /* Card Visibility */
+    /* Card Styling */
     div[data-testid="stExpander"] {{ 
-        border: 1px solid #94a3b8 !important; 
-        border-radius: 16px !important; 
+        border: 1.5px solid #94a3b8 !important; 
+        border-radius: 20px !important; 
         background-color: #FFFFFF !important;
-        margin-bottom: 12px; 
+        margin-bottom: 16px; 
     }}
     
     div[data-testid="stExpander"] details summary p {{ 
         color: #000000 !important; 
         font-weight: 800 !important; 
+        font-size: 18px !important;
     }}
 
-    /* FIXED INPUT FIELDS: Ensure they don't blend into the background */
+    /* FIXED INPUT FIELDS: No Dark Hover Fill */
     div[data-baseweb="select"] > div, 
     div[data-testid="stNumberInput"] input, 
     div[data-testid="stDateInput"] input {{
-        background-color: #f1f5f9 !important; /* Subtle gray background */
-        color: #0f172a !important; /* Dark navy text */
-        border: 1.5px solid #cbd5e1 !important;
-        border-radius: 8px !important;
+        background-color: #f8fafc !important;
+        color: #0f172a !important;
+        border: 1.5px solid #e2e8f0 !important;
+        border-radius: 10px !important;
         font-weight: 600 !important;
     }}
     
-    /* Ensure the actual text inside selectbox is visible */
-    div[data-baseweb="select"] span {{
-        color: #0f172a !important;
+    /* Force visibility for Selectbox labels and items */
+    div[data-baseweb="select"] span {{ color: #0f172a !important; }}
+    
+    /* REMOVE DARK HOVER OVERRIDES */
+    div[data-baseweb="select"] > div:hover,
+    div[data-testid="stNumberInput"] input:hover,
+    div[data-testid="stDateInput"] input:hover {{
+        background-color: #ffffff !important; /* Keep it light */
+        border-color: {TB_BLUE} !important;
     }}
 
     div[data-testid="stTextArea"] textarea {{
-        background-color: {TB_LIGHT_BLUE} !important;
-        color: #000000 !important;
-        border: 1px solid #94a3b8 !important;
-        border-radius: 12px !important;
+        background-color: #f0f7ff !important;
+        color: #1e3a8a !important;
+        border: 1.5px solid #bfdbfe !important;
+        border-radius: 14px !important;
         font-size: 14px !important;
+        font-weight: 500 !important;
     }}
 
     .summary-card {{
         background: #f8fafc;
         border: 1px solid #e2e8f0;
-        border-radius: 12px;
+        border-radius: 14px;
         padding: 15px;
+        margin-bottom: 10px;
     }}
 
     .stButton>button {{ 
         background-color: {TB_PURPLE} !important; 
         color: #FFFFFF !important; 
         font-weight: 700 !important; 
-        border-radius: 10px !important; 
-        border: none !important;
+        border-radius: 12px !important; 
+        height: 3.5em !important;
     }}
     
-    div[data-testid="stWidgetLabel"] p {{ color: #475569 !important; font-weight: 700 !important; font-size: 12px !important; }}
+    div[data-testid="stWidgetLabel"] p {{ color: #64748b !important; font-weight: 800 !important; font-size: 11px !important; text-transform: uppercase; }}
     </style>
 """, unsafe_allow_html=True)
 
@@ -251,7 +260,7 @@ def render_dispatch_logic(i, cluster, pod_name, is_sent=False):
     
     st.markdown("### 📍 Location Overview")
     for addr, count in loc_sum.items(): 
-        st.markdown(f"**{addr}** <span style='color:#64748b;'>({count} Tasks)</span>", unsafe_allow_html=True)
+        st.markdown(f"<span style='color:black;'>**{addr}** ({count} Tasks)</span>", unsafe_allow_html=True)
     st.divider()
 
     if is_sent:
@@ -270,7 +279,7 @@ def render_dispatch_logic(i, cluster, pod_name, is_sent=False):
     ic_opts = {f"{row['Name']} ({round(row['d'], 1)} mi)": row for _, row in valid_ics.iterrows()}
     
     c_ic, c_rate, c_due = st.columns([2, 1, 1])
-    sel_label = c_ic.selectbox("Select Contractor", list(ic_opts.keys()), key=f"s_{i}_{pod_name}")
+    sel_label = c_ic.selectbox("Contractor", list(ic_opts.keys()), key=f"s_{i}_{pod_name}")
     rate = c_rate.number_input("Rate / Stop", 16.0, 150.0, 18.0, 0.5, key=f"r_{i}_{pod_name}")
     due = c_due.date_input("Deadline", datetime.now().date() + timedelta(days=14), key=f"d_{i}_{pod_name}")
     
