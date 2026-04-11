@@ -464,22 +464,22 @@ def render_dispatch(i, cluster, pod_name, is_sent=False, is_declined=False):
 
     wo_val = f"{ic['Name']} - {datetime.now().strftime('%m%d%Y')}"
 
-    sig = (f"Work Order: {wo_val}\nContractor: {ic['Name']}\nDue Date: {due.strftime('%A, %b %d, %Y')}\n\n"
+    # 1. Preview Signature (Shows "LINK_PENDING" before generation)
+    sig_preview = (f"Work Order: {wo_val}\nContractor: {ic['Name']}\nDue Date: {due.strftime('%A, %b %d, %Y')}\n\n"
            f"Metrics:\n- Stops: {cluster['stops']}\n- Mileage: {mi} mi\n- Time: {t_str}\n- Compensation: ${pay:.2f}\n\n"
            f"Authorize here:\n{PORTAL_BASE_URL}?route={link_id}&v2=true")
     
-    st.text_area("Email Content Preview", sig, height=180, key=f"tx_{pod_name}_{i}_{cluster_hash}_{ic['Name']}_{pay}_{due}")
+    st.text_area("Email Content Preview", sig_preview, height=180, key=f"tx_{pod_name}_{i}_{cluster_hash}_{ic['Name']}_{pay}_{due}")
 
-    col1, col2 = st.columns(2)
+    # 2. THE ONE-CLICK COMBO BUTTON
+    btn_label = "🚀 GENERATE LINK & OPEN GMAIL" if (not real_id or is_declined) else "🚀 OPEN IN GMAIL (RESEND)"
     
-    # Read the explicit state
-    route_state = st.session_state.get(f"route_state_{cluster_hash}")
-    
-    with col1:
-        # Show Generate if no link OR if it's a declined route that hasn't generated a fresh link yet
-        if not real_id or (is_declined and route_state != "link_generated"):
-            btn_text = "🔄 Generate New Link" if is_declined else "☁️ Push & Generate Link"
-            if st.button(btn_text, key=f"btn_s_{pod_name}_{i}_{cluster_hash}"):
+    if st.button(btn_label, type="primary", key=f"gbtn_{cluster_hash}"):
+        with st.spinner("Generating secure link & opening Gmail..."):
+            final_route_id = real_id
+            
+            # --- STEP A: GENERATE THE LINK (If missing or declined) ---
+            if not final_route_id or is_declined:
                 home = ic['Location']
                 payload = {
                     "icn": ic['Name'], "ice": ic['Email'], "wo": wo_val, 
@@ -492,37 +492,38 @@ def render_dispatch(i, cluster, pod_name, is_sent=False, is_declined=False):
                 
                 res = requests.post(GAS_WEB_APP_URL, json={"action": "saveRoute", "payload": payload}).json()
                 if res.get("success"):
-                    st.session_state[sync_key] = res.get("routeId")
-                    
-                    # 🔒 LOCK IT: Tell the machine the link exists, but hold the card here!
-                    st.session_state[f"route_state_{cluster_hash}"] = "link_generated"
-                    st.session_state[f"orig_status_{cluster_hash}"] = "declined" if is_declined else "ready"
-                    st.rerun()
-        else:
-            st.button("✅ Link Generated", disabled=True, key=f"dis_{pod_name}_{i}_{cluster_hash}")
-    
-    with col2:
-        if real_id:
-            gmail_url = f"https://mail.google.com/mail/?view=cm&fs=1&to={ic['Email']}&su=Route Request: {ic['Name']}&body={requests.utils.quote(sig)}"
+                    final_route_id = res.get("routeId")
+                    st.session_state[sync_key] = final_route_id
+                else:
+                    st.error("Failed to generate link from Google Sheets.")
+                    st.stop()
+
+            # --- STEP B: BUILD THE REAL EMAIL ---
+            final_sig = (f"Work Order: {wo_val}\nContractor: {ic['Name']}\nDue Date: {due.strftime('%A, %b %d, %Y')}\n\n"
+                   f"Metrics:\n- Stops: {cluster['stops']}\n- Mileage: {mi} mi\n- Time: {t_str}\n- Compensation: ${pay:.2f}\n\n"
+                   f"Authorize here:\n{PORTAL_BASE_URL}?route={final_route_id}&v2=true")
             
-            if st.button("🚀 OPEN IN GMAIL", type="primary", key=f"gbtn_{cluster_hash}"):
-                now_ts = datetime.now().strftime('%m/%d %I:%M %p')
-                st.session_state[f"sent_ts_{cluster_hash}"] = now_ts
-                st.session_state[f"contractor_{cluster_hash}"] = ic['Name']
-                
-                # 🚀 SEND IT: Tell the machine the email was clicked, allow it to move to Sent!
-                st.session_state[f"route_state_{cluster_hash}"] = "email_sent"
-                
-                st.components.v1.html(
-                    f"""
-                    <script>
-                        window.open('{gmail_url}', '_blank');
-                    </script>
-                    """,
-                    height=0,
-                )
-                time.sleep(0.5)
-                st.rerun()
+            gmail_url = f"https://mail.google.com/mail/?view=cm&fs=1&to={ic['Email']}&su=Route Request: {ic['Name']}&body={requests.utils.quote(final_sig)}"
+            
+            # --- STEP C: UPDATE STATUS & MOVE CARD ---
+            now_ts = datetime.now().strftime('%m/%d %I:%M %p')
+            st.session_state[f"sent_ts_{cluster_hash}"] = now_ts
+            st.session_state[f"contractor_{cluster_hash}"] = ic['Name']
+            st.session_state[f"status_override_{cluster_hash}"] = "sent" # Instantly forces card to Sent tab
+            
+            # --- STEP D: POP GMAIL & REFRESH ---
+            st.components.v1.html(
+                f"""
+                <script>
+                    window.open('{gmail_url}', '_blank');
+                </script>
+                """,
+                height=0,
+            )
+            
+            # 1-second delay gives the browser time to open the popup before Streamlit clears the screen
+            time.sleep(1) 
+            st.rerun()
                 
 def run_pod_tab(pod_name):
     st.markdown(f"<h2 style='text-align:center;'>{pod_name} Dashboard</h2>", unsafe_allow_html=True)
