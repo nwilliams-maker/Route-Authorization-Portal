@@ -80,7 +80,7 @@ st.markdown(f"""
     .stTabs [aria-selected="true"] {{ transform: scale(1.05); border: 2px solid {TB_PURPLE} !important; z-index: 1; }}
 
     /* TARGET THE GMAIL (PRIMARY) BUTTON SPECIFICALLY */
-    button[kind="primary"] {
+    button[kind="primary"] {{
         background-color: #76bc21 !important; /* TB_GREEN */
         color: white !important;
         height: 3.5rem !important; /* Makes it larger */
@@ -89,13 +89,13 @@ st.markdown(f"""
         border: none !important;
         box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important;
         transition: all 0.2s ease !important;
-    }
+    }}
     
-    button[kind="primary"]:hover {
+    button[kind="primary"]:hover {{
         filter: brightness(1.1) !important;
         transform: translateY(-2px) !important;
         box-shadow: 0 6px 10px rgba(0,0,0,0.15) !important;
-    }
+    }}
     
     /* NESTED SUB-TABS OVERRIDE (Pipeline & Portal Results) */
     div[data-testid="stTabs"] div[data-testid="stTabs"] [data-baseweb="tab"]:nth-of-type(1) {{ background-color: {TB_GREEN_FILL} !important; color: #000000 !important; }} /* Ready */
