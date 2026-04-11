@@ -716,31 +716,17 @@ def run_pod_tab(pod_name):
     
     # FIX: Remove width=1100 and use container width for responsiveness
     st_folium(m, height=400, use_container_width=True, key=f"map_{pod_name}")
-# --- ICON KEY (LEGEND) WITH HOVER DEFINITIONS ---
+# --- ICON KEY (LEGEND) ---
     st.markdown("""
-        <div style="display: flex; justify-content: center; flex-wrap: wrap; gap: 20px; background: #ffffff; padding: 12px; border-radius: 12px; border: 1px solid #cbd5e1; margin-top: -10px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+        <div style="display: flex; justify-content: center; gap: 20px; background: #ffffff; padding: 10px; border-radius: 12px; border: 1px solid #cbd5e1; margin-top: -10px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
             <div style="font-size: 11px; font-weight: 800; color: #64748b; text-transform: uppercase; align-self: center; margin-right: 10px;">Route Key:</div>
-            
-            <div style="font-size: 13px; cursor: help;" 
-                 title="Standard route: Within distance limits (<60mi) and standard rate (<$25/stop).">📍 Ready</div>
-            
-            <div style="font-size: 13px; cursor: help;" 
-                 title="Security Lock: This route is frozen and requires manual authorization before sending.">🔒 Action Required</div>
-            
-            <div style="font-size: 13px; cursor: help;" 
-                 title="Cost Alert: The calculated price per stop is $25.00 or higher.">💰 High Rate</div>
-            
-            <div style="font-size: 13px; cursor: help;" 
-                 title="Travel Alert: The closest contractor is located more than 60 miles from the route center.">📡 Long Distance</div>
-            
-            <div style="font-size: 13px; cursor: help;" 
-                 title="System Flag: This route was flagged for review (e.g., low density or scattered stops).">🔴 Flagged</div>
-            
-            <div style="font-size: 13px; cursor: help;" 
-                 title="Priority: This route contains tasks marked for escalation.">⭐ Escalated</div>
-            
-            <div style="font-size: 13px; cursor: help;" 
-                 title="Dispatched: The route request has been generated and sent to the contractor's email.">✉️ Sent</div>
+            <div style="font-size: 13px; cursor: help;" title="Route is within distance limits (<60mi) and standard rate (<$25/stop).">📍 Ready</div>
+            <div style="font-size: 13px; cursor: help;" title="Route is frozen and requires manual authorization before sending.">🔒 Action Required</div>
+            <div style="font-size: 13px; cursor: help;" title="The calculated price per stop is $25.00 or higher.">💰 High Rate</div>
+            <div style="font-size: 13px; cursor: help;" title="The closest contractor is more than 60 miles away.">📡 Long Distance</div>
+            <div style="font-size: 13px; cursor: help;" title="Route was flagged for review (e.g., low density).">🔴 Flagged</div>
+            <div style="font-size: 13px; cursor: help;" title="Priority: Contains escalated tasks.">⭐ Escalated</div>
+            <div style="font-size: 13px; cursor: help;" title="Route request has been sent to the contractor.">✉️ Sent</div>
         </div>
     """, unsafe_allow_html=True)
     st.markdown("---")
