@@ -614,7 +614,6 @@ def run_pod_tab(pod_name):
     
     # --- NEW: VISUAL SEPARATION & DUAL TAB GROUPS ---
     st.markdown("---")
-    st.markdown("### 🚦 Dispatch Command Center")
     
     # We create 7 columns: 3 for active work, 1 for a gap, 2 for portal results
     # The [1.2, 1.2, 1.2, 0.5, 1.2, 1.2, 0.1] creates the "further right" spacing
