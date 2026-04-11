@@ -665,14 +665,9 @@ def run_pod_tab(pod_name):
         """, unsafe_allow_html=True)
 
     with c3:
-        # 1. The Tiny Transparent Button (type="tertiary" natively strips Streamlit backgrounds!)
-        if st.button("↻", type="tertiary", key=f"sync_track_{pod_name}"):
-            fetch_sent_records_from_sheet.clear()
-            st.rerun()
-
-        # 2. The Supercard (margin-top: -58px slides it UP exactly underneath the transparent button)
+        # 1. The Supercard Background (Aligned perfectly with the others)
         st.markdown(f"""
-            <div style='margin-top: -58px; background:#ffffff; border:1px solid #cbd5e1; border-radius:12px; padding:10px; box-shadow:0 2px 4px rgba(0,0,0,0.05); height: 110px; position:relative; z-index:1;'>
+            <div style='background:#ffffff; border:1px solid #cbd5e1; border-radius:12px; padding:10px; box-shadow:0 2px 4px rgba(0,0,0,0.05); margin-bottom:0px; height: 110px;'>
                 <p style='margin:0 0 5px 0; font-size:11px; font-weight:800; color:#000000; text-transform:uppercase; text-align:center;'>Dispatched Tracking: {total_dispatched}</p>
                 <div style='display:flex; justify-content:space-between; gap:8px;'>
                     <div style='background:{TB_GREEN_FILL}; flex:1; padding:8px; border-radius:8px; text-align:center;'>
@@ -687,37 +682,72 @@ def run_pod_tab(pod_name):
             </div>
         """, unsafe_allow_html=True)
         
-        # 3. Universal CSS to float the button and make it tiny and dark
+        # 2. Render the tiny tertiary button
+        if st.button("↻", type="tertiary", key=f"sync_track_{pod_name}"):
+            fetch_sent_records_from_sheet.clear()
+            st.rerun()
+
+        # 3. The bulletproof CSS using negative margin on the button itself
         st.markdown("""
             <style>
-            /* Target ONLY tertiary buttons (which is only our refresh icon) */
+            /* Absolute position the button, pull it UP 105px, pin to the right */
             button[kind="tertiary"] {
-                float: right !important;      /* Push to the far right */
-                position: relative !important; 
-                top: 8px !important;          /* Push slightly down into the corner */
-                right: 5px !important;        /* Cushion from the edge */
-                z-index: 99 !important;       /* Keeps it clickable above the card */
-                color: #1e293b !important;    /* DARK slate text color */
-                font-size: 14px !important;   /* Very small symbol */
-                font-weight: 900 !important;
+                position: absolute !important;
+                margin-top: -105px !important;
+                right: 12px !important;
+                background-color: transparent !important;
                 background: transparent !important;
                 border: none !important;
-                width: 25px !important;
-                height: 25px !important;
+                box-shadow: none !important;
+                color: #1e293b !important; /* Dark slate text */
+                font-size: 16px !important; /* Very small icon */
+                font-weight: 800 !important;
+                width: 24px !important;
+                height: 24px !important;
                 padding: 0 !important;
-                transition: transform 0.4s ease !important;
+                min-height: 0 !important;
+                line-height: 1 !important;
+                z-index: 99 !important;
+                transition: transform 0.4s ease, color 0.2s ease !important;
             }
 
-            /* Spin effect on hover */
-            button[kind="tertiary"]:hover {
-                transform: rotate(180deg) !important;
-                color: #000000 !important;
+            /* Darken on hover, apply spin, KEEP transparent */
+            button[kind="tertiary"]:hover,
+            button[kind="tertiary"]:focus,
+            button[kind="tertiary"]:active {
+                background-color: transparent !important;
                 background: transparent !important;
+                border: none !important;
+                box-shadow: none !important;
+                color: #000000 !important; /* True black */
+                transform: rotate(180deg) !important;
+            }
+            
+            /* Destroy the ghost shadows Streamlit tries to render */
+            button[kind="tertiary"]::before,
+            button[kind="tertiary"]::after {
+                display: none !important;
+            }
+            
+            /* Clean up the inner paragraph text */
+            button[kind="tertiary"] p {
+                font-size: 16px !important;
+                color: inherit !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+
+            /* Optional: Crush the wrapper so it doesn't push the map down */
+            div[data-testid="stButton"]:has(button[kind="tertiary"]) {
+                height: 0px !important;
+                min-height: 0px !important;
+                margin: 0 !important;
+                padding: 0 !important;
             }
             </style>
         """, unsafe_allow_html=True)
 
-    # --- MAP RENDERING (Make sure this stays right below the card!) ---
+    # --- MAP RENDERING (Make sure this stays directly below!) ---
     st.markdown("<br>", unsafe_allow_html=True)
     m = folium.Map(location=cls[0]['center'], zoom_start=6, tiles="cartodbpositron")
     for c in ready: folium.CircleMarker(c['center'], radius=10, color=TB_GREEN, fill=True, opacity=0.8).add_to(m)
@@ -726,7 +756,7 @@ def run_pod_tab(pod_name):
     st_folium(m, width=1100, height=400, key=f"map_{pod_name}")
     
     st.markdown("---")
-
+    
     # TABS REMAIN UNTOUCHED
     t1, t2, t3, gap, t4, t5, end_gap = st.tabs([
         "📥 Dispatch Ready", 
