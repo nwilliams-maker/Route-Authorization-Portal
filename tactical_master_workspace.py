@@ -425,8 +425,8 @@ def render_dispatch(i, cluster, pod_name, is_sent=False):
         if counts['cont'] > 0: pill_parts.append(f"🔄 {counts['cont']} Continuity")
         if counts['def'] > 0: pill_parts.append(f"⚪ {counts['def']} Default")
         
-        # Build the pill string cleanly
-        pill_str = f"[ {' | '.join(pill_parts)} ]"
+        # Build the string without brackets
+        pill_str = " | ".join(pill_parts) if pill_parts else f"{counts['total']} Tasks"
         loc_pills[addr] = pill_str
         
         # Display as normal text (REMOVED the backticks so it doesn't get the dark green code styling)
