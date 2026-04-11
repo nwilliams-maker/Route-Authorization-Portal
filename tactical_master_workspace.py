@@ -151,8 +151,6 @@ def normalize_state(st_str):
 def fetch_sent_records_from_sheet():
     try:
         base_url = f"{IC_SHEET_URL.split('/edit')[0]}/export?format=csv&gid="
-        
-        # 1. Fetch all three tabs
         sheets_to_fetch = [
             (SAVED_ROUTES_GID, "sent"),
             (ACCEPTED_ROUTES_GID, "accepted"),
@@ -160,29 +158,43 @@ def fetch_sent_records_from_sheet():
         ]
         
         sent_dict = {}
-        
         for gid, status_label in sheets_to_fetch:
-            df = pd.read_csv(base_url + gid)
-            df.columns = [str(c).strip().lower() for c in df.columns]
-            
-            # Use 'json payload' or 'taskids' to find the IDs
-            # Your GAS script uses 'json payload'
-            if 'json payload' in df.columns:
-                for _, row in df.iterrows():
-                    try:
-                        p = json.loads(row['json payload'])
-                        tids = str(p.get('taskIds', '')).replace('|', ',').split(',')
-                        c_name = row.get('contractor', 'Unknown Contractor')
-                        
-                        for tid in tids:
-                            tid = tid.strip()
-                            if tid:
-                                sent_dict[tid] = {"name": c_name, "status": status_label}
-                    except: continue
-                    
+            try:
+                df = pd.read_csv(base_url + str(gid))
+                df.columns = [str(c).strip().lower() for c in df.columns]
+                
+                if 'json payload' in df.columns:
+                    for _, row in df.iterrows():
+                        try:
+                            p = json.loads(row['json payload'])
+                            tids = str(p.get('taskIds', '')).replace('|', ',').split(',')
+                            c_name = row.get('contractor', 'Unknown')
+                            
+                            # Parse the date created
+                            raw_ts = row.get('date created', '')
+                            ts_display = ""
+                            if pd.notna(raw_ts) and str(raw_ts).strip():
+                                try:
+                                    ts_display = pd.to_datetime(raw_ts).strftime('%m/%d %I:%M %p')
+                                except:
+                                    ts_display = str(raw_ts)
+                                    
+                            for tid in tids:
+                                tid = tid.strip()
+                                if tid:
+                                    sent_dict[tid] = {
+                                        "name": c_name,
+                                        "status": status_label,
+                                        "time": ts_display
+                                    }
+                        except: continue
+            except Exception as e:
+                # If one tab fails (e.g. it's empty), skip it and keep going
+                continue
+                
         return sent_dict
     except Exception as e:
-        st.error(f"Failed to fetch portal records: {e}")
+        st.error(f"Failed to sync database: {e}")
         return {}
 
 @st.cache_data(show_spinner=False)
@@ -515,7 +527,6 @@ def render_dispatch(i, cluster, pod_name, is_sent=False):
             # This button triggers the move to Sent AND opens Gmail
             if st.button("🚀 OPEN IN GMAIL", key=f"gbtn_{cluster_hash}"):
                 # 1. Open Gmail first via HTML/JS component
-                gmail_url = f"https://mail.google.com/mail/?view=cm&fs=1&to={ic['Email']}&su=Route Request: {ic['Name']}&body={requests.utils.quote(sig)}"
                 st.components.v1.html(
                     f"""
                     <script>
@@ -525,12 +536,15 @@ def render_dispatch(i, cluster, pod_name, is_sent=False):
                     height=0,
                 )
                 
-                # 2. Mark as sent locally
+                # 2. Mark as sent locally AND capture the exact time
+                now_ts = datetime.now().strftime('%m/%d %I:%M %p')
                 st.session_state[f"contractor_{cluster_hash}"] = ic['Name']
+                st.session_state[f"sent_ts_{cluster_hash}"] = now_ts
                 
                 # 3. Brief pause to ensure JS fires before the rerun kills the process
                 time.sleep(0.5)
                 st.rerun()
+
 def run_pod_tab(pod_name):
     st.markdown(f"<h2 style='text-align:center;'>{pod_name} Dashboard</h2>", unsafe_allow_html=True)
     if f"clusters_{pod_name}" not in st.session_state:
@@ -552,19 +566,25 @@ def run_pod_tab(pod_name):
     
     # We need to look at the 'sent_db' which pulls from your SAVED_ROUTES_GID
     # We'll assume your portal updates a 'status' column in that sheet
+    # We need to look at the 'sent_db' which pulls from your SAVED_ROUTES_GID
     for c in cls:
         task_ids = [str(t['id']).strip() for t in c['data']]
         cluster_hash = hashlib.md5("".join(sorted(task_ids)).encode()).hexdigest()
         
-        # Look for a match in our multi-tab database
-        sheet_match = next((sent_db[tid] for tid in task_ids if tid in sent_db), None)
+        # Look for a match in our multi-tab database SAFELY
+        sheet_match = next((sent_db.get(tid) for tid in task_ids if tid in sent_db), None)
         local_sent_name = st.session_state.get(f"contractor_{cluster_hash}")
+        local_ts = st.session_state.get(f"sent_ts_{cluster_hash}", "")
         
         if sheet_match or local_sent_name:
-            c['contractor_name'] = sheet_match['name'] if sheet_match else local_sent_name
+            c['contractor_name'] = sheet_match.get('name', 'Unknown') if sheet_match else local_sent_name
+            
+            # SAFELY grab the time, fallback to local_ts
+            sheet_time = sheet_match.get('time', '') if sheet_match else ""
+            c['route_ts'] = sheet_time if sheet_time else local_ts
             
             # Determine status based on which sheet it was found in
-            current_status = sheet_match['status'] if sheet_match else "sent"
+            current_status = sheet_match.get('status', 'sent') if sheet_match else "sent"
             
             if current_status == "accepted":
                 accepted.append(c)
@@ -576,14 +596,13 @@ def run_pod_tab(pod_name):
             if c.get('status') == "Ready": ready.append(c)
             else: review.append(c)
     
-    # ---> NEW: 6 Columns to comfortably fit BOTH "Total Tasks" and "Total Stops" <---
+    # ---> 6 Columns to comfortably fit Metrics <---
     c1, c2, c3, c4, c5, c6 = st.columns([1,1,1,1,1, 1.2])
     
     total_tasks = sum(len(c['data']) for c in cls)
     total_stops = sum(c['stops'] for c in cls)
     
     for col, title, val in zip([c1, c2, c3, c4, c5], ["Total Tasks", "Total Stops", "Ready", "Sent", "Flagged"], [total_tasks, total_stops, len(ready), len(sent), len(review)]):
-        
         if title in ["Total Tasks", "Total Stops"]: bg_color = "#f8fafc"
         elif title == "Ready": bg_color = TB_GREEN_FILL
         elif title == "Sent": bg_color = TB_BLUE_FILL
@@ -612,11 +631,8 @@ def run_pod_tab(pod_name):
     for c in review: folium.CircleMarker(c['center'], radius=10, color="#ef4444", fill=True, opacity=0.8).add_to(m)
     st_folium(m, width=1100, height=400, key=f"map_{pod_name}")
     
-    # --- NEW: VISUAL SEPARATION & DUAL TAB GROUPS ---
     st.markdown("---")
     
-    # We create 7 columns: 3 for active work, 1 for a gap, 2 for portal results
-    # The [1.2, 1.2, 1.2, 0.5, 1.2, 1.2, 0.1] creates the "further right" spacing
     t1, t2, t3, gap, t4, t5, end_gap = st.tabs([
         "📥 Dispatch Ready", 
         "✉️ Sent (Pending)", 
@@ -639,7 +655,8 @@ def run_pod_tab(pod_name):
         for i, c in enumerate(sent):
             ic_name = c.get('contractor_name', 'Unknown')
             esc_pill = f"  [ ⭐ {c.get('esc_count', 0)} ]" if c.get('esc_count', 0) > 0 else ""
-            with st.expander(f"✉️ Sent: {ic_name} | {c['city']}, {c['state']}{esc_pill}"): 
+            ts_label = f" | {c.get('route_ts', '')}" if c.get('route_ts') else ""
+            with st.expander(f"✉️ Sent: {ic_name}{ts_label} | {c['city']}, {c['state']}{esc_pill}"): 
                 render_dispatch(i+500, c, pod_name, is_sent=True)
             
     with t3:
@@ -650,7 +667,6 @@ def run_pod_tab(pod_name):
             with st.expander(f"{status_emoji} {c['city']}, {c['state']} | {c['stops']} Stops{esc_pill}"): 
                 render_dispatch(i+1000, c, pod_name)
 
-    # Tab 4 is the Spacer (Empty)
     with gap:
         st.write(" ")
 
@@ -658,7 +674,8 @@ def run_pod_tab(pod_name):
         if not accepted: st.info("Waiting for portal acceptances...")
         for i, c in enumerate(accepted):
             ic_name = c.get('contractor_name', 'Unknown')
-            with st.expander(f"✅ {ic_name} | {c['city']}, {c['state']}"):
+            ts_label = f" | {c.get('route_ts', '')}" if c.get('route_ts') else ""
+            with st.expander(f"✅ {ic_name}{ts_label} | {c['city']}, {c['state']}"):
                 st.success(f"Route accepted. Onfleet assignment should be complete.")
                 render_dispatch(i+2000, c, pod_name, is_sent=True)
 
@@ -666,10 +683,10 @@ def run_pod_tab(pod_name):
         if not declined: st.info("No declined routes.")
         for i, c in enumerate(declined):
             ic_name = c.get('contractor_name', 'Unknown')
-            with st.expander(f"❌ {ic_name} | {c['city']}, {c['state']}"):
+            ts_label = f" | {c.get('route_ts', '')}" if c.get('route_ts') else ""
+            with st.expander(f"❌ {ic_name}{ts_label} | {c['city']}, {c['state']}"):
                 st.error("Route declined by contractor. Requires re-dispatch.")
                 render_dispatch(i+3000, c, pod_name)
-
 # --- START ---
 if "ic_df" not in st.session_state:
     try:
