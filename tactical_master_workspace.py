@@ -665,9 +665,9 @@ def run_pod_tab(pod_name):
         """, unsafe_allow_html=True)
 
     with c3:
-        # 1. The Supercard Background
+        # 1. The Supercard Background (Margin-bottom set to 0 to keep the math clean)
         st.markdown(f"""
-            <div style='background:#ffffff; border:1px solid #cbd5e1; border-radius:12px; padding:10px; box-shadow:0 2px 4px rgba(0,0,0,0.05); margin-bottom:5px; height: 110px;'>
+            <div style='background:#ffffff; border:1px solid #cbd5e1; border-radius:12px; padding:10px; box-shadow:0 2px 4px rgba(0,0,0,0.05); margin-bottom:0px; height: 110px;'>
                 <p style='margin:0 0 5px 0; font-size:11px; font-weight:800; color:#000000; text-transform:uppercase; text-align:center;'>Dispatched Tracking: {total_dispatched}</p>
                 <div style='display:flex; justify-content:space-between; gap:8px;'>
                     <div style='background:{TB_GREEN_FILL}; flex:1; padding:8px; border-radius:8px; text-align:center;'>
@@ -682,42 +682,52 @@ def run_pod_tab(pod_name):
             </div>
         """, unsafe_allow_html=True)
         
-        # 2. The CSS to specifically hijack this exact button and drag it UP into the card
+        # 2. The Button itself
+        if st.button("🔄", key=f"sync_track_{pod_name}", help="Force Sync Portal Accept/Declines"):
+            fetch_sent_records_from_sheet.clear()
+            st.rerun()
+
+        # 3. The CSS Hack to pull the wrapper UP and RIGHT
         st.markdown("""
             <style>
-            /* Target the button using its exact hover 'help' text */
+            /* Target the WRAPPER of the button using the title attribute */
+            div.stButton:has(button[title="Force Sync Portal Accept/Declines"]) {
+                margin-top: -110px !important;  /* Pulls it UP into the card */
+                margin-left: auto !important;   /* Pushes it RIGHT */
+                margin-right: 5px !important;   /* Slight padding from the right edge */
+                width: fit-content !important;  /* Prevents it from blocking clicks on the card */
+                position: relative !important;
+                z-index: 99 !important;
+            }
+            
             button[title="Force Sync Portal Accept/Declines"] {
-                position: absolute !important;
-                right: 15px !important;
-                margin-top: -110px !important; /* Pulls it up exactly into the top right corner */
                 background: transparent !important;
                 border: none !important;
                 box-shadow: none !important;
-                font-size: 16px !important;
+                font-size: 18px !important;
                 width: 30px !important;
                 height: 30px !important;
+                padding: 0 !important;
                 color: #94a3b8 !important;
-                z-index: 99 !important;
                 transition: transform 0.4s ease !important;
             }
             
-            /* Cool spin effect on hover */
             button[title="Force Sync Portal Accept/Declines"]:hover {
                 transform: rotate(180deg) !important;
                 color: #000000 !important;
             }
-            
-            /* Collapse the invisible container left behind so it doesn't mess up your spacing */
-            div[data-testid="stButton"]:has(button[title="Force Sync Portal Accept/Declines"]) {
-                height: 0px !important;
-            }
             </style>
         """, unsafe_allow_html=True)
 
-        # 3. The Button itself (Rendered beneath the card, but visually pulled inside by the CSS)
-        if st.button("🔄", key=f"sync_track_{pod_name}", help="Force Sync Portal Accept/Declines"):
-            fetch_sent_records_from_sheet.clear()
-            st.rerun()
+    # --- MAP RENDERING (RESTORED!) ---
+    st.markdown("<br>", unsafe_allow_html=True)
+    m = folium.Map(location=cls[0]['center'], zoom_start=6, tiles="cartodbpositron")
+    for c in ready: folium.CircleMarker(c['center'], radius=10, color=TB_GREEN, fill=True, opacity=0.8).add_to(m)
+    for c in sent: folium.CircleMarker(c['center'], radius=10, color="#3b82f6", fill=True, opacity=0.8).add_to(m)
+    for c in review: folium.CircleMarker(c['center'], radius=10, color="#ef4444", fill=True, opacity=0.8).add_to(m)
+    st_folium(m, width=1100, height=400, key=f"map_{pod_name}")
+    
+    st.markdown("---")
 
     # TABS REMAIN UNTOUCHED
     t1, t2, t3, gap, t4, t5, end_gap = st.tabs([
