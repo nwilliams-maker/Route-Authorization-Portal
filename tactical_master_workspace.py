@@ -665,67 +665,59 @@ def run_pod_tab(pod_name):
         """, unsafe_allow_html=True)
 
     with c3:
-        # 1. The Supercard Background (Boxes are 42% width, leaving a 16% gap perfectly in the middle)
+        # 1. The Header Row (Pushes the icon to the far right)
+        header_col1, header_col2 = st.columns([0.8, 0.2])
+        with header_col2:
+            # We use tertiary to remove the border/background naturally
+            if st.button("↻", type="tertiary", key=f"sync_track_{pod_name}", help="Sync Status"):
+                fetch_sent_records_from_sheet.clear()
+                st.rerun()
+        
+        # 2. The Supercard Background (No hacks, just a clean card)
         st.markdown(f"""
-            <div style='background:#ffffff; border:1px solid #cbd5e1; border-radius:12px; padding:10px; box-shadow:0 2px 4px rgba(0,0,0,0.05); margin-bottom:0px; height: 110px;'>
+            <div style='background:#ffffff; border:1px solid #cbd5e1; border-radius:12px; padding:10px; box-shadow:0 2px 4px rgba(0,0,0,0.05); height: 110px;'>
                 <p style='margin:0 0 5px 0; font-size:11px; font-weight:800; color:#000000; text-transform:uppercase; text-align:center;'>Dispatched Tracking: {total_dispatched}</p>
-                <div style='display:flex; justify-content:space-between;'>
-                    <div style='background:{TB_GREEN_FILL}; width:42%; padding:8px; border-radius:8px; text-align:center;'>
+                <div style='display:flex; justify-content:space-between; gap:8px;'>
+                    <div style='background:{TB_GREEN_FILL}; flex:1; padding:8px; border-radius:8px; text-align:center;'>
                         <p style='margin:0; font-size:9px; font-weight:800; color:#000000;'>ACCEPTED</p>
                         <p style='margin:0; font-size:20px; font-weight:800; color:#000000;'>{len(accepted)}</p>
                     </div>
-                    <div style='background:{TB_RED_FILL}; width:42%; padding:8px; border-radius:8px; text-align:center;'>
+                    <div style='background:{TB_RED_FILL}; flex:1; padding:8px; border-radius:8px; text-align:center;'>
                         <p style='margin:0; font-size:9px; font-weight:800; color:#000000;'>DECLINED</p>
                         <p style='margin:0; font-size:20px; font-weight:800; color:#000000;'>{len(declined)}</p>
                     </div>
                 </div>
             </div>
         """, unsafe_allow_html=True)
-        
-        # 2. Render the tiny tertiary button
-        if st.button("↻", type="tertiary", key=f"sync_track_{pod_name}", help="SyncGap"):
-            fetch_sent_records_from_sheet.clear()
-            st.rerun()
 
-        # 3. The universal, unbreakable centering CSS
-        st.markdown("""
+        # 3. Minimal CSS just to tighten the gap and color the icon
+        st.markdown(f"""
             <style>
-            /* position: absolute detaches it.
-               left: 50% and margin-left: -12px perfectly centers a 24px button.
-               margin-top: -68px pulls it straight up into the gap. 
-            */
-            button[title="SyncGap"] {
-                position: absolute !important;
-                left: 50% !important;
-                margin-left: -12px !important; 
-                margin-top: -68px !important;  
+            /* Tighten the space between the button row and the card */
+            div[data-testid="column"]:nth-of-type(3) div[data-testid="stVerticalBlock"] {{
+                gap: 0rem !important;
+            }}
+            
+            /* Make the icon dark and clean */
+            button[title="Sync Status"] {{
+                color: #000000 !important;
+                font-size: 20px !important;
+                font-weight: 900 !important;
                 background: transparent !important;
                 border: none !important;
-                box-shadow: none !important;
-                color: #64748b !important; /* Subtle slate grey */
-                font-size: 18px !important; /* Very small icon */
-                font-weight: 900 !important;
-                width: 24px !important;
-                height: 24px !important;
-                padding: 0 !important;
-                min-height: 0 !important;
-                line-height: 1 !important;
-                z-index: 99 !important;
-                transition: transform 0.4s ease, color 0.2s ease !important;
-            }
-
-            /* Spin on hover without messing up the positioning */
-            button[title="SyncGap"]:hover,
-            button[title="SyncGap"]:focus,
-            button[title="SyncGap"]:active {
-                color: #000000 !important;
-                background: transparent !important;
+                float: right !important;
+                padding-bottom: 5px !important;
+            }}
+            
+            button[title="Sync Status"]:hover {{
                 transform: rotate(180deg) !important;
-            }
+                transition: transform 0.4s ease !important;
+                background: transparent !important;
+            }}
             </style>
         """, unsafe_allow_html=True)
 
-    # --- MAP RENDERING (Ensure this stays right below) ---
+    # --- MAP RENDERING (Make sure this is right after the c3 block) ---
     st.markdown("<br>", unsafe_allow_html=True)
     m = folium.Map(location=cls[0]['center'], zoom_start=6, tiles="cartodbpositron")
     for c in ready: folium.CircleMarker(c['center'], radius=10, color=TB_GREEN, fill=True, opacity=0.8).add_to(m)
