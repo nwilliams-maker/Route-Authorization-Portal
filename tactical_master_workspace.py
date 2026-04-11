@@ -394,8 +394,7 @@ def render_dispatch(i, cluster, pod_name, is_sent=False, is_declined=False):
     link_id = real_id if real_id else "LINK_PENDING"
 
     st.write("### 📍 Route Stops")
-
-    # --- 1. STOP METRICS ---
+    # ... (Stops metrics logic stays the same) ...
     stop_metrics = {}
     for c in cluster['data']:
         addr = c['full']
@@ -413,13 +412,11 @@ def render_dispatch(i, cluster, pod_name, is_sent=False, is_declined=False):
 
     for addr, metrics in stop_metrics.items():
         st.markdown(f"**{addr}** &nbsp;<span style='color: #633094; background-color: #f3e8ff; padding: 2px 6px; border-radius: 10px; font-weight: 800; font-size: 11px;'>{metrics['t_count']} Tasks</span>", unsafe_allow_html=True)
-        
     st.divider()
 
-    # --- 2. CONTRACTOR SEARCH ---
+    # --- 1. CONTRACTOR SEARCH & KEYS ---
     ic_df = st.session_state.get('ic_df', pd.DataFrame())
     v_ics = ic_df[~ic_df.astype(str).apply(lambda x: x.str.contains('Field Agent', case=False, na=False).any(), axis=1)].dropna(subset=['Lat', 'Lng']).copy()
-
     if not v_ics.empty:
         v_ics['d'] = v_ics.apply(lambda x: haversine(cluster['center'][0], cluster['center'][1], x['Lat'], x['Lng']), axis=1)
         v_ics = v_ics[v_ics['d'] <= 100].sort_values('d').head(5)
@@ -429,67 +426,64 @@ def render_dispatch(i, cluster, pod_name, is_sent=False, is_declined=False):
         return
 
     ic_opts = {f"{r['Name']} ({round(r['d'],1)} mi)": r for _, r in v_ics.iterrows()}
-    
-    # --- 3. DYNAMIC COMPENSATION PRE-CALC ---
     pay_key = f"pay_val_{cluster_hash}"
     rate_key = f"rate_val_{cluster_hash}"
+    sel_key = f"sel_{cluster_hash}"
 
-    ic = ic_opts[list(ic_opts.keys())[0]] # Temporary for initialization
+    # --- 2. THE LOGISTICS REFRESH CALLBACK ---
+    def update_pricing_on_ic_change():
+        # This function runs the moment you pick a new contractor
+        selected_ic_label = st.session_state[sel_key]
+        new_ic = ic_opts[selected_ic_label]
+        # Re-calculate floor based on NEW contractor's distance/time
+        _, new_hrs, _ = get_gmaps(new_ic['Location'], list(stop_metrics.keys())[:25])
+        new_pay = float(round(max(cluster['stops'] * 18.0, new_hrs * 25.0), 2))
+        # Inject into state
+        st.session_state[pay_key] = new_pay
+        st.session_state[rate_key] = float(round(new_pay / cluster['stops'], 2))
+
+    # --- 3. SELECTION & LOCK CHECK ---
+    col_a, col_b, col_c, col_d = st.columns([1.5, 1, 1, 1])
+    
+    with col_a:
+        # ADDED ON_CHANGE CALLBACK HERE
+        sel_label = st.selectbox("Contractor", list(ic_opts.keys()), key=sel_key, on_change=update_pricing_on_ic_change)
+    
+    ic = ic_opts[sel_label]
     mi, hrs, t_str = get_gmaps(ic['Location'], list(stop_metrics.keys())[:25])
 
-    def update_rate(): st.session_state[rate_key] = round(st.session_state[pay_key] / cluster['stops'], 2)
-    def update_pay(): st.session_state[pay_key] = round(st.session_state[rate_key] * cluster['stops'], 2)
-
+    # Initial Run Logic (if keys don't exist yet)
     if pay_key not in st.session_state:
-        initial_pay = float(round(max(cluster['stops'] * 18.0, hrs * 25.0), 2))
-        st.session_state[pay_key] = initial_pay
-        st.session_state[rate_key] = float(round(initial_pay / cluster['stops'], 2))
+        update_pricing_on_ic_change()
 
-    # --- 4. THE LOCK LOGIC (3-WAY CHECK) ---
     current_rate = st.session_state.get(rate_key, 0)
-    
-    # Check 1: Is it Flagged? | Check 2: Distance > 60mi | Check 3: Rate >= $25
     is_high_rate = current_rate >= 25.0
     is_long_dist = ic['d'] > 60
     is_flagged = cluster['status'] == 'Flagged'
     
     needs_unlock = is_high_rate or is_long_dist or is_flagged
-    is_unlocked = True # Default for clean routes
+    is_unlocked = True 
     
     if needs_unlock:
         reasons = []
         if is_high_rate: reasons.append(f"High Rate (${current_rate}/stop)")
-        if is_long_dist: reasons.append(f"Extended Distance ({round(ic['d'],1)}mi)")
+        if is_long_dist: reasons.append(f"Distance ({round(ic['d'],1)}mi)")
         if is_flagged: reasons.append("Flagged Route")
-        
-        reason_text = " & ".join(reasons)
-        
-        st.markdown(f"""
-            <div style="background-color: #fef2f2; border: 1px solid #ef4444; padding: 12px; border-radius: 10px; margin-bottom: 15px;">
-                <span style="color: #b91c1c; font-weight: 800; font-size: 14px;">🔒 ACTION REQUIRED:</span><br>
-                <span style="color: #7f1d1d; font-size: 13px;">Reviewing: <b>{reason_text}</b></span>
-            </div>
-        """, unsafe_allow_html=True)
+        st.markdown(f"""<div style="background-color:#fef2f2; border:1px solid #ef4444; padding:10px; border-radius:8px; margin-bottom:15px;"><span style="color:#b91c1c; font-weight:800;">🔒 ACTION REQUIRED:</span> <span style="color:#7f1d1d;">{ " & ".join(reasons) }</span></div>""", unsafe_allow_html=True)
         is_unlocked = st.checkbox("Authorize Premium Rate / Distance", key=f"lock_{cluster_hash}")
 
-    # --- 5. INPUT ROW ---
-    col_a, col_b, col_c, col_d = st.columns([1.5, 1, 1, 1])
-    
-    with col_a:
-        sel_label = st.selectbox("Contractor", list(ic_opts.keys()), key=f"sel_{cluster_hash}")
-    
-    # Re-calc logistics based on actual selection
-    ic = ic_opts[sel_label]
-    mi, hrs, t_str = get_gmaps(ic['Location'], list(stop_metrics.keys())[:25])
+    # --- 4. INPUTS & DYNAMIC FORMULA ---
+    def sync_rate(): st.session_state[rate_key] = round(st.session_state[pay_key] / cluster['stops'], 2)
+    def sync_pay(): st.session_state[pay_key] = round(st.session_state[rate_key] * cluster['stops'], 2)
 
     with col_b:
-        pay = st.number_input("Total Comp ($)", min_value=0.0, step=5.0, key=pay_key, on_change=update_rate, disabled=not is_unlocked)
+        pay = st.number_input("Total Comp ($)", min_value=0.0, step=5.0, key=pay_key, on_change=sync_rate, disabled=not is_unlocked)
     with col_c:
-        eff_stop = st.number_input("Rate/Stop ($)", min_value=0.0, step=1.0, key=rate_key, on_change=update_pay, disabled=not is_unlocked)
+        eff_stop = st.number_input("Rate/Stop ($)", min_value=0.0, step=1.0, key=rate_key, on_change=sync_pay, disabled=not is_unlocked)
     with col_d:
         due = st.date_input("Deadline", datetime.now().date()+timedelta(14), key=f"dd_{cluster_hash}", disabled=not is_unlocked)
 
-    # --- 6. FINANCIALS & LOGISTICS ---
+    # --- 5. DISPLAY & GMAIL ---
     m1, m2 = st.columns(2)
     with m1: 
         status_color = TB_GREEN if 18.0 <= eff_stop <= 23.0 else "#ef4444"
@@ -497,16 +491,14 @@ def render_dispatch(i, cluster, pod_name, is_sent=False, is_declined=False):
     with m2: 
         st.markdown(f"<div style='background:#ffffff; border:1px solid #cbd5e1; border-radius:12px; padding:15px; margin-bottom:10px;'><p style='font-size:11px; font-weight:800; text-transform:uppercase;'>Logistics</p><p style='margin:0; font-size:24px; font-weight:800; color:#000000;'>{t_str}</p><p style='margin:0; font-size:13px; color:#000000;'>Round Trip: {mi} mi</p></div>", unsafe_allow_html=True)
 
-    # --- 7. PREVIEW & GMAIL ---
-    wo_val = f"{ic['Name']} - {datetime.now().strftime('%m%d%Y')}"
-    sig_preview = (f"Work Order: {wo_val}\nContractor: {ic['Name']}\nDue Date: {due.strftime('%A, %b %d, %Y')}\n\n"
+    sig_preview = (f"Work Order: {ic['Name']} - {datetime.now().strftime('%m%d%Y')}\nContractor: {ic['Name']}\nDue Date: {due.strftime('%A, %b %d, %Y')}\n\n"
            f"Metrics:\n- Stops: {cluster['stops']}\n- Mileage: {mi} mi\n- Time: {t_str}\n- Compensation: ${pay:.2f}\n\n"
            f"Authorize here:\n{PORTAL_BASE_URL}?route={link_id}&v2=true")
-
     st.text_area("Email Content Preview", sig_preview, height=150, key=f"tx_{cluster_hash}_preview", disabled=not is_unlocked)
 
-    btn_label = "🚀 GENERATE LINK & OPEN GMAIL" if (not real_id or is_declined) else "🚀 OPEN IN GMAIL (RESEND)"
-    
+    if st.button("🚀 GENERATE LINK & OPEN GMAIL", type="primary", key=f"gbtn_{cluster_hash}", disabled=not is_unlocked):
+        # ... (Gmail Button logic remains exactly as before) ...
+        pass
     if st.button(btn_label, type="primary", key=f"gbtn_{cluster_hash}", disabled=not is_unlocked):
         final_route_id = real_id
         with st.spinner("Generating..."):
