@@ -547,16 +547,16 @@ def run_pod_tab(pod_name):
     # 3. Load cluster data
     cls = st.session_state[f"clusters_{pod_name}"]
     
-    if st.button(f"🚀 Initialize {pod_name} Data", key=f"init_{pod_name}"):
-            process_pod(pod_name)
-            st.rerun()
-        return
-    cls = st.session_state[f"clusters_{pod_name}"]
-    if not cls:
-        st.info(f"No tasks pending in the {pod_name} region.")
-        if st.button("🔄 Check Again", key=f"empty_ref_{pod_name}"):
-            process_pod(pod_name); st.rerun()
-        return
+if st.button(f"🚀 Initialize {pod_name} Data", key=f"init_{pod_name}"):
+        process_pod(pod_name)
+        st.rerun()
+    return
+cls = st.session_state[f"clusters_{pod_name}"]
+if not cls:
+    st.info(f"No tasks pending in the {pod_name} region.")
+    if st.button("🔄 Check Again", key=f"empty_ref_{pod_name}"):
+        process_pod(pod_name); st.rerun()
+    return
     
     # --- KEEPING THE CLEAN AUTO-SYNC LOGIC ---
     sent_db = fetch_sent_records_from_sheet()
