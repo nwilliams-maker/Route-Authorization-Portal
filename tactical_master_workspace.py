@@ -202,6 +202,12 @@ def process_pod(pod_name):
     config = POD_CONFIGS[pod_name]
     progress_bar = st.progress(0, text=f"📥 Extracting {pod_name} tasks & evaluating dense routes...")
     try:
+        # ---> NEW: Dynamically find the ID for 'A - Escalation' (or any escalation team) <---
+        teams_res = requests.get("https://onfleet.com/api/v2/teams", headers=headers).json()
+        esc_team_ids = []
+        if isinstance(teams_res, list):
+            esc_team_ids = [team['id'] for team in teams_res if 'escalation' in str(team.get('name', '')).lower()]
+
         all_tasks = []
         url = f"https://onfleet.com/api/v2/tasks/all?state=0&from={int(time.time()*1000)-(80*24*3600*1000)}"
         while url:
@@ -215,14 +221,11 @@ def process_pod(pod_name):
             addr = t.get('destination', {}).get('address', {})
             stt = normalize_state(addr.get('state', ''))
             
-            # ---> BULLETPROOF ESCALATION CHECK <---
+            # ---> CRITICAL FIX: Check if task is sitting in the Escalation Team queue <---
             is_esc = False
-            for m in (t.get('metadata') or []):
-                m_name = str(m.get('name', '')).lower().strip()
-                m_val = str(m.get('value', '')).lower().strip()
-                if 'escalation' in m_name and m_val in ['1', '1.0', 'true', 'yes']:
-                    is_esc = True
-                    break
+            container = t.get('container', {})
+            if container.get('type') == 'team' and container.get('team') in esc_team_ids:
+                is_esc = True
             
             if stt in config['states']:
                 pool.append({
