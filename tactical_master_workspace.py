@@ -202,11 +202,32 @@ def process_pod(pod_name):
     config = POD_CONFIGS[pod_name]
     progress_bar = st.progress(0, text=f"📥 Extracting {pod_name} tasks & evaluating dense routes...")
     try:
-        # Dynamically find the ID for 'A - Escalation'
+        # ---> 1. DEFINE YOUR APPROVED TEAMS <---
+        APPROVED_TEAMS = [
+            "a - escalation", 
+            "b - boosted campaigns", 
+            "b - local campaigns", 
+            "c - priority nationals", 
+            "cvs kiosk removal", 
+            "n - national campaigns"
+        ]
+
+        # ---> 2. MAP ONFLEET TEAMS & GRAB THEIR IDs <---
         teams_res = requests.get("https://onfleet.com/api/v2/teams", headers=headers).json()
+        target_team_ids = []
         esc_team_ids = []
+        
         if isinstance(teams_res, list):
-            esc_team_ids = [team['id'] for team in teams_res if 'escalation' in str(team.get('name', '')).lower()]
+            for team in teams_res:
+                t_name = str(team.get('name', '')).lower().strip()
+                
+                # If the team name matches one of your approved teams, save its ID
+                if any(appr in t_name for appr in APPROVED_TEAMS):
+                    target_team_ids.append(team['id'])
+                    
+                # Track the Escalation team separately to ensure it gets the Star Pill
+                if 'escalation' in t_name:
+                    esc_team_ids.append(team['id'])
 
         all_tasks = []
         url = f"https://onfleet.com/api/v2/tasks/all?state=0&from={int(time.time()*1000)-(80*24*3600*1000)}"
@@ -218,16 +239,19 @@ def process_pod(pod_name):
 
         pool = []
         for t in all_tasks:
+            container = t.get('container', {})
+            c_type = str(container.get('type', '')).upper()
+            
+            # ---> 3. NEW FILTER: Keep completely unassigned tasks, but filter specific teams <---
+            # If it is assigned to a team, but NOT one of our approved teams, skip it entirely.
+            if c_type == 'TEAM' and container.get('team') not in target_team_ids:
+                continue
+
             addr = t.get('destination', {}).get('address', {})
             stt = normalize_state(addr.get('state', ''))
             
-            # ---> CRITICAL FIX: Check if task is sitting in the Escalation Team queue <---
-            is_esc = False
-            container = t.get('container', {})
-            
-            # Using .upper() ensures it catches "TEAM", "team", or "Team"
-            if str(container.get('type', '')).upper() == 'TEAM' and container.get('team') in esc_team_ids:
-                is_esc = True
+            # Tag for the Star Pill (Only true if it is in a team AND that team is the Escalation team)
+            is_esc = (c_type == 'TEAM' and container.get('team') in esc_team_ids)
             
             if stt in config['states']:
                 pool.append({
