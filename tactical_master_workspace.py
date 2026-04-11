@@ -614,48 +614,61 @@ def run_pod_tab(pod_name):
     
     # --- NEW: VISUAL SEPARATION & DUAL TAB GROUPS ---
     st.markdown("---")
-    st.markdown("### 🚦 Dispatch Pipeline")
-    t_ready, t_out, t_rev = st.tabs(["Dispatch Ready", "Sent (Pending IC)", "Flagged"])
+    st.markdown("### 🚦 Dispatch Command Center")
     
-    with t_ready:
+    # We create 7 columns: 3 for active work, 1 for a gap, 2 for portal results
+    # The [1.2, 1.2, 1.2, 0.5, 1.2, 1.2, 0.1] creates the "further right" spacing
+    t1, t2, t3, gap, t4, t5, end_gap = st.tabs([
+        "📥 Dispatch Ready", 
+        "✉️ Sent (Pending)", 
+        "⚠️ Flagged",
+        " ", # Empty Spacer Tab
+        "✅ Accepted", 
+        "❌ Declined",
+        " "
+    ])
+    
+    with t1:
+        if not ready: st.info("No tasks ready for dispatch.")
         for i, c in enumerate(ready):
             esc_pill = f"  [ ⭐ {c.get('esc_count', 0)} ]" if c.get('esc_count', 0) > 0 else ""
             with st.expander(f"📍 {c['city']}, {c['state']} | {c['stops']} Stops{esc_pill}"): 
                 render_dispatch(i, c, pod_name)
     
-    with t_out:
+    with t2:
+        if not sent: st.info("No pending routes sent.")
         for i, c in enumerate(sent):
             ic_name = c.get('contractor_name', 'Unknown')
             esc_pill = f"  [ ⭐ {c.get('esc_count', 0)} ]" if c.get('esc_count', 0) > 0 else ""
             with st.expander(f"✉️ Sent: {ic_name} | {c['city']}, {c['state']}{esc_pill}"): 
                 render_dispatch(i+500, c, pod_name, is_sent=True)
             
-    with t_rev:
+    with t3:
+        if not review: st.info("No flagged tasks requiring review.")
         for i, c in enumerate(review):
             status_emoji = "🔴" if not c.get('has_ic') else "⚠️" 
             esc_pill = f"  [ ⭐ {c.get('esc_count', 0)} ]" if c.get('esc_count', 0) > 0 else ""
             with st.expander(f"{status_emoji} {c['city']}, {c['state']} | {c['stops']} Stops{esc_pill}"): 
                 render_dispatch(i+1000, c, pod_name)
 
-    # Secondary Group for Portal Results
-    st.markdown("<br>", unsafe_allow_html=True)
-    st.markdown("### 🏁 Portal Responses")
-    t_acc, t_dec = st.tabs(["✅ Accepted Routes", "❌ Declined Routes"])
-    
-    with t_acc:
-        if not accepted: 
-            st.info("No routes have been accepted yet.")
+    # Tab 4 is the Spacer (Empty)
+    with gap:
+        st.write(" ")
+
+    with t4:
+        if not accepted: st.info("Waiting for portal acceptances...")
         for i, c in enumerate(accepted):
-            with st.expander(f"✅ {c.get('contractor_name')} ACCEPTED | {c['city']}, {c['state']}"):
-                st.success(f"Route accepted by {c.get('contractor_name')}. Ready for Onfleet assignment.")
+            ic_name = c.get('contractor_name', 'Unknown')
+            with st.expander(f"✅ {ic_name} | {c['city']}, {c['state']}"):
+                st.success(f"Route accepted. Onfleet assignment should be complete.")
                 render_dispatch(i+2000, c, pod_name, is_sent=True)
 
-    with t_dec:
-        if not declined: 
-            st.info("No routes have been declined yet.")
+    with t5:
+        if not declined: st.info("No declined routes.")
         for i, c in enumerate(declined):
-            with st.expander(f"❌ {c.get('contractor_name')} DECLINED | {c['city']}, {c['state']}"):
-                st.error("This route was declined. Re-dispatch required.")
+            ic_name = c.get('contractor_name', 'Unknown')
+            with st.expander(f"❌ {ic_name} | {c['city']}, {c['state']}"):
+                st.error("Route declined by contractor. Requires re-dispatch.")
                 render_dispatch(i+3000, c, pod_name)
 
 # --- START ---
