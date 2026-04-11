@@ -592,7 +592,7 @@ if "ic_df" not in st.session_state:
         st.session_state.ic_df = pd.read_csv(url)
     except: st.error("Database connection failed.")
 
-st.markdown("<h1>Terraboost Tactical Command</h1>", unsafe_allow_html=True)
+st.markdown("<h1>Dispatch Command Center</h1>", unsafe_allow_html=True)
 tabs = st.tabs(["Global", "Blue", "Green", "Orange", "Purple", "Red"])
 
 with tabs[0]:
