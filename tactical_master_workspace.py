@@ -409,11 +409,11 @@ def render_dispatch(i, cluster, pod_name, is_sent=False):
         
         # Categorize strictly using IF/ELIF
         # Blank tasks (not tt) and "location in venue incorrect" now map to New Ad
-        if not tt or any(x in tt for x in ["new ad", "digital ad with bottom", "digital ad with magnet", "art change", "location in venue incorrect"]):
+        if not tt or any(x in tt for x in ["new ad", "digital ad with bottom", "digital ad with magnet", "art change", "location in venue incorrect", "top"]):
             loc_data[addr]['new'] += 1
-        elif any(x in tt for x in ["continuity", "ad takedown", "move kiosk", "photo retake", "pull down", "swap magnets", "reorder", "fix", "digital photo", "photo"]):
+        elif any(x in tt for x in ["continuity", "move kiosk", "photo retake", "swap magnets", "reorder", "fix", "digital photo", "photo"]):
             loc_data[addr]['cont'] += 1
-        elif any(x in tt for x in ["default", "store default", "default ad"]):
+        elif any(x in tt for x in ["default", "store default", "default ad", "ad takedown", "pull down"]):
             loc_data[addr]['def'] += 1
         elif any(x in tt for x in ["kiosk install", "install"]): 
             loc_data[addr]['install'] += 1
