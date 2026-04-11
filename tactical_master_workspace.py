@@ -456,19 +456,19 @@ def run_pod_tab(pod_name):
     
     t_ready, t_out, t_rev = st.tabs(["Dispatch Ready", "Sent", "Flagged"])
     with t_ready:
-        for i, c in enumerate(ready):
-            esc_pill = f"  [ ⭐ {c['esc_count']} ]" if c.get('esc_count', 0) > 0 else ""
-            with st.expander(f"📍 {c['city']}, {c['state']} | {c['stops']} Stops{esc_pill}"): render_dispatch(i, c, pod_name)
+        for c in ready:
+            esc_pill = f"  [ ⭐ {c.get('esc_count', 0)} ]" if c.get('esc_count', 0) > 0 else ""
+            with st.expander(f"📍 {c['city']}, {c['state']} | {c['stops']} Stops{esc_pill}"): render_dispatch(c, pod_name)
     with t_out:
-        for i, c in enumerate(sent):
+        for c in sent:
             ic_name = c.get('contractor_name', 'Unknown')
-            esc_pill = f"  [ ⭐ {c['esc_count']} ]" if c.get('esc_count', 0) > 0 else ""
-            with st.expander(f"✓ {ic_name} | {c['city']}, {c['state']} | {c['stops']} Stops{esc_pill}"): render_dispatch(i+500, c, pod_name, is_sent=True)
+            esc_pill = f"  [ ⭐ {c.get('esc_count', 0)} ]" if c.get('esc_count', 0) > 0 else ""
+            with st.expander(f"✓ {ic_name} | {c['city']}, {c['state']} | {c['stops']} Stops{esc_pill}"): render_dispatch(c, pod_name, is_sent=True)
     with t_rev:
-        for i, c in enumerate(review):
+        for c in review:
             status_emoji = "🔴" if not c.get('has_ic') else "⚠" 
-            esc_pill = f"  [ ⭐ {c['esc_count']} ]" if c.get('esc_count', 0) > 0 else ""
-            with st.expander(f"{status_emoji} {c['city']}, {c['state']} | {c['stops']} Stops{esc_pill}"): render_dispatch(i+1000, c, pod_name)
+            esc_pill = f"  [ ⭐ {c.get('esc_count', 0)} ]" if c.get('esc_count', 0) > 0 else ""
+            with st.expander(f"{status_emoji} {c['city']}, {c['state']} | {c['stops']} Stops{esc_pill}"): render_dispatch(c, pod_name)
 
 # --- START ---
 if "ic_df" not in st.session_state:
