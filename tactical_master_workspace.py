@@ -57,7 +57,7 @@ headers = {"Authorization": f"Basic {base64.b64encode(f'{ONFLEET_KEY}:'.encode()
 
 st.set_page_config(page_title="Dispatch Command Center", layout="wide")
 
-# --- # --- UI STYLING ---
+# --- UI STYLING ---
 st.markdown(f"""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
@@ -69,36 +69,6 @@ st.markdown(f"""
     /* GLOBAL TABS STYLING */
     .stTabs [data-baseweb="tab-list"] {{ justify-content: center; gap: 8px; background: rgba(255,255,255,0.6); padding: 10px; border-radius: 15px; }}
     .stTabs [data-baseweb="tab"] {{ border-radius: 10px !important; padding: 10px 20px !important; font-weight: 700 !important; }}
-
-    /* MODERN INTEGRATED SYNC ICON */
-    button[title="Sync Pod Status"] {{
-        background: transparent !important;
-        border: none !important;
-        box-shadow: none !important;
-        color: #1e293b !important; /* Deep Slate (Dark) */
-        font-size: 24px !important;
-        font-weight: 900 !important;
-        padding: 0 !important;
-        margin-top: 5px !important; 
-        margin-left: -60% !important; 
-        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
-        min-height: 0 !important;
-        display: flex !important;
-        align-items: center !important;
-    }}
-
-    button[title="Sync Pod Status"]:hover {{
-        color: #76bc21 !important; /* TB_GREEN Glow */
-        transform: rotate(180deg) scale(1.1) !important;
-        background: transparent !important;
-    }}
-
-    /* Target the inner span to ensure no Streamlit styling leaks through */
-    button[title="Sync Pod Status"] div[data-testid="stMarkdownContainer"] p {{
-        font-size: 24px !important;
-        font-weight: 900 !important;
-        color: inherit !important;
-    }}
     
     /* TOP LEVEL TABS (Pod Colors) */
     .stTabs [data-baseweb="tab"]:nth-of-type(1) {{ background-color: #ffffff !important; color: #000000 !important; }}
@@ -127,24 +97,6 @@ st.markdown(f"""
         box-shadow: 0 6px 10px rgba(0,0,0,0.15) !important;
     }}
 
-    /* SYNC ICON HOVER */
-    button[key^="sync_track_"] {{
-        background: transparent !important;
-        border: none !important;
-        box-shadow: none !important;
-        padding: 0 !important;
-        font-size: 14px !important;
-        width: 25px !important;
-        height: 25px !important;
-        color: #475569 !important;
-        transition: transform 0.4s ease !important;
-    }}
-    
-    button[key^="sync_track_"]:hover {{
-        transform: rotate(180deg) !important;
-        filter: brightness(0.5) !important;
-    }}
-    
     /* NESTED SUB-TABS OVERRIDE */
     div[data-testid="stTabs"] div[data-testid="stTabs"] [data-baseweb="tab"]:nth-of-type(1) {{ background-color: {TB_GREEN_FILL} !important; color: #000000 !important; }}
     div[data-testid="stTabs"] div[data-testid="stTabs"] [data-baseweb="tab"]:nth-of-type(2) {{ background-color: {TB_BLUE_FILL} !important; color: #000000 !important; }}
@@ -580,30 +532,19 @@ def render_dispatch(i, cluster, pod_name, is_sent=False, is_declined=False):
         st.rerun()
                 
 def run_pod_tab(pod_name):
-    # Centered Header with Icon
-    # Ratio [1, 2, 1] ensures the middle column is perfectly centered on the page
-    h_left, h_center, h_right = st.columns([1, 2, 1])
-    
-    with h_center:
-        # We wrap the Title and Icon in a flex container to keep them side-by-side
-        st.markdown(f"""
-            <div style="display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%;">
-                <h2 style="margin: 0; white-space: nowrap;">{pod_name} Dashboard</h2>
-            </div>
-        """, unsafe_allow_html=True)
-        
-    with h_right:
-        # The icon is placed here; CSS will pull it closer to the title
-        if st.button("↻", key=f"sync_pod_{pod_name}", help="Sync Pod Status", type="tertiary"):
-            fetch_sent_records_from_sheet.clear()
-            st.rerun()
-
+    # Standard Centered Header
+    st.markdown(f"<h2 style='text-align:center;'>{pod_name} Dashboard</h2>", unsafe_allow_html=True)
     st.markdown("<br>", unsafe_allow_html=True)
 
     if f"clusters_{pod_name}" not in st.session_state:
-        # ... rest of your existing initialization logic
-        
-        # ... rest of your initialization logic
+        if st.button(f"🚀 Initialize {pod_name} Data", key=f"init_{pod_name}"):
+            process_pod(pod_name)
+            st.rerun()
+        return
+    
+    cls = st.session_state[f"clusters_{pod_name}"]
+    # ... rest of the function continues as normal ...
+    
         if st.button(f"🚀 Initialize {pod_name} Data", key=f"init_{pod_name}"):
             process_pod(pod_name)
             st.rerun()
