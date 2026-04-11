@@ -214,16 +214,19 @@ def process_pod(pod_name):
         for t in all_tasks:
             addr = t.get('destination', {}).get('address', {})
             stt = normalize_state(addr.get('state', ''))
-
-            # ---> CRITICAL FIX: Add this line back to define is_esc <---
-            is_esc = any("escalation" in str(m.get('name')).lower() for m in t.get('metadata', []))
+            
+            # ---> CRITICAL FIX: Explicitly check if the metadata value is exactly "1" <---
+            is_esc = any(
+                "escalation" in str(m.get('name', '')).lower() and str(m.get('value', '')).strip() == "1" 
+                for m in t.get('metadata', [])
+            )
             
             if stt in config['states']:
                 pool.append({
                     "id": t['id'], "city": addr.get('city', 'Unknown'), "state": stt,
                     "full": f"{addr.get('number','')} {addr.get('street','')}, {addr.get('city','')}, {stt}",
                     "lat": t['destination']['location'][1], "lon": t['destination']['location'][0],
-                    "escalated": is_esc #
+                    "escalated": is_esc
                 })
         
         clusters = []
