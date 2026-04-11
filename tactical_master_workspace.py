@@ -215,9 +215,10 @@ def process_pod(pod_name):
             addr = t.get('destination', {}).get('address', {})
             stt = normalize_state(addr.get('state', ''))
             
-            # ---> CRITICAL FIX: Explicitly check if the metadata value is exactly "1" <---
+           # ---> CRITICAL FIX: Make the value check flexible for Onfleet decimals/numbers <---
             is_esc = any(
-                "escalation" in str(m.get('name', '')).lower() and str(m.get('value', '')).strip() == "1" 
+                "escalation" in str(m.get('name', '')).lower() and 
+                str(m.get('value', '')).strip().lower() in ["1", "1.0", "true", "yes"] 
                 for m in t.get('metadata', [])
             )
             
