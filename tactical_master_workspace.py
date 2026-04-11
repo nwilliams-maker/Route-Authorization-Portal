@@ -505,11 +505,24 @@ def render_dispatch(i, cluster, pod_name, is_sent=False):
         if real_id:
             gmail_url = f"https://mail.google.com/mail/?view=cm&fs=1&to={ic['Email']}&su=Route Request: {ic['Name']}&body={requests.utils.quote(sig)}"
             
-            # This button triggers the move to Sent ONLY when clicked
+            # This button triggers the move to Sent AND opens Gmail
             if st.button("🚀 OPEN IN GMAIL", key=f"gbtn_{cluster_hash}"):
+                # 1. Open Gmail first via HTML/JS component
+                gmail_url = f"https://mail.google.com/mail/?view=cm&fs=1&to={ic['Email']}&su=Route Request: {ic['Name']}&body={requests.utils.quote(sig)}"
+                st.components.v1.html(
+                    f"""
+                    <script>
+                        window.open('{gmail_url}', '_blank');
+                    </script>
+                    """,
+                    height=0,
+                )
+                
+                # 2. Mark as sent locally
                 st.session_state[f"contractor_{cluster_hash}"] = ic['Name']
-                js = f"window.open('{gmail_url}')"
-                st.components.v1.html(f"<script>{js}</script>", height=0)
+                
+                # 3. Brief pause to ensure JS fires before the rerun kills the process
+                time.sleep(0.5)
                 st.rerun()
 def run_pod_tab(pod_name):
     st.markdown(f"<h2 style='text-align:center;'>{pod_name} Dashboard</h2>", unsafe_allow_html=True)
