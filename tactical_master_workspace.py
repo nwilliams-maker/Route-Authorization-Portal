@@ -662,7 +662,7 @@ def run_pod_tab(pod_name):
             </div>
         """, unsafe_allow_html=True)
 
-    # MAP & EXPANDERS (Untouched)
+    # MAP REMAINS UNTOUCHED
     m = folium.Map(location=cls[0]['center'], zoom_start=6, tiles="cartodbpositron")
     for c in ready: folium.CircleMarker(c['center'], radius=10, color=TB_GREEN, fill=True, opacity=0.8).add_to(m)
     for c in sent: folium.CircleMarker(c['center'], radius=10, color="#3b82f6", fill=True, opacity=0.8).add_to(m)
@@ -671,6 +671,15 @@ def run_pod_tab(pod_name):
     
     st.markdown("---")
     
+    # --- NEW: MANUAL SYNC BUTTON FOR PORTAL UPDATES ---
+    sync_col1, sync_col2 = st.columns([8, 2])
+    with sync_col2:
+        # This button explicitly clears the 15-second cache and forces a fresh read
+        if st.button("🔄 Sync Portal Status", use_container_width=True, key=f"force_sync_{pod_name}"):
+            fetch_sent_records_from_sheet.clear() 
+            st.rerun()
+
+    # TABS REMAIN UNTOUCHED
     t1, t2, t3, gap, t4, t5, end_gap = st.tabs([
         "📥 Dispatch Ready", 
         "✉️ Sent (Pending)", 
