@@ -424,7 +424,6 @@ def render_dispatch(i, cluster, pod_name, is_sent=False):
         if counts['new'] > 0: pill_parts.append(f"🆕 {counts['new']} New Ad")
         if counts['cont'] > 0: pill_parts.append(f"🔄 {counts['cont']} Continuity")
         if counts['def'] > 0: pill_parts.append(f"⚪ {counts['def']} Default")
-        if counts['other'] > 0: pill_parts.append(f"📦 {counts['other']} Other")
         
         # Build the pill string cleanly
         pill_str = f"[ {' | '.join(pill_parts)} ]"
