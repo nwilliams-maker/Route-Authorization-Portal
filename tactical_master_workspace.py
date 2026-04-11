@@ -472,8 +472,12 @@ def render_dispatch(i, cluster, pod_name, is_sent=False, is_declined=False):
 
     col1, col2 = st.columns(2)
     
+    # Read the explicit state
+    route_state = st.session_state.get(f"route_state_{cluster_hash}")
+    
     with col1:
-        if not real_id or is_declined:
+        # Show Generate if no link OR if it's a declined route that hasn't generated a fresh link yet
+        if not real_id or (is_declined and route_state != "link_generated"):
             btn_text = "🔄 Generate New Link" if is_declined else "☁️ Push & Generate Link"
             if st.button(btn_text, key=f"btn_s_{pod_name}_{i}_{cluster_hash}"):
                 home = ic['Location']
@@ -490,8 +494,9 @@ def render_dispatch(i, cluster, pod_name, is_sent=False, is_declined=False):
                 if res.get("success"):
                     st.session_state[sync_key] = res.get("routeId")
                     
-                    # 🔒 NEW: Set the UI lock before rerunning!
-                    st.session_state[f"ui_lock_{cluster_hash}"] = "declined" if is_declined else "ready"
+                    # 🔒 LOCK IT: Tell the machine the link exists, but hold the card here!
+                    st.session_state[f"route_state_{cluster_hash}"] = "link_generated"
+                    st.session_state[f"orig_status_{cluster_hash}"] = "declined" if is_declined else "ready"
                     st.rerun()
         else:
             st.button("✅ Link Generated", disabled=True, key=f"dis_{pod_name}_{i}_{cluster_hash}")
@@ -505,9 +510,8 @@ def render_dispatch(i, cluster, pod_name, is_sent=False, is_declined=False):
                 st.session_state[f"sent_ts_{cluster_hash}"] = now_ts
                 st.session_state[f"contractor_{cluster_hash}"] = ic['Name']
                 
-                # 🔓 NEW: Remove the UI lock so the card can finally move to Sent!
-                if f"ui_lock_{cluster_hash}" in st.session_state:
-                    del st.session_state[f"ui_lock_{cluster_hash}"]
+                # 🚀 SEND IT: Tell the machine the email was clicked, allow it to move to Sent!
+                st.session_state[f"route_state_{cluster_hash}"] = "email_sent"
                 
                 st.components.v1.html(
                     f"""
@@ -519,7 +523,7 @@ def render_dispatch(i, cluster, pod_name, is_sent=False, is_declined=False):
                 )
                 time.sleep(0.5)
                 st.rerun()
-
+                
 def run_pod_tab(pod_name):
     st.markdown(f"<h2 style='text-align:center;'>{pod_name} Dashboard</h2>", unsafe_allow_html=True)
     if f"clusters_{pod_name}" not in st.session_state:
@@ -545,48 +549,44 @@ def run_pod_tab(pod_name):
         cluster_hash = hashlib.md5("".join(sorted(task_ids)).encode()).hexdigest()
         
         sheet_match = sent_db.get(next((tid for tid in task_ids if tid in sent_db), None))
+        route_state = st.session_state.get(f"route_state_{cluster_hash}")
         local_ts = st.session_state.get(f"sent_ts_{cluster_hash}", "")
-        ui_lock = st.session_state.get(f"ui_lock_{cluster_hash}") # 🔒 CHECK FOR LOCK
+        local_contractor = st.session_state.get(f"contractor_{cluster_hash}", "Unknown")
         
+        # --- Apply labels so the UI shows the right name and time ---
         if sheet_match:
             c['contractor_name'] = sheet_match.get('name', 'Unknown')
             c['route_ts'] = sheet_match.get('time', '') or local_ts
-            
-            # Identify the raw status from the sheet
-            raw_status = sheet_match.get('status')
-            
-            # 🔒 OVERRIDE: If the card is locked, keep it exactly where it was
-            if ui_lock == "declined":
-                declined.append(c)
-            elif ui_lock == "ready":
-                ready.append(c)
-            # 🔓 NORMAL LOGIC: If no lock, behave normally
-            else:
-                if raw_status == "declined":
-                    if local_ts:
-                        sent.append(c) # Moves to Sent tab
-                    else:
-                        declined.append(c) # Stays in Declined tab
-                elif raw_status == "accepted":
-                    accepted.append(c)
-                else:
-                    sent.append(c)
-        
-        # If not in the sheet but we have a local_ts, it was just sent from 'Ready'
-        elif local_ts:
-            c['contractor_name'] = st.session_state.get(f"contractor_{cluster_hash}", "Unknown")
+        else:
+            c['contractor_name'] = local_contractor
             c['route_ts'] = local_ts
+        
+        # --- THE STRICT STATE MACHINE ---
+        # 1. If Gmail was clicked, FORCE it to the Sent tab
+        if route_state == "email_sent":
+            sent.append(c)
             
-            # Lock check here too just in case
-            if ui_lock == "ready":
+        # 2. If link was generated but Gmail NOT clicked, FORCE it to stay where it was
+        elif route_state == "link_generated":
+            orig = st.session_state.get(f"orig_status_{cluster_hash}")
+            if orig == "declined":
+                declined.append(c)
+            else:
                 ready.append(c)
+                
+        # 3. Default to whatever Google Sheets says
+        elif sheet_match:
+            raw_status = sheet_match.get('status')
+            if raw_status == 'declined':
+                declined.append(c)
+            elif raw_status == 'accepted':
+                accepted.append(c)
             else:
                 sent.append(c)
-            
+                
+        # 4. Completely brand new routes
         else:
-            if ui_lock == "ready":
-                ready.append(c)
-            elif c.get('status') == "Ready": 
+            if c.get('status') == 'Ready': 
                 ready.append(c)
             else: 
                 review.append(c)
