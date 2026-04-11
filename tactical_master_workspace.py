@@ -229,13 +229,19 @@ def process_pod(pod_name):
                 if 'escalation' in t_name:
                     esc_team_ids.append(team['id'])
 
-        all_tasks = []
+        all_tasks_raw = []
         url = f"https://onfleet.com/api/v2/tasks/all?state=0&from={int(time.time()*1000)-(80*24*3600*1000)}"
         while url:
             res = requests.get(url, headers=headers).json()
-            all_tasks.extend(res.get('tasks', []))
+            all_tasks_raw.extend(res.get('tasks', []))
             url = f"https://onfleet.com/api/v2/tasks/all?state=0&from={int(time.time()*1000)-(80*24*3600*1000)}&lastId={res['lastId']}" if res.get('lastId') else None
-            progress_bar.progress(min(len(all_tasks)/500, 0.4))
+            progress_bar.progress(min(len(all_tasks_raw)/500, 0.4))
+
+        # ---> NEW: STRICT DEDUPLICATION TO PREVENT API OVERLAP <---
+        unique_tasks_dict = {}
+        for t in all_tasks_raw:
+            unique_tasks_dict[t['id']] = t
+        all_tasks = list(unique_tasks_dict.values())
 
         pool = []
         for t in all_tasks:
@@ -251,43 +257,7 @@ def process_pod(pod_name):
             
             # Tag for the Star Pill (Team Check)
             is_esc = (c_type == 'TEAM' and container.get('team') in esc_team_ids)
-
-            # ---> NEW: Bulletproof Task Type Extraction <---
-            tt_val = ""
             
-            # Check 1: Try the top-level task container just in case it isn't nested
-            if 'taskType' in t:
-                tt_val = str(t.get('taskType', '')).strip()
-            
-            # Check 2: Dig deeply through the Metadata array
-            if not tt_val:
-                for m in (t.get('metadata') or []):
-                    m_name = str(m.get('name', '')).lower().strip()
-                    if m_name == 'tasktype' or m_name == 'task type':
-                        tt_val = str(m.get('value', '')).strip()
-                        break
-            
-            # Check 3: Check custom fields array (sometimes Onfleet puts it here instead of metadata)
-            if not tt_val and 'customFields' in t:
-                for cf in (t.get('customFields') or []):
-                    cf_name = str(cf.get('name', '')).lower().strip()
-                    if cf_name == 'tasktype' or cf_name == 'task type':
-                        tt_val = str(cf.get('value', '')).strip()
-                        break
-                        
-            # Check 4: The Fallback - Read the literal task notes
-            if not tt_val:
-                tt_val = str(t.get('taskDetails', '')).strip()
-            
-            if stt in config['states']:
-                pool.append({
-                    "id": t['id'], "city": addr.get('city', 'Unknown'), "state": stt,
-                    "full": f"{addr.get('number','')} {addr.get('street','')}, {addr.get('city','')}, {stt}",
-                    "lat": t['destination']['location'][1], "lon": t['destination']['location'][0],
-                    "escalated": is_esc,
-                    "task_type": tt_val
-                })
-                
             # Tag for the Star Pill (Metadata Fallback Check)
             if not is_esc:
                 for m in (t.get('metadata') or []):
@@ -295,14 +265,26 @@ def process_pod(pod_name):
                         is_esc = True
                         break
             
-            # ---> NEW: Extract Task Type from Metadata OR Notes <---
+            # ---> NEW: Bulletproof Task Type Extraction <---
             tt_val = ""
-            for m in (t.get('metadata') or []):
-                if 'tasktype' in str(m.get('name', '')).lower() or 'task type' in str(m.get('name', '')).lower():
-                    tt_val = str(m.get('value', '')).strip()
-                    break
             
-            # Fallback: if it wasn't mapped strictly to metadata, check the task notes
+            if 'taskType' in t:
+                tt_val = str(t.get('taskType', '')).strip()
+            
+            if not tt_val:
+                for m in (t.get('metadata') or []):
+                    m_name = str(m.get('name', '')).lower().strip()
+                    if m_name == 'tasktype' or m_name == 'task type':
+                        tt_val = str(m.get('value', '')).strip()
+                        break
+            
+            if not tt_val and 'customFields' in t:
+                for cf in (t.get('customFields') or []):
+                    cf_name = str(cf.get('name', '')).lower().strip()
+                    if cf_name == 'tasktype' or cf_name == 'task type':
+                        tt_val = str(cf.get('value', '')).strip()
+                        break
+                        
             if not tt_val:
                 tt_val = str(t.get('taskDetails', '')).strip()
             
@@ -407,7 +389,6 @@ def process_pod(pod_name):
         progress_bar.empty()
         st.error(f"Error initializing {pod_name}: {str(e)}")
 
-# Added the 'i' index back into the function to prevent Streamlit widget crashes
 def render_dispatch(i, cluster, pod_name, is_sent=False):
     task_ids = [str(t['id']).strip() for t in cluster['data']]
     cluster_hash = hashlib.md5("".join(sorted(task_ids)).encode()).hexdigest()
@@ -417,7 +398,6 @@ def render_dispatch(i, cluster, pod_name, is_sent=False):
     
     st.write("### 📍 Route Stops")
     
-    # ---> NEW: Count specific task types per location <---
     loc_data = {}
     for c in cluster['data']:
         addr = c['full']
@@ -427,8 +407,8 @@ def render_dispatch(i, cluster, pod_name, is_sent=False):
         loc_data[addr]['total'] += 1
         tt = str(c.get('task_type', '')).strip().lower()
         
-        # Categorize strictly using your provided lists
-        if any(x in tt for x in ["new ad", "digital ad with bottom", "art change"]):
+        # Categorize strictly using IF/ELIF to completely prevent double-counting
+        if any(x in tt for x in ["new ad", "digital ad with bottom", "digital ad with magnet", "art change"]):
             loc_data[addr]['new'] += 1
         elif any(x in tt for x in ["continuity", "ad takedown", "move kiosk", "photo retake", "pull down", "swap magnets", "reorder", "fix", "digital photo", "photo"]):
             loc_data[addr]['cont'] += 1
@@ -437,7 +417,6 @@ def render_dispatch(i, cluster, pod_name, is_sent=False):
         else:
             loc_data[addr]['other'] += 1
 
-    # Render the perfectly formatted Pills!
     loc_pills = {} 
     for addr, counts in loc_data.items():
         pill_parts = []
@@ -446,11 +425,8 @@ def render_dispatch(i, cluster, pod_name, is_sent=False):
         if counts['def'] > 0: pill_parts.append(f"⚪ {counts['def']} Default")
         if counts['other'] > 0: pill_parts.append(f"📦 {counts['other']} Other")
         
-        # Build the pill string cleanly without backticks
         pill_str = f"[ {' | '.join(pill_parts)} ]"
         loc_pills[addr] = pill_str
-        
-        # Add the visual backticks only for the Streamlit UI
         st.markdown(f"**{addr}** `{pill_str}`")
         
     st.divider()
@@ -549,13 +525,15 @@ def run_pod_tab(pod_name):
             if c.get('status') == "Ready": ready.append(c)
             else: review.append(c)
     
-    c1, c2, c3, c4, c5 = st.columns([1,1,1,1, 1.2])
+    # ---> NEW: 6 Columns to comfortably fit BOTH "Total Tasks" and "Total Stops" <---
+    c1, c2, c3, c4, c5, c6 = st.columns([1,1,1,1,1, 1.2])
     
     total_tasks = sum(len(c['data']) for c in cls)
+    total_stops = sum(c['stops'] for c in cls)
     
-    for col, title, val in zip([c1, c2, c3, c4], ["Total Tasks", "Ready", "Sent", "Flagged"], [total_tasks, len(ready), len(sent), len(review)]):
+    for col, title, val in zip([c1, c2, c3, c4, c5], ["Total Tasks", "Total Stops", "Ready", "Sent", "Flagged"], [total_tasks, total_stops, len(ready), len(sent), len(review)]):
         
-        if title == "Total Tasks": bg_color = "#f8fafc"
+        if title in ["Total Tasks", "Total Stops"]: bg_color = "#f8fafc"
         elif title == "Ready": bg_color = TB_GREEN_FILL
         elif title == "Sent": bg_color = TB_BLUE_FILL
         else: bg_color = TB_RED_FILL
@@ -567,7 +545,7 @@ def run_pod_tab(pod_name):
             </div>
         """, unsafe_allow_html=True)
     
-    with c5:
+    with c6:
         st.markdown("<br>", unsafe_allow_html=True)
         if st.button("🔄 Sync Sent Routes", use_container_width=True, key=f"sync_sheet_{pod_name}"):
             bar = st.progress(0, text="🔄 Fetching database records...")
