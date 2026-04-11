@@ -465,7 +465,7 @@ def render_dispatch(i, cluster, pod_name, is_sent=False):
     due = col_c.date_input("Deadline", datetime.now().date()+timedelta(14), key=f"dd_{pod_name}_{i}_{cluster_hash}")
 
     ic = ic_opts[sel_label]
-    mi, hrs, t_str = get_gmaps(ic['Location'], list(loc_data.keys())[:25])
+    mi, hrs, t_str = get_gmaps(ic['Location'], list(stop_metrics.keys())[:25])
     pay = round(max(cluster['stops'] * rate, hrs * 25.0), 2)
     eff_stop = round(pay / cluster['stops'], 2) if cluster['stops'] > 0 else 0
 
@@ -489,7 +489,7 @@ def render_dispatch(i, cluster, pod_name, is_sent=False):
                 payload = {
                     "icn": ic['Name'], "ice": ic['Email'], "wo": wo_val, 
                     "due": str(due), "comp": pay, "lCnt": cluster['stops'], "mi": mi, "time": t_str, "phone": str(ic['Phone']),
-                    "locs": " | ".join([home] + list(loc_data.keys()) + [home]),
+                    "locs": " | ".join([home] + list(stop_metrics.keys()) + [home]),
                     "taskIds": ",".join(task_ids),
                     "tCnt": len(task_ids),
                     "jobOnly": " | ".join([f"{a} {pill}" for a, pill in loc_pills.items()])
@@ -504,7 +504,6 @@ def render_dispatch(i, cluster, pod_name, is_sent=False):
         if real_id:
             gmail_url = f"https://mail.google.com/mail/?view=cm&fs=1&to={ic['Email']}&su=Route Request: {ic['Name']}&body={requests.utils.quote(sig)}"
             st.markdown(f'<a href="{gmail_url}" target="_blank" class="gmail-btn">🚀 OPEN IN GMAIL</a>', unsafe_allow_html=True)
-
 def run_pod_tab(pod_name):
     st.markdown(f"<h2 style='text-align:center;'>{pod_name} Dashboard</h2>", unsafe_allow_html=True)
     if f"clusters_{pod_name}" not in st.session_state:
