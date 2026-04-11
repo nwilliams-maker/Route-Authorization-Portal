@@ -536,6 +536,7 @@ def run_pod_tab(pod_name):
     st.markdown(f"<h2 style='text-align:center;'>{pod_name} Dashboard</h2>", unsafe_allow_html=True)
     st.markdown("<br>", unsafe_allow_html=True)
 
+    # Check if data exists for this pod
     if f"clusters_{pod_name}" not in st.session_state:
         if st.button(f"🚀 Initialize {pod_name} Data", key=f"init_{pod_name}"):
             process_pod(pod_name)
@@ -543,7 +544,6 @@ def run_pod_tab(pod_name):
         return
     
     cls = st.session_state[f"clusters_{pod_name}"]
-    # ... rest of the function continues as normal ...
     
         if st.button(f"🚀 Initialize {pod_name} Data", key=f"init_{pod_name}"):
             process_pod(pod_name)
