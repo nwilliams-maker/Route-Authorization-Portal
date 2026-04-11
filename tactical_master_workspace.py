@@ -482,16 +482,30 @@ def render_dispatch(i, cluster, pod_name, is_sent=False, is_declined=False):
             gmail_url = f"https://mail.google.com/mail/?view=cm&fs=1&to={ic['Email']}&su=Route Request: {ic['Name']}&body={requests.utils.quote(sig)}"
             
             if st.button("🚀 OPEN IN GMAIL", key=f"gbtn_{cluster_hash}"):
+                # 1. Capture the timestamp immediately
                 now_ts = datetime.now().strftime('%m/%d %I:%M %p')
-                st.session_state[f"contractor_{cluster_hash}"] = ic['Name']
                 st.session_state[f"sent_ts_{cluster_hash}"] = now_ts
+                st.session_state[f"contractor_{cluster_hash}"] = ic['Name']
                 
-                # --- THIS MOVES IT TO THE SENT TAB ONLY AFTER GMAIL IS CLICKED ---
-                st.session_state[f"status_override_{cluster_hash}"] = "sent"
-                
-                st.components.v1.html(f"<script>window.open('{gmail_url}', '_blank');</script>", height=0)
-                time.sleep(1.0)
-                st.rerun()
+                # 2. Open Gmail and ONLY THEN trigger the rerun via JS
+                # This prevents Streamlit from killing the window.open process
+                st.components.v1.html(
+                    f"""
+                    <script>
+                        var win = window.open('{gmail_url}', '_blank');
+                        if (win) {{
+                            win.focus();
+                            setTimeout(function() {{
+                                window.parent.location.reload();
+                            }}, 500);
+                        }} else {{
+                            alert('Please allow popups for this site to open Gmail');
+                        }}
+                    </script>
+                    """,
+                    height=0,
+                )
+                # We remove the python st.rerun() because the JS above handles it after the popup clears
 
 def run_pod_tab(pod_name):
     st.markdown(f"<h2 style='text-align:center;'>{pod_name} Dashboard</h2>", unsafe_allow_html=True)
