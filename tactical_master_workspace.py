@@ -497,6 +497,8 @@ def render_dispatch(i, cluster, pod_name, is_sent=False):
                 res = requests.post(GAS_WEB_APP_URL, json={"action": "saveRoute", "payload": payload}).json()
                 if res.get("success"):
                     st.session_state[sync_key] = res.get("routeId")
+                    # Add the contractor name to the cluster data so the 'Sent' filter catches it immediately
+                    cluster['contractor_name'] = ic['Name'] 
                     st.rerun()
         else: st.button("✅ Link Generated", disabled=True, key=f"dis_{pod_name}_{i}_{cluster_hash}")
     
