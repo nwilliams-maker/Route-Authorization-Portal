@@ -381,24 +381,26 @@ def render_dispatch(cluster, pod_name, is_sent=False):
         loc_data[addr]['total'] += 1
         tt = str(c.get('task_type', '')).strip().lower()
         
-        # Categorize exactly as requested
-        if tt in ["new ad", "digital ad with bottom", "art change"]:
+        # Categorize using SUBSTRING matching to catch combined tags like "Escalation, New Ad"
+        if any(x in tt for x in ["new ad", "digital ad with bottom", "digital ad with magnet", "art change"]):
             loc_data[addr]['new'] += 1
-        elif tt in ["continuity", "ad takedown", "move kiosk", "photo retake", "pull down", "swap magnets", "reorder", "fix", "digital photo", "photo"]:
+        if any(x in tt for x in ["continuity", "ad takedown", "move kiosk", "photo retake", "pull down", "swap magnets", "reorder", "fix", "digital photo", "photo"]):
             loc_data[addr]['cont'] += 1
-        elif tt in ["default", "store default", "default ad"]:
+        if any(x in tt for x in ["default", "store default", "default ad"]):
             loc_data[addr]['def'] += 1
 
     # Render the new Pills!
+    loc_pills = {} # Saves the formatted string for the Google Sheet payload later
     for addr, counts in loc_data.items():
         pill_parts = []
         if counts['new'] > 0: pill_parts.append(f"🆕 {counts['new']} New")
-        if counts['cont'] > 0: pill_parts.append(f"🔄 {counts['cont']} Continuity")
-        if counts['def'] > 0: pill_parts.append(f"⚪ {counts['def']} Default")
+        if counts['cont'] > 0: pill_parts.append(f"🔄 {counts['cont']} Cont")
+        if counts['def'] > 0: pill_parts.append(f"⚪ {counts['def']} Def")
         
         # Build the pill, or fallback to standard count if task type was totally blank/unknown
-        pill_str = f" `[ {' | '.join(pill_parts)} ]`" if pill_parts else f" `[ {counts['total']} Tasks ]`"
-        st.markdown(f"**{addr}** {pill_str}")
+        pill_str = f"[ {' | '.join(pill_parts)} ]" if pill_parts else f"[ {counts['total']} Tasks ]"
+        loc_pills[addr] = pill_str
+        st.markdown(f"**{addr}** `{pill_str}`")
         
     st.divider()
     ic_df = st.session_state.get('ic_df', pd.DataFrame())
@@ -456,7 +458,7 @@ def render_dispatch(cluster, pod_name, is_sent=False):
                     "locs": " | ".join([home] + list(loc_data.keys()) + [home]),
                     "taskIds": ",".join(task_ids),
                     "tCnt": len(task_ids),
-                    "jobOnly": " | ".join([f"{a} ({c} Tasks)" for a,c in loc_data.items()])
+                    "jobOnly": " | ".join([f"{a} {pill}" for a, pill in loc_pills.items()])
                 }
                 res = requests.post(GAS_WEB_APP_URL, json={"action": "saveRoute", "payload": payload}).json()
                 if res.get("success"):
