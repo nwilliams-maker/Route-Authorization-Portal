@@ -118,12 +118,17 @@ button[kind="secondary"]:hover {{
     border-color: {TB_PURPLE} !important;
 }}
 
-/* FORCE REVOKE BUTTON TO SIT FLUSH AGAINST EXPANDER */
-div[data-testid="column"]:last-child button[kind="secondary"] {{
-    margin-left: -1rem !important; /* Pulls it exactly 16px left to bridge the gap */
-    width: calc(100% + 1rem) !important; /* Stretches the button so it doesn't leave a hole on the right */
-    border-top-left-radius: 0px !important; /* Squares off the corners to look attached */
+/* CONNECT EXPANDER AND BUTTON SEAMLESSLY */
+div[data-testid="stColumn"]:has(.flush-hook) button[kind="secondary"] {{
+    margin-left: -1rem !important; /* Pulls the button left to bridge the Streamlit gap */
+    width: calc(100% + 1rem) !important; /* Stretches it to fill the gap */
+    border-top-left-radius: 0px !important; /* Squares off the button's left side */
     border-bottom-left-radius: 0px !important;
+}}
+
+div[data-testid="stColumn"]:has(.expander-hook) div[data-testid="stExpander"] {{
+    border-top-right-radius: 0px !important; /* Squares off the expander's right side */
+    border-bottom-right-radius: 0px !important;
 }}
 
 /* NESTED SUB-TABS OVERRIDE (Clean Uniform Layout) */
@@ -857,14 +862,18 @@ def run_pod_tab(pod_name):
                 task_ids = [str(t['id']).strip() for t in c['data']]
                 cluster_hash = hashlib.md5("".join(sorted(task_ids)).encode()).hexdigest()
                 
-                # 1. Changed back to [5, 1] so the button isn't stretched out horizontally
+                # 1. Back to [5, 1] for perfect proportions
                 exp_col, btn_col = st.columns([5, 1])
                 
                 with exp_col:
+                    # Hidden hook to square off the right side of the expander
+                    st.markdown("<div class='expander-hook' style='display:none;'></div>", unsafe_allow_html=True)
                     with st.expander(f"✉️ {ic_name}{ts_label} | {c['city']}, {c['state']}{esc_pill}"): 
                         render_dispatch(i+500, c, pod_name, is_sent=True)
                         
                 with btn_col:
+                    # Hidden hook to pull the button left and square off its left side
+                    st.markdown("<div class='flush-hook' style='display:none;'></div>", unsafe_allow_html=True)
                     if st.button("↩️ Revoke", key=f"quick_rev_{cluster_hash}", help="Pull this route back to Dispatch", use_container_width=True):
                         # Log the previous contractor
                         hist = st.session_state.get(f"history_{cluster_hash}", [])
