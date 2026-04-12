@@ -894,9 +894,58 @@ def run_pod_tab(pod_name):
             for i, c in enumerate(accepted):
                 ic_name = c.get('contractor_name', 'Unknown')
                 ts_label = f" | {c.get('route_ts', '')}" if c.get('route_ts') else ""
-                with st.expander(f"✅ {ic_name}{ts_label} | {c['city']}, {c['state']}"):
-                    st.success(f"Route accepted. Onfleet assignment should be complete.")
-                    render_dispatch(i+2000, c, pod_name, is_sent=True)
+                
+                # Re-calculate hash for the double-check button
+                task_ids = [str(t['id']).strip() for t in c['data']]
+                cluster_hash = hashlib.md5("".join(sorted(task_ids)).encode()).hexdigest()
+                
+                # Check if we are currently in the "Are you sure?" state for this specific route
+                confirm_key = f"confirm_revoke_{cluster_hash}"
+                is_confirming = st.session_state.get(confirm_key, False)
+                
+                # Use the exact same [5, 1] flush layout as the Sent and Declined tabs
+                exp_col, btn_col = st.columns([5, 1])
+                
+                with exp_col:
+                    st.markdown("<div class='expander-hook' style='display:none;'></div>", unsafe_allow_html=True)
+                    
+                    # If they clicked Revoke, this automatically forces the card open to show the warning
+                    with st.expander(f"✅ {ic_name}{ts_label} | {c['city']}, {c['state']}", expanded=is_confirming):
+                        
+                        if is_confirming:
+                            # --- The Warning UI ---
+                            st.error(f"⚠️ **WARNING:** Are you sure you want to revoke this route from **{ic_name}**? They have already accepted it in the portal.")
+                            if st.button("❌ Nevermind, keep it", key=f"cancel_rev_{cluster_hash}"):
+                                st.session_state[confirm_key] = False
+                                st.rerun()
+                        else:
+                            st.success("Route accepted. Onfleet assignment should be complete.")
+                            
+                        render_dispatch(i+2000, c, pod_name, is_sent=True)
+                        
+                with btn_col:
+                    st.markdown("<div class='flush-hook' style='display:none;'></div>", unsafe_allow_html=True)
+                    
+                    if is_confirming:
+                        # Second Click: The actual execution
+                        if st.button("⚠️ Confirm", key=f"do_rev_{cluster_hash}", help="Permanently revoke this accepted route", use_container_width=True):
+                            # Log the previous contractor and note that it was revoked post-acceptance
+                            hist = st.session_state.get(f"history_{cluster_hash}", [])
+                            hist.append(f"{ic_name} ({datetime.now().strftime('%m/%d')} - Revoked Post-Accept)")
+                            st.session_state[f"history_{cluster_hash}"] = hist
+                            
+                            # Flag as reverted, clear the state, and destroy the link
+                            st.session_state[f"reverted_{cluster_hash}"] = True
+                            st.session_state[confirm_key] = False 
+                            sync_key = f"sync_{cluster_hash}"
+                            if sync_key in st.session_state:
+                                del st.session_state[sync_key]
+                            st.rerun()
+                    else:
+                        # First Click: Ask for confirmation
+                        if st.button("↩️ Revoke", key=f"ask_rev_{cluster_hash}", help="Pull this accepted route back to Dispatch", use_container_width=True):
+                            st.session_state[confirm_key] = True
+                            st.rerun()
 
         with t_dec:
             if not declined: st.info("No declined routes.")
