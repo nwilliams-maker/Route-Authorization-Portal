@@ -150,8 +150,30 @@ div[data-testid="stExpander"] [data-testid="stExpanderDetails"] {{
     background-color: #ffffff !important; 
     color: #000000 !important;
 }}
-div[data-testid="stExpander"] {{ border: 1px solid #cbd5e1 !important; border-radius: 15px !important; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05); margin-bottom: 20px; overflow: hidden; }}
-div[data-testid="stExpander"] details summary p {{ color: #000000 !important; font-weight: 800 !important; }}
+div[data-testid="stExpander"] {{ 
+    border: 1px solid #cbd5e1 !important; 
+    border-radius: 10px !important; 
+    box-shadow: 0 2px 4px rgba(0,0,0,0.02) !important; /* Softer shadow for tighter packing */
+    margin-bottom: 8px !important; /* CRITICAL: Shrinks the gap between cards */
+    overflow: hidden; 
+}}
+
+/* Tightens the padding inside the clickable title bar */
+div[data-testid="stExpander"] details summary {{
+    padding-top: 0.5rem !important;
+    padding-bottom: 0.5rem !important;
+}}
+
+div[data-testid="stExpander"] details summary p {{ 
+    color: #000000 !important; 
+    font-weight: 800 !important; 
+    font-size: 0.95rem !important; /* Slightly smaller text for a sleeker look */
+}}
+
+/* Tightens the padding inside the open card */
+div[data-testid="stExpander"] [data-testid="stExpanderDetails"] {{
+    padding: 1rem !important; 
+}}
 
 div[data-baseweb="select"] > div, 
     div[data-testid="stNumberInput"] input, 
