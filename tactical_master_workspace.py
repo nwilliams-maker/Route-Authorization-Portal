@@ -347,7 +347,7 @@ def process_pod(pod_name, master_bar=None, pod_idx=0, total_pods=1):
         v_ics_base = ic_df[~ic_df.astype(str).apply(lambda x: x.str.contains('Field Agent', case=False, na=False).any(), axis=1)].dropna(subset=['Lat', 'Lng']).copy() if not ic_df.empty else pd.DataFrame()
 
         while pool:
-            # Routing progress (40% to 100% of this pod's slice)
+            # Routing progress calculation
             rel_prog = 0.4 + (0.6 * (1 - (len(pool) / total_pool if total_pool > 0 else 1)))
             update_prog(rel_prog, f"🗺️ Routing {len(pool)} remaining tasks...")
             
@@ -359,7 +359,24 @@ def process_pod(pod_name, master_bar=None, pod_idx=0, total_pods=1):
                 else: rem.append(t)
             
             candidates.sort(key=lambda x: x[0])
-            group = [anc] + [c[1] for c in candidates]
+            
+            # --- NEW: 20 STOP LIMIT LOGIC ---
+            group = [anc]
+            unique_stops = {anc['full']}
+            spillover = []
+            
+            for _, t in candidates:
+                # Only add the task if we're under 20 stops OR the task is at an address we already have
+                if len(unique_stops) < 20 or t['full'] in unique_stops:
+                    group.append(t)
+                    unique_stops.add(t['full'])
+                else:
+                    # If the route is "full" at 20 stops, save this for the next route
+                    spillover.append(t)
+            
+            # Put the spillover tasks back into the main pool
+            rem.extend(spillover)
+            # --------------------------------
             
             has_ic = False; closest_ic_loc = f"{anc['lat']},{anc['lon']}" 
             if not v_ics_base.empty:
@@ -381,6 +398,8 @@ def process_pod(pod_name, master_bar=None, pod_idx=0, total_pods=1):
             
             gate_avg, _ = check_viability(group)
             status = "Ready"
+            
+            # If the price is too high, we still attempt to "shave off" the last stop added
             if gate_avg > 23.00:
                 if len(group) > 1:
                     removed = group.pop()
@@ -388,6 +407,7 @@ def process_pod(pod_name, master_bar=None, pod_idx=0, total_pods=1):
                     if new_avg <= 23.00: rem.append(removed)
                     else: group.append(removed); status = "Flagged"
                 else: status = "Flagged"
+            
             if not has_ic: status = "Flagged"
             
             pool = rem
