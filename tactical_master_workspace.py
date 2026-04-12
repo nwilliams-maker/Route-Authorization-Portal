@@ -509,19 +509,16 @@ def render_dispatch(i, cluster, pod_name, is_sent=False, is_declined=False):
 
     ic_opts = {f"{r['Name']} ({round(r['d'],1)} mi)": r for _, r in v_ics.iterrows()}
     
-    # --- 3. DYNAMIC PRICING SYNC LOGIC ---
+    # --- 4. DYNAMIC PRICING SYNC LOGIC ---
     def sync_on_total():
-        # User edited TOTAL COMP
         val = st.session_state[pay_key]
         st.session_state[rate_key] = round(val / cluster['stops'], 2) if cluster['stops'] > 0 else 0
 
     def sync_on_rate():
-        # User edited RATE PER STOP
         val = st.session_state[rate_key]
         st.session_state[pay_key] = round(val * cluster['stops'], 2)
 
     def update_for_new_contractor():
-        # Reset pricing floor when a DIFFERENT contractor is selected
         selected_label = st.session_state[sel_key]
         if selected_label != st.session_state.get(last_sel_key):
             ic_new = ic_opts[selected_label]
@@ -531,7 +528,7 @@ def render_dispatch(i, cluster, pod_name, is_sent=False, is_declined=False):
             st.session_state[rate_key] = round(new_pay / cluster['stops'], 2) if cluster['stops'] > 0 else 0
             st.session_state[last_sel_key] = selected_label
 
-    # Initial Setup (First time card is seen)
+    # Initial Setup 
     if pay_key not in st.session_state:
         first_ic_label = list(ic_opts.keys())[0]
         ic_init = ic_opts[first_ic_label]
@@ -546,10 +543,8 @@ def render_dispatch(i, cluster, pod_name, is_sent=False, is_declined=False):
     col_a, col_b, col_c, col_d = st.columns([1.5, 1, 1, 1])
     
     with col_a:
-        # The callback is attached here to force the background math to run
         st.selectbox("Contractor", list(ic_opts.keys()), key=sel_key, on_change=update_for_new_contractor)
     
-    # Get current state values
     ic = ic_opts[st.session_state[sel_key]]
     mi, hrs, t_str = get_gmaps(ic['Location'], list(stop_metrics.keys())[:25])
     
@@ -574,7 +569,6 @@ def render_dispatch(i, cluster, pod_name, is_sent=False, is_declined=False):
         st.date_input("Deadline", datetime.now().date()+timedelta(14), key=f"dd_{cluster_hash}", disabled=not is_unlocked)
 
     # --- 6. UPDATED FINANCIALS & PREVIEW ---
-    # Fetch final values from session state to ensure they match the UI dynamically
     final_pay = st.session_state[pay_key]
     final_rate = st.session_state[rate_key]
 
@@ -592,7 +586,6 @@ def render_dispatch(i, cluster, pod_name, is_sent=False, is_declined=False):
            f"Metrics:\n- Stops: {cluster['stops']}\n- Mileage: {mi} mi\n- Time: {t_str}\n- Compensation: ${final_pay:.2f}\n\n"
            f"Authorize here:\n{PORTAL_BASE_URL}?route={link_id}&v2=true")
     
-    # This forces Streamlit to wipe the old text and inject the fresh math/dates instantly
     tx_key = f"tx_{cluster_hash}_preview"
     st.session_state[tx_key] = sig_preview 
     
@@ -601,7 +594,7 @@ def render_dispatch(i, cluster, pod_name, is_sent=False, is_declined=False):
     # --- 7. BUTTON LAYOUT ---
     btn_label = "🚀 GENERATE LINK & OPEN GMAIL" if (not real_id or is_declined) else "🚀 OPEN IN GMAIL (RESEND)"
 
-    # Removed the inner Revoke button and column split, allowing the main button to use full width
+    # Clean, single button taking up the full width
     if st.button(btn_label, type="primary", key=f"gbtn_{cluster_hash}", disabled=not is_unlocked, use_container_width=True):
         final_route_id = real_id
         with st.spinner("Generating secure link..."):
