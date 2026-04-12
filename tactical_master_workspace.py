@@ -825,8 +825,33 @@ def run_pod_tab(pod_name):
                 ic_name = c.get('contractor_name', 'Unknown')
                 ts_label = f" | {c.get('route_ts', '')}" if c.get('route_ts') else ""
                 esc_pill = f"  [ ⭐ {c.get('esc_count', 0)} ]" if c.get('esc_count', 0) > 0 else ""
-                with st.expander(f"✉️ {ic_name}{ts_label} | {c['city']}, {c['state']}{esc_pill}"): 
-                    render_dispatch(i+500, c, pod_name, is_sent=True)
+                
+                # Re-calculate hash for the quick-revoke button
+                task_ids = [str(t['id']).strip() for t in c['data']]
+                cluster_hash = hashlib.md5("".join(sorted(task_ids)).encode()).hexdigest()
+                
+                # Split the layout: Expander on the left (80%), Button on the right (20%)
+                exp_col, btn_col = st.columns([5, 1])
+                
+                with exp_col:
+                    with st.expander(f"✉️ {ic_name}{ts_label} | {c['city']}, {c['state']}{esc_pill}"): 
+                        render_dispatch(i+500, c, pod_name, is_sent=True)
+                        
+                with btn_col:
+                    # A tiny top margin to vertically align the button with the expander box
+                    st.markdown("<div style='margin-top: 2px;'></div>", unsafe_allow_html=True)
+                    if st.button("↩️ Revoke", key=f"quick_rev_{cluster_hash}", help="Pull this route back to Dispatch"):
+                        # Log the previous contractor
+                        hist = st.session_state.get(f"history_{cluster_hash}", [])
+                        hist.append(f"{ic_name} ({datetime.now().strftime('%m/%d')})")
+                        st.session_state[f"history_{cluster_hash}"] = hist
+                        
+                        # Flag as reverted and destroy the link
+                        st.session_state[f"reverted_{cluster_hash}"] = True
+                        sync_key = f"sync_{cluster_hash}"
+                        if sync_key in st.session_state:
+                            del st.session_state[sync_key]
+                        st.rerun()
 
         with t_acc:
             if not accepted: st.info("Waiting for portal acceptances...")
