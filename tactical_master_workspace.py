@@ -659,7 +659,7 @@ def run_pod_tab(pod_name):
     # ... rest of your header code ...
     
     # Standard Centered Header
-    st.markdown(f"<h2 style='text-align:center;'>{pod_name} Dashboard</h2>", unsafe_allow_html=True)
+    st.markdown(f"<h2 style='text-align:center;'>{pod_name} Pod Dashboard</h2>", unsafe_allow_html=True)
     st.markdown("<br>", unsafe_allow_html=True)
 
     # Check if data exists for this pod
@@ -1004,7 +1004,7 @@ with col_ref:
     st.markdown("</div>", unsafe_allow_html=True)
 
 # Define tabs once for the entire app
-tabs = st.tabs(["Global", "Blue", "Green", "Orange", "Purple", "Red"])
+tabs = st.tabs(["Global", "Blue Pod", "Green Pod", "Orange Pod", "Purple Pod", "Red Pod"])
 
 # --- TAB 0: GLOBAL CONTROL ---
 with tabs[0]:
