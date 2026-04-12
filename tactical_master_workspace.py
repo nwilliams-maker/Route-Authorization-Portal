@@ -64,7 +64,12 @@ st.markdown(f"""
 .stApp {{ background-color: {TB_APP_BG} !important; color: #000000 !important; font-family: 'Inter', sans-serif !important; }}
 .main .block-container {{ max-width: 1100px !important; padding-top: 2rem; }}
 
-h1, h2, h3, h4, h5, h6 {{ color: #633094 !important; font-weight: 800 !important; }}
+h1, h2, h3, h4, h5, h6 {{ 
+    color: #633094 !important; 
+    font-weight: 800 !important; 
+    text-align: center !important; /* 🚀 Centered globally */
+    width: 100%;
+}}
 
 /* Modern Condensed Refresh Button - Far Right Alignment */
 div.refresh-btn-container {{
@@ -979,13 +984,19 @@ if "ic_df" not in st.session_state:
     except: st.error("Database connection failed.")
 
 # --- TOP HEADER & REFRESH ROW ---
-col_title, col_ref = st.columns([6, 1])
+# Using [1, 10, 1] ensures the middle column is centered on the page
+col_left_space, col_main_title, col_ref = st.columns([1, 10, 1])
 
-with col_title:
-    st.markdown(f"<h1 style='margin-top: -10px;'>Terraboost Media: Operations Dispatch Command Center</h1>", unsafe_allow_html=True)
+with col_main_title:
+    # Title centered within the large middle column
+    st.markdown(f"""
+        <h1 style='margin-top: -10px;'>
+            Terraboost Media: Operations Dispatch Command Center
+        </h1>
+    """, unsafe_allow_html=True)
 
 with col_ref:
-    # Use 26px to align the smaller button with the bottom of the text
+    # Keep the button alignment logic we built
     st.markdown("<div style='margin-top: 26px;' class='refresh-btn-container'>", unsafe_allow_html=True)
     if st.button("🔄 Refresh", key="top_ref_btn"):
         st.cache_data.clear()
