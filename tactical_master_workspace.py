@@ -741,7 +741,7 @@ def run_pod_tab(pod_name):
         # ==========================================
         # SECTION 1: DISPATCH (LEFT SIDE - CENTERED)
         # ==========================================
-        st.markdown(f"<h3 style='color: {TB_PURPLE} !important; margin-bottom: 5px; text-align: center;'>🚀 Dispatch</h3>", unsafe_allow_html=True)
+        st.markdown(f"<div style='font-size: 1.5rem; font-weight: 800; color: {TB_PURPLE}; margin-bottom: 5px; text-align: center;'>🚀 Dispatch</div>", unsafe_allow_html=True)
         t_ready, t_flagged = st.tabs(["📥 Ready", "⚠️ Flagged"])
 
         with t_ready:
@@ -777,7 +777,7 @@ def run_pod_tab(pod_name):
         # ==========================================
         # SECTION 2: AWAITING CONFIRMATION (RIGHT SIDE - CENTERED)
         # ==========================================
-        st.markdown(f"<h3 style='color: {TB_GREEN} !important; margin-bottom: 5px; text-align: center;'>⏳ Awaiting Confirmation</h3>", unsafe_allow_html=True)
+        st.markdown(f"<div style='font-size: 1.5rem; font-weight: 800; color: {TB_GREEN}; margin-bottom: 5px; text-align: center;'>⏳ Awaiting Confirmation</div>", unsafe_allow_html=True)
         t_sent, t_acc, t_dec = st.tabs(["✉️ Sent (Pending)", "✅ Accepted", "❌ Declined"])
 
         with t_sent:
