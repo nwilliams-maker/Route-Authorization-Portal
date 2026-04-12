@@ -64,22 +64,23 @@ st.markdown(f"""
 .stApp {{ background-color: {TB_APP_BG} !important; color: #000000 !important; font-family: 'Inter', sans-serif !important; }}
 .main .block-container {{ max-width: 1100px !important; padding-top: 2rem; }}
 
+/* CENTERED PURPLE HEADERS */
 h1, h2, h3, h4, h5, h6 {{ 
     color: #633094 !important; 
     font-weight: 800 !important; 
-    text-align: center !important; /* 🚀 Centered globally */
+    text-align: center !important; 
     width: 100%;
 }}
 
-/* Modern Condensed Refresh Button - Far Right Alignment */
+/* MODERN CONDENSED REFRESH BUTTON - FAR RIGHT */
 div.refresh-btn-container {{
     display: flex;
-    justify-content: flex-end; /* Shoves content to the far right */
+    justify-content: flex-end;
     width: 100%;
 }}
 
 div.refresh-btn-container > div > button {{
-    height: 28px !important; /* Even more condensed */
+    height: 28px !important;
     padding: 0 12px !important;
     font-size: 12px !important;
     border-radius: 20px !important;
@@ -98,70 +99,53 @@ div.refresh-btn-container > div > button:hover {{
 
 /* GLOBAL TABS STYLING */
 .stTabs [data-baseweb="tab-list"] {{ justify-content: center; gap: 8px; background: rgba(255,255,255,0.6); padding: 10px; border-radius: 15px; }}
-.stTabs [data-baseweb="tab"] {{ border-radius: 10px !important; padding: 10px 20px !important; font-weight: 700 !important; }}
 
-/* PERMANENT POD TAB OUTLINES */
+/* PERMANENT POD TAB OUTLINES & DARK TEXT */
 .stTabs [data-baseweb="tab"] {{
     border-top: 1px solid #cbd5e1 !important;
     border-left: 1px solid #cbd5e1 !important;
     border-right: 1px solid #cbd5e1 !important;
     margin: 0 4px !important;
     transition: all 0.2s ease !important;
+    font-weight: 800 !important;
+    border-radius: 10px 10px 0 0 !important;
+    padding: 10px 20px !important;
 }}
 
-/* Global Tab */
-.stTabs [data-baseweb="tab"]:nth-of-type(1) {{ 
-    border: 2px solid #633094 !important; 
-    color: #633094 !important;
-}}
+/* Tab 1: Global - Deep Purple */
+.stTabs [data-baseweb="tab"]:nth-of-type(1) {{ border: 2px solid #633094 !important; color: #3b1d58 !important; }}
 
-/* Blue Pod */
-.stTabs [data-baseweb="tab"]:nth-of-type(2) {{ 
-    border: 2px solid #3b82f6 !important; 
-    background-color: #f0f7ff !important;
-}}
+/* Tab 2: Blue Pod - Navy */
+.stTabs [data-baseweb="tab"]:nth-of-type(2) {{ border: 2px solid #3b82f6 !important; background-color: #f0f7ff !important; color: #1e3a8a !important; }}
 
-/* Green Pod */
-.stTabs [data-baseweb="tab"]:nth-of-type(3) {{ 
-    border: 2px solid #22c55e !important; 
-    background-color: #f0fdf4 !important;
-}}
+/* Tab 3: Green Pod - Forest */
+.stTabs [data-baseweb="tab"]:nth-of-type(3) {{ border: 2px solid #22c55e !important; background-color: #f0fdf4 !important; color: #064e3b !important; }}
 
-/* Orange Pod */
-.stTabs [data-baseweb="tab"]:nth-of-type(4) {{ 
-    border: 2px solid #f97316 !important; 
-    background-color: #fffaf5 !important;
-}}
+/* Tab 4: Orange Pod - Burnt Orange */
+.stTabs [data-baseweb="tab"]:nth-of-type(4) {{ border: 2px solid #f97316 !important; background-color: #fffaf5 !important; color: #7c2d12 !important; }}
 
-/* Purple Pod */
-.stTabs [data-baseweb="tab"]:nth-of-type(5) {{ 
-    border: 2px solid #a855f7 !important; 
-    background-color: #faf5ff !important;
-}}
+/* Tab 5: Purple Pod - Deep Violet */
+.stTabs [data-baseweb="tab"]:nth-of-type(5) {{ border: 2px solid #a855f7 !important; background-color: #faf5ff !important; color: #4c1d95 !important; }}
 
-/* Red Pod */
-.stTabs [data-baseweb="tab"]:nth-of-type(6) {{ 
-    border: 2px solid #ef4444 !important; 
-    background-color: #fef2f2 !important;
-}}
+/* Tab 6: Red Pod - Maroon */
+.stTabs [data-baseweb="tab"]:nth-of-type(6) {{ border: 2px solid #ef4444 !important; background-color: #fef2f2 !important; color: #7f1d1d !important; }}
 
 /* ACTIVE STATE - The "Terraboost Purple Glow" */
 .stTabs [aria-selected="true"] {{ 
     background-color: #ffffff !important;
-    transform: translateY(-5px) !important; /* Lifts slightly higher */
-    /* Light Purple Glow: x-axis, y-axis, blur, spread, color */
+    transform: translateY(-5px) !important;
     box-shadow: 0 8px 20px rgba(99, 48, 148, 0.3) !important; 
-    border-bottom: 4px solid #633094 !important; /* Thicker bottom bar to anchor the glow */
+    border-bottom: 4px solid #633094 !important;
 }}
 
-/* Add a subtle hover effect to the other tabs so they feel interactive */
 .stTabs [data-baseweb="tab"]:hover {{
     transform: translateY(-2px);
     box-shadow: 0 4px 10px rgba(0,0,0,0.05);
 }}
-/* TARGET THE GMAIL (PRIMARY) BUTTON SPECIFICALLY */
+
+/* PRIMARY & SECONDARY BUTTONS */
 button[kind="primary"] {{
-    background-color: #76bc21 !important; /* TB_GREEN */
+    background-color: #76bc21 !important;
     color: white !important;
     height: 3.5rem !important;
     font-size: 1.2rem !important;
@@ -171,113 +155,62 @@ button[kind="primary"] {{
     transition: all 0.2s ease !important;
 }}
 
-button[kind="primary"]:hover {{
-    filter: brightness(1.1) !important;
-    transform: translateY(-2px) !important;
-    box-shadow: 0 6px 10px rgba(0,0,0,0.15) !important;
-}}
-
-/* TARGET SECONDARY BUTTONS (Revoke, Initialize, etc.) */
 button[kind="secondary"] {{
     background-color: #ffffff !important;
     color: {TB_PURPLE} !important;
     border: 2px solid {TB_PURPLE} !important;
-    height: 42px !important;  /* SHRUNK FROM 54px */
-    font-size: 0.9rem !important; /* SCALED DOWN SLIGHTLY */
+    height: 42px !important;
+    font-size: 0.9rem !important;
     font-weight: 800 !important;
-    border-radius: 8px !important; /* Slimmer corners to match the smaller size */
+    border-radius: 8px !important;
     box-shadow: 0 2px 4px rgba(0,0,0,0.05) !important;
     transition: all 0.2s ease !important;
 }}
 
-button[kind="secondary"]:hover {{
-    background-color: #f3e8ff !important;
-    color: {TB_PURPLE} !important;
-    transform: translateY(-2px) !important;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important;
-    border-color: {TB_PURPLE} !important;
-}}
-
-/* CONNECT EXPANDER AND BUTTON SEAMLESSLY */
+/* EXPANDER & LAYOUT TIGHTENING */
 div[data-testid="stColumn"]:has(.flush-hook) button[kind="secondary"] {{
-    margin-left: -1rem !important; /* Pulls the button left to bridge the Streamlit gap */
-    width: calc(100% + 1rem) !important; /* Stretches it to fill the gap */
-    border-top-left-radius: 0px !important; /* Squares off the button's left side */
+    margin-left: -1rem !important;
+    width: calc(100% + 1rem) !important;
+    border-top-left-radius: 0px !important;
     border-bottom-left-radius: 0px !important;
 }}
 
 div[data-testid="stColumn"]:has(.expander-hook) div[data-testid="stExpander"] {{
-    border-top-right-radius: 0px !important; /* Squares off the expander's right side */
+    border-top-right-radius: 0px !important;
     border-bottom-right-radius: 0px !important;
 }}
 
-/* NESTED SUB-TABS OVERRIDE (Clean Uniform Layout) */
-div[data-testid="stTabs"] div[data-testid="stTabs"] [data-baseweb="tab"] {{
-    background-color: #f8fafc !important; 
-    color: #475569 !important; 
-    border: 1px solid #cbd5e1 !important;
-}}
-div[data-testid="stTabs"] div[data-testid="stTabs"] [aria-selected="true"] {{
-    background-color: #ffffff !important;
-    color: #000000 !important;
-    border: 2px solid #633094 !important;
-}}
-/* CARDS & INPUTS */
-div[data-testid="stExpander"],
-div[data-testid="stExpander"] > details,
-div[data-testid="stExpander"] > details > summary,
-div[data-testid="stExpander"] [data-testid="stExpanderDetails"] {{
-    background-color: #ffffff !important; 
-    color: #000000 !important;
-}}
 div[data-testid="stExpander"] {{ 
     border: 1px solid #cbd5e1 !important; 
     border-radius: 10px !important; 
-    box-shadow: 0 2px 4px rgba(0,0,0,0.02) !important; /* Softer shadow for tighter packing */
-    margin-bottom: 8px !important; /* CRITICAL: Shrinks the gap between cards */
-    overflow: hidden; 
-}}
-
-/* Tightens the padding inside the clickable title bar */
-div[data-testid="stExpander"] details summary {{
-    padding-top: 0.5rem !important;
-    padding-bottom: 0.5rem !important;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.02) !important;
+    margin-bottom: 8px !important;
+    background-color: #ffffff !important;
 }}
 
 div[data-testid="stExpander"] details summary p {{ 
     color: #000000 !important; 
     font-weight: 800 !important; 
-    font-size: 0.95rem !important; /* Slightly smaller text for a sleeker look */
+    font-size: 0.95rem !important;
 }}
 
-/* Tightens the padding inside the open card */
-div[data-testid="stExpander"] [data-testid="stExpanderDetails"] {{
-    padding: 1rem !important; 
-}}
-
+/* INPUTS & SELECTS */
 div[data-baseweb="select"] > div, 
-    div[data-testid="stNumberInput"] input, 
-    div[data-testid="stDateInput"] input,
-    div[data-testid="stTextArea"] textarea {{ 
+div[data-testid="stNumberInput"] input, 
+div[data-testid="stDateInput"] input,
+div[data-testid="stTextArea"] textarea {{ 
     background-color: #ffffff !important; color: #000000 !important; border: 1.5px solid #cbd5e1 !important; border-radius: 8px !important;
 }}
 
 label, div[data-testid="stWidgetLabel"] p {{ color: #000000 !important; font-weight: 600 !important; }}
 
+/* MAP & FOLIUM */
+iframe[title="streamlit_folium.st_folium"] {{
+    border-radius: 15px !important;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05) !important;
+}}
+.stFolium {{ background: transparent !important; }}
 
-div[data-testid="stMetricValue"] > div {{ color: #000000 !important; }}
-
-/* MAP CONTAINER CLEANUP */
-    iframe[title="streamlit_folium.st_folium"] {{
-        border-radius: 15px !important;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.05) !important;
-        background-color: transparent !important;
-    }}
-    
-    /* Prevents the 'black box' flicker on refresh */
-    .stFolium {{
-        background: transparent !important;
-    }}
 </style>
 """, unsafe_allow_html=True)
 
