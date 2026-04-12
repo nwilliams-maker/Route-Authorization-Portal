@@ -67,7 +67,6 @@ st.markdown(f"""
 
 /* CENTERED PURPLE HEADERS */
 h1, h2, h3, h4, h5, h6 {{ 
-    color: #633094 !important; 
     font-weight: 800 !important; 
     text-align: center !important; 
     width: 100%;
@@ -1014,7 +1013,7 @@ if "ic_df" not in st.session_state:
 col_left_space, col_main_title, col_ref = st.columns([1, 10, 1])
 
 with col_main_title:
-    st.markdown("<h1>Terraboost Media: Operations Dispatch Command Center</h1>", unsafe_allow_html=True)
+    st.markdown("<h1 style='color: #633094;'>Terraboost Media: Dispatch Command Center</h1>", unsafe_allow_html=True)
 
 with col_ref:
     st.markdown("<div class='refresh-btn-container' style='margin-top: 26px;'>", unsafe_allow_html=True)
@@ -1028,7 +1027,7 @@ tabs = st.tabs(["Global", "Blue Pod", "Green Pod", "Orange Pod", "Purple Pod", "
 
 # --- TAB 0: GLOBAL CONTROL ---
 with tabs[0]:
-    st.markdown("<h2 style='text-align:center;'>🌍 Global Command Overview</h2>", unsafe_allow_html=True)
+    st.markdown("<h2 style='color: #633094; text-align:center;'>🌍 Global Command Overview</h2>", unsafe_allow_html=True)
     
     # --- 1. INITIALIZE BUTTON ---
     c_btn = st.columns([1,2,1])[1]
