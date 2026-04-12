@@ -1128,18 +1128,6 @@ def run_pod_tab(pod_name):
                         args=(cluster_hash, ic_name),
                         use_container_width=True
                     )
-                        # 2. Log History
-                        hist = st.session_state.get(f"history_{cluster_hash}", [])
-                        hist.append(f"{ic_name} ({datetime.now().strftime('%m/%d')})")
-                        st.session_state[f"history_{cluster_hash}"] = hist
-                        
-                        # 3. Kill the sync link
-                        sync_key = f"sync_{cluster_hash}"
-                        if sync_key in st.session_state:
-                            del st.session_state[sync_key]
-                        
-                        # 4. Immediate Rerun (No waiting)
-                        st.rerun()
         with t_acc:
             if not accepted and not pod_ghosts: st.info("Waiting for portal acceptances...")
             
