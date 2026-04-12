@@ -100,15 +100,65 @@ div.refresh-btn-container > div > button:hover {{
 .stTabs [data-baseweb="tab-list"] {{ justify-content: center; gap: 8px; background: rgba(255,255,255,0.6); padding: 10px; border-radius: 15px; }}
 .stTabs [data-baseweb="tab"] {{ border-radius: 10px !important; padding: 10px 20px !important; font-weight: 700 !important; }}
 
-/* TOP LEVEL TABS (Pod Colors) */
-.stTabs [data-baseweb="tab"]:nth-of-type(1) {{ background-color: #ffffff !important; color: #000000 !important; }}
-.stTabs [data-baseweb="tab"]:nth-of-type(2) {{ background-color: #dbeafe !important; color: #000000 !important; }}
-.stTabs [data-baseweb="tab"]:nth-of-type(3) {{ background-color: #dcfce7 !important; color: #000000 !important; }}
-.stTabs [data-baseweb="tab"]:nth-of-type(4) {{ background-color: #ffedd5 !important; color: #000000 !important; }}
-.stTabs [data-baseweb="tab"]:nth-of-type(5) {{ background-color: #f3e8ff !important; color: #000000 !important; }}
-.stTabs [data-baseweb="tab"]:nth-of-type(6) {{ background-color: #fee2e2 !important; color: #000000 !important; }}
-.stTabs [aria-selected="true"] {{ transform: scale(1.05); border: 2px solid {TB_PURPLE} !important; z-index: 1; }}
+/* PERMANENT POD TAB OUTLINES */
+.stTabs [data-baseweb="tab"] {{
+    border-top: 1px solid #cbd5e1 !important;
+    border-left: 1px solid #cbd5e1 !important;
+    border-right: 1px solid #cbd5e1 !important;
+    margin: 0 4px !important;
+    transition: all 0.2s ease !important;
+}}
 
+/* Global Tab */
+.stTabs [data-baseweb="tab"]:nth-of-type(1) {{ 
+    border: 2px solid #633094 !important; 
+    color: #633094 !important;
+}}
+
+/* Blue Pod */
+.stTabs [data-baseweb="tab"]:nth-of-type(2) {{ 
+    border: 2px solid #3b82f6 !important; 
+    background-color: #f0f7ff !important;
+}}
+
+/* Green Pod */
+.stTabs [data-baseweb="tab"]:nth-of-type(3) {{ 
+    border: 2px solid #22c55e !important; 
+    background-color: #f0fdf4 !important;
+}}
+
+/* Orange Pod */
+.stTabs [data-baseweb="tab"]:nth-of-type(4) {{ 
+    border: 2px solid #f97316 !important; 
+    background-color: #fffaf5 !important;
+}}
+
+/* Purple Pod */
+.stTabs [data-baseweb="tab"]:nth-of-type(5) {{ 
+    border: 2px solid #a855f7 !important; 
+    background-color: #faf5ff !important;
+}}
+
+/* Red Pod */
+.stTabs [data-baseweb="tab"]:nth-of-type(6) {{ 
+    border: 2px solid #ef4444 !important; 
+    background-color: #fef2f2 !important;
+}}
+
+/* ACTIVE STATE - The "Terraboost Purple Glow" */
+.stTabs [aria-selected="true"] {{ 
+    background-color: #ffffff !important;
+    transform: translateY(-5px) !important; /* Lifts slightly higher */
+    /* Light Purple Glow: x-axis, y-axis, blur, spread, color */
+    box-shadow: 0 8px 20px rgba(99, 48, 148, 0.3) !important; 
+    border-bottom: 4px solid #633094 !important; /* Thicker bottom bar to anchor the glow */
+}}
+
+/* Add a subtle hover effect to the other tabs so they feel interactive */
+.stTabs [data-baseweb="tab"]:hover {{
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+}}
 /* TARGET THE GMAIL (PRIMARY) BUTTON SPECIFICALLY */
 button[kind="primary"] {{
     background-color: #76bc21 !important; /* TB_GREEN */
