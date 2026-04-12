@@ -20,10 +20,11 @@ SAVED_ROUTES_GID = "1477617688"
 ACCEPTED_ROUTES_GID = "934075207"
 DECLINED_ROUTES_GID = "600909788"
 
+
 # Terraboost Media Brand Palette
 TB_PURPLE = "#633094"
 TB_GREEN = "#76bc21"
-TB_APP_BG = "#f1f5f9"
+TB_APP_BG = "#cbd5e1"
 TB_HOVER_GRAY = "#e2e8f0"
 
 # Status Fills
