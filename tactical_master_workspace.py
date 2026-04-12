@@ -957,7 +957,12 @@ if "ic_df" not in st.session_state:
 col_title, col_ref = st.columns([4, 1])
 
 with col_title:
-    st.markdown("<h1 style='margin-top: -10px;'>Dispatch Command Center</h1>", unsafe_allow_html=True)
+    # Applying TB_PURPLE (#633094) and the full brand title
+    st.markdown(f"""
+        <h1 style='margin-top: -10px; color: {TB_PURPLE}; font-size: 2.2rem; font-weight: 800;'>
+            Terraboost Media: Operations Dispatch Command Center
+        </h1>
+    """, unsafe_allow_html=True)
 
 with col_ref:
     # Adding a bit of padding to line up the button with the text
