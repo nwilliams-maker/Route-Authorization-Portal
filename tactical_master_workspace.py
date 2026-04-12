@@ -1134,26 +1134,45 @@ with tabs[0]:
                 total_tasks = sum(len(c['data']) for c in pod_cls)
                 total_stops = sum(c['stops'] for c in pod_cls)
                 
-                # Calculate Sent Count
-                sent_count = 0
+                # --- EXACT SYNC LOGIC FROM POD TABS ---
+                sent, accepted, declined = [], [], []
                 for c in pod_cls:
                     task_ids = [str(t['id']).strip() for t in c['data']]
                     cluster_hash = hashlib.md5("".join(sorted(task_ids)).encode()).hexdigest()
-                    if any(tid in current_sent_db for tid in task_ids) or st.session_state.get(f"route_state_{cluster_hash}") == "email_sent":
-                        sent_count += 1
+                    
+                    sheet_match = current_sent_db.get(next((tid for tid in task_ids if tid in current_sent_db), None))
+                    route_state = st.session_state.get(f"route_state_{cluster_hash}")
+                    is_reverted = st.session_state.get(f"reverted_{cluster_hash}", False)
+                    
+                    if route_state == "email_sent" and not is_reverted:
+                        sent.append(c)
+                    elif route_state == "link_generated" and not is_reverted:
+                        orig = st.session_state.get(f"orig_status_{cluster_hash}")
+                        if orig == "declined":
+                            declined.append(c)
+                    elif sheet_match and not is_reverted:
+                        raw_status = sheet_match.get('status')
+                        if raw_status == 'declined':
+                            declined.append(c)
+                        elif raw_status == 'accepted':
+                            accepted.append(c)
+                        else:
+                            sent.append(c)
+                
+                # Combine Sent (Pending), Accepted, and Declined for the true Total Sent out
+                true_sent_count = len(sent) + len(accepted) + len(declined)
                 
                 # Metrics HTML (Flushed Left to prevent markdown code blocks)
                 card_content = f"""
-<p style='margin: 10px 0 0 0; font-size: 26px; font-weight: 800; color: {colors['text']};'>{sent_count} / {total_routes}</p>
-<p style='margin: -5px 0 10px 0; font-size: 11px; font-weight: 700; color: {colors['text']}; opacity: 0.6; text-transform: uppercase;'>Routes Sent</p>
-<div style='display: flex; justify-content: space-around; border-top: 1px solid #4b5563; padding-top: 10px;'>
+<p style='margin: 10px 0 0 0; font-size: 26px; font-weight: 800; color: {colors['text']};'>{true_sent_count} / {total_routes}</p>
+<p style='margin: -5px 0 10px 0; font-size: 11px; font-weight: 700; color: {colors['text']}; opacity: 0.6; text-transform: uppercase;'>Routes Dispatched</p>
+<div style='display: flex; justify-content: space-around; border-top: 1px solid rgba(0,0,0,0.08); padding-top: 10px;'>
 <div><p style='margin:0; font-size:9px; color: {colors['text']}; opacity: 0.8; font-weight: 800;'>TASKS</p><b style='color: {colors['text']};'>{total_tasks}</b></div>
-<div style='border-left: 1px solid #4b5563; height: 20px;'></div>
+<div style='border-left: 1px solid rgba(0,0,0,0.08); height: 20px;'></div>
 <div><p style='margin:0; font-size:9px; color: {colors['text']}; opacity: 0.8; font-weight: 800;'>STOPS</p><b style='color: {colors['text']};'>{total_stops}</b></div>
 </div>
 """
                 for c in pod_cls: folium.CircleMarker(c['center'], radius=5, color=colors['border'], fill=True, fill_opacity=0.7).add_to(global_map)
-            else:
                 card_content = f"<p style='color: {colors['text']}; opacity: 0.3; font-weight: 800; margin-top: 30px;'>OFFLINE</p>"
 
             # --- RENDER THE PILL (Entire string Flushed Left) ---
