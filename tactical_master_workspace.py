@@ -1120,18 +1120,15 @@ def run_pod_tab(pod_name):
                         render_dispatch(i+500, c, pod_name, is_sent=True)
                         
                 with btn_col:
-                    st.markdown("<div class='flush-hook' style='display:none;'></div>", unsafe_allow_html=True)
-                    # THIS IS THE NEW BUTTON:
-                    st.button(
-                        "↩️ Revoke", 
-                        key=f"rev_btn_{cluster_hash}", 
-                        on_click=instant_revoke_callback, 
-                        args=(cluster_hash, ic_name),
-                        use_container_width=True
-                    )
-                        # 1. Immediate State Updates (The "Instant" part)
-                        st.session_state[f"reverted_{cluster_hash}"] = True
-                        st.session_state[f"route_state_{cluster_hash}"] = "ready_to_dispatch" # Reset local state
+    st.markdown("<div class='flush-hook' style='display:none;'></div>", unsafe_allow_html=True)
+    st.button(
+        "↩️ Revoke", 
+        key=f"rev_btn_{cluster_hash}", 
+        on_click=instant_revoke_callback, 
+        args=(cluster_hash, ic_name),
+        use_container_width=True
+    )
+    # ❌ DELETE the st.session_state lines here; they are now inside the callback function!
                         
                         # 2. Log History
                         hist = st.session_state.get(f"history_{cluster_hash}", [])
