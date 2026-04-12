@@ -97,12 +97,17 @@ button[kind="primary"]:hover {{
     box-shadow: 0 6px 10px rgba(0,0,0,0.15) !important;
 }}
 
-/* NESTED SUB-TABS OVERRIDE (Clean Horizontal Grouping) */
-div[data-testid="stTabs"] div[data-testid="stTabs"] [data-baseweb="tab"]:nth-of-type(1) {{ background-color: #dcfce7 !important; color: #000000 !important; }} /* Ready: Green */
-div[data-testid="stTabs"] div[data-testid="stTabs"] [data-baseweb="tab"]:nth-of-type(2) {{ background-color: #ffcccc !important; color: #000000 !important; margin-right: 40px !important; }} /* Flagged: Red + GAP */
-div[data-testid="stTabs"] div[data-testid="stTabs"] [data-baseweb="tab"]:nth-of-type(3) {{ background-color: #dbeafe !important; color: #000000 !important; }} /* Sent: Blue */
-div[data-testid="stTabs"] div[data-testid="stTabs"] [data-baseweb="tab"]:nth-of-type(4) {{ background-color: #dcfce7 !important; color: #000000 !important; }} /* Accepted: Green */
-div[data-testid="stTabs"] div[data-testid="stTabs"] [data-baseweb="tab"]:nth-of-type(5) {{ background-color: #ffcccc !important; color: #000000 !important; }} /* Declined: Red */
+/* NESTED SUB-TABS OVERRIDE (Clean Uniform Layout) */
+div[data-testid="stTabs"] div[data-testid="stTabs"] [data-baseweb="tab"] {{
+    background-color: #f8fafc !important; 
+    color: #475569 !important; 
+    border: 1px solid #cbd5e1 !important;
+}}
+div[data-testid="stTabs"] div[data-testid="stTabs"] [aria-selected="true"] {{
+    background-color: #ffffff !important;
+    color: #000000 !important;
+    border: 2px solid #633094 !important;
+}}
 /* CARDS & INPUTS */
 div[data-testid="stExpander"],
 div[data-testid="stExpander"] > details,
@@ -712,27 +717,13 @@ def run_pod_tab(pod_name):
     # FIX: Remove width=1100 and use container width for responsiveness
     st_folium(m, height=400, use_container_width=True, key=f"map_{pod_name}")
 # --- ICON KEY (LEGEND) ---
-    st.markdown("""
-        <div style="display: flex; justify-content: center; gap: 20px; background: #ffffff; padding: 10px; border-radius: 12px; border: 1px solid #cbd5e1; margin-top: -10px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-            <div style="font-size: 11px; font-weight: 800; color: #64748b; text-transform: uppercase; align-self: center; margin-right: 10px;">Route Key:</div>
-            <div style="font-size: 13px; cursor: help;" title="Route is within distance limits (<60mi) and standard rate (<$25/stop).">📍 Ready</div>
-            <div style="font-size: 13px; cursor: help;" title="Route is frozen and requires manual authorization before sending.">🔒 Action Required</div>
-            <div style="font-size: 13px; cursor: help;" title="The calculated price per stop is $25.00 or higher.">💰 High Rate</div>
-            <div style="font-size: 13px; cursor: help;" title="The closest contractor is more than 60 miles away.">📡 Long Distance</div>
-            <div style="font-size: 13px; cursor: help;" title="Route was flagged for review (e.g., low density).">🔴 Flagged</div>
-            <div style="font-size: 13px; cursor: help;" title="Priority: Contains escalated tasks.">⭐ Escalated</div>
-            <div style="font-size: 13px; cursor: help;" title="Route request has been sent to the contractor.">✉️ Sent</div>
-        </div>
-    """, unsafe_allow_html=True)
     st.markdown("---")
 
-    t_ready, t_flagged, t_sent, t_acc, t_dec = st.tabs([
-        "📥 Dispatch Ready", 
-        "⚠️ Flagged",
-        "✉️ Sent (Pending)", 
-        "✅ Accepted", 
-        "❌ Declined"
-    ])
+    # ==========================================
+    # SECTION 1: DISPATCH
+    # ==========================================
+    st.markdown("<h3 style='color: #000000; margin-bottom: 5px;'>🚀 Dispatch</h3>", unsafe_allow_html=True)
+    t_ready, t_flagged = st.tabs(["📥 Ready", "⚠️ Flagged"])
 
     with t_ready:
         if not ready: st.info("No tasks ready for dispatch.")
@@ -763,6 +754,14 @@ def run_pod_tab(pod_name):
             with st.expander(f"🔒 🔴 {c['city']}, {c['state']} | {c['stops']} Stops{esc_pill}"): 
                 render_dispatch(i+1000, c, pod_name)
 
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    # ==========================================
+    # SECTION 2: AWAITING CONFIRMATION
+    # ==========================================
+    st.markdown("<h3 style='color: #000000; margin-bottom: 5px;'>⏳ Awaiting Confirmation</h3>", unsafe_allow_html=True)
+    t_sent, t_acc, t_dec = st.tabs(["✉️ Sent (Pending)", "✅ Accepted", "❌ Declined"])
+
     with t_sent:
         if not sent: st.info("No pending routes sent.")
         for i, c in enumerate(sent):
@@ -789,7 +788,6 @@ def run_pod_tab(pod_name):
             with st.expander(f"❌ {ic_name}{ts_label} | {c['city']}, {c['state']}"):
                 st.error("Route declined. Select a new contractor below to generate a fresh link.")
                 render_dispatch(i+3000, c, pod_name, is_declined=True)
-
 # --- START ---
 if "ic_df" not in st.session_state:
     try:
