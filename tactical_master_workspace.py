@@ -1039,7 +1039,7 @@ with tabs[0]:
     
     # --- 1. INITIALIZE BUTTON ---
     c_btn = st.columns([1,2,1])[1]
-    if c_btn.button("🚀 Initialize All Pods", key="global_init_action", use_container_width=True):
+    if c_btn.button("🚀 Initialize All Pods", key="global_init_final", use_container_width=True):
         st.session_state.sent_db = fetch_sent_records_from_sheet()
         st.session_state.trigger_pull = True 
 
@@ -1053,7 +1053,7 @@ with tabs[0]:
     current_sent_db = st.session_state.get('sent_db', {})
 
     for i, pod in enumerate(pod_keys):
-        # 🟢 FIXED: Dictionary uses single { } in Python logic
+        # Python Dictionary: Use SINGLE braces here
         colors = {
             "Blue":   {"border": "#3b82f6", "bg": "#f0f7ff", "text": "#1e3a8a"},
             "Green":  {"border": "#22c55e", "bg": "#f0fdf4", "text": "#064e3b"},
@@ -1066,27 +1066,19 @@ with tabs[0]:
             is_loading = st.session_state.get("current_loading_pod") == pod
             has_data = f"clusters_{pod}" in st.session_state
             
-            st.markdown(f"""
-                <div class='pod-card-pill' style='
-                    border: 2px solid {colors['border']}; 
-                    border-radius: 30px; 
-                    padding: 20px 10px; 
-                    background: {colors['bg']}; 
-                    text-align: center; 
-                    height: 190px; 
-                    box-shadow: 0 4px 10px rgba(0,0,0,0.03);
-                    display: flex; flex-direction: column; justify-content: center;'>
-                    <h3 style='margin: 0; color: {colors['text']}; font-weight: 800; font-size: 1.2rem;'>{pod} Pod</h3>
-            """, unsafe_allow_html=True)
+            # --- CONSTRUCT CARD CONTENT STRING ---
+            # We build this first so it can be injected into the main container
+            card_body = ""
             
             if is_loading:
-                st.markdown(f"<p class='loading-pulse' style='color:{colors['border']}; margin-top:20px;'>📡 SYNCING...</p>", unsafe_allow_html=True)
+                card_body = f"<p class='loading-pulse' style='color:{colors['border']}; margin-top:20px;'>📡 SYNCING...</p>"
             elif has_data:
                 pod_cls = st.session_state[f"clusters_{pod}"]
                 total_routes = len(pod_cls)
                 total_tasks = sum(len(c['data']) for c in pod_cls)
                 total_stops = sum(c['stops'] for c in pod_cls)
                 
+                # Logic for Sent Count
                 sent_count = 0
                 for c in pod_cls:
                     task_ids = [str(t['id']).strip() for t in c['data']]
@@ -1094,7 +1086,7 @@ with tabs[0]:
                     if any(tid in current_sent_db for tid in task_ids) or st.session_state.get(f"route_state_{cluster_hash}") == "email_sent":
                         sent_count += 1
                 
-                st.markdown(f"""
+                card_body = f"""
                     <p style='margin: 10px 0 0 0; font-size: 24px; font-weight: 800; color: {colors['text']};'>
                         {sent_count} / {total_routes} <span style='font-size: 12px; opacity: 0.7;'>Sent</span>
                     </p>
@@ -1109,16 +1101,30 @@ with tabs[0]:
                             <b style='color: {colors['text']}; font-size: 14px;'>{total_stops}</b>
                         </div>
                     </div>
-                """, unsafe_allow_html=True)
-                
+                """
+                # Update map markers
                 for c in pod_cls:
                     folium.CircleMarker(c['center'], radius=5, color=colors['border'], fill=True, fill_opacity=0.7).add_to(global_map)
             else:
-                st.markdown(f"<p style='color: {colors['text']}; opacity: 0.3; font-weight: 700; margin-top: 25px;'>OFFLINE</p>", unsafe_allow_html=True)
-            
-            st.markdown("</div>", unsafe_allow_html=True)
+                card_body = f"<p style='color: {colors['text']}; opacity: 0.3; font-weight: 700; margin-top: 25px;'>OFFLINE</p>"
 
-    # --- 3. LOADING ZONE (Progress bar stays below cards) ---
+            # --- RENDER ENTIRE CARD IN ONE CALL ---
+            st.markdown(f"""
+                <div class='pod-card-pill' style='
+                    border: 2px solid {colors['border']}; 
+                    border-radius: 30px; 
+                    padding: 20px 10px; 
+                    background: {colors['bg']}; 
+                    text-align: center; 
+                    height: 190px; 
+                    box-shadow: 0 4px 10px rgba(0,0,0,0.03);
+                    display: flex; flex-direction: column; justify-content: center;'>
+                    <h3 style='margin: 0; color: {colors['text']}; font-weight: 800; font-size: 1.2rem;'>{pod} Pod</h3>
+                    {card_body}
+                </div>
+            """, unsafe_allow_html=True)
+
+    # --- 3. LOADING ZONE (Progress bar below cards) ---
     if st.session_state.get("trigger_pull"):
         st.session_state.sent_db = fetch_sent_records_from_sheet()
         prog_bar = st.progress(0, text="🎬 Starting Global Data Sync...")
@@ -1133,6 +1139,7 @@ with tabs[0]:
     st.markdown("<br>### 🗺️ Master Route Map", unsafe_allow_html=True)
     st_folium(global_map, height=500, use_container_width=True, key="global_master_map")
 
-# 🚀 Indent this loop ALL THE WAY to the left (outside the Global Tab block)
+# --- END TAB 0 ---
+
 for i, pod in enumerate(["Blue", "Green", "Orange", "Purple", "Red"], 1):
     with tabs[i]: run_pod_tab(pod)
