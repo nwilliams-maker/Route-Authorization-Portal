@@ -233,7 +233,7 @@ div[data-testid="stExpander"] {{
     border: 1px solid #cbd5e1 !important; 
     border-radius: 10px !important; 
     box-shadow: 0 2px 4px rgba(0,0,0,0.02) !important;
-    margin-bottom: 4px !important;
+    margin-bottom: 0px !important;
     background-color: #ffffff !important;
     overflow: hidden !important;
 }}
