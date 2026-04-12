@@ -87,112 +87,203 @@ st.markdown(f"""
 .stApp {{ background-color: {TB_APP_BG} !important; color: #000000 !important; font-family: 'Inter', sans-serif !important; }}
 .main .block-container {{ max-width: 1100px !important; padding-top: 2rem; }}
 
-/* GLOBAL TABS CONTAINER - Clean & Floating with Bottom Line */
-.stTabs [data-baseweb="tab-list"] {{ 
-    justify-content: center; 
-    gap: 12px; 
-    background: transparent !important; /* Removes the gray box background */
-    padding: 15px 15px 20px 15px !important; /* Adds extra padding on the bottom so pills don't touch the line */
-    border-bottom: 2px solid #cbd5e1 !important; /* 🌟 THIS IS THE HORIZONTAL LINE 🌟 */
-    margin-bottom: 15px !important; /* Pushes the dashboard content down slightly for breathing room */
-}}
-
 /* CENTERED PURPLE HEADERS */
-h1, h2, h3, h4, h5, h6 {{ 
+h1, h2, h3, h4, h5, h6 {{ font-weight: 800 !important; text-align: center !important; width: 100%; }}
+label, div[data-testid="stWidgetLabel"] p {{ color: #000000 !important; font-weight: 600 !important; }}
+
+/* =========================================
+   1. FIX VERTICAL ALIGNMENT (COLLAPSE INVISIBLE HOOKS)
+   ========================================= */
+/* This prevents the invisible HTML tags from pushing the right column down! */
+div.element-container:has(.expander-hook),
+div.element-container:has(.flush-hook),
+div.element-container:has(.dispatch-tabs-hook),
+div.element-container:has(.awaiting-tabs-hook) {{
+    position: absolute !important;
+    width: 0px !important;
+    height: 0px !important;
+    margin: 0px !important;
+    padding: 0px !important;
+    visibility: hidden !important;
+}}
+
+/* =========================================
+   2. EXPANDER & BUTTON MERGE (PERFECT 46px HEIGHT)
+   ========================================= */
+/* Lock the Expander Header height */
+div[data-testid="stExpander"] details summary {{
+    height: 46px !important;
+    min-height: 46px !important;
+    padding-top: 0px !important;
+    padding-bottom: 0px !important;
+    display: flex !important;
+    align-items: center !important;
+    background-color: #ffffff !important; 
+    transition: background-color 0.2s ease !important;
+}}
+
+/* Lock the Revoke Button height to match exactly */
+div[data-testid="stColumn"]:has(.flush-hook) button[kind="secondary"],
+div[data-testid="stColumn"]:has(.flush-hook) button {{
+    height: 46px !important;
+    min-height: 46px !important;
+    margin-top: 0px !important;
+    margin-left: -1rem !important; /* Bridges the horizontal gap */
+    width: calc(100% + 1rem) !important;
+    border-top-left-radius: 0px !important;
+    border-bottom-left-radius: 0px !important;
+}}
+
+/* Square off the right side of the Expander, and remove the right border so they fuse */
+div[data-testid="stColumn"]:has(.expander-hook) div[data-testid="stExpander"] {{
+    border-top-right-radius: 0px !important;
+    border-bottom-right-radius: 0px !important;
+    border-right: 0px !important; 
+}}
+
+/* Main Expander Container Layout */
+div[data-testid="stExpander"] {{ 
+    border: 1px solid #cbd5e1 !important; 
+    border-radius: 10px !important; 
+    box-shadow: 0 2px 4px rgba(0,0,0,0.02) !important;
+    margin-bottom: 0px !important;
+    background-color: #ffffff !important;
+    overflow: hidden !important;
+}}
+
+/* Header text color */
+div[data-testid="stExpander"] details summary p {{ 
+    color: #000000 !important; 
     font-weight: 800 !important; 
-    text-align: center !important; 
-    width: 100%;
+    font-size: 0.95rem !important;
+    margin: 0 !important; /* Ensures perfect vertical centering */
 }}
 
-/* MODERN CONDENSED REFRESH BUTTON - FAR RIGHT */
-div.refresh-btn-container {{
-    display: flex;
-    justify-content: flex-end;
-    width: 100%;
+/* Expander Hover & Click Fixes */
+div[data-testid="stExpander"] details summary:hover {{ background-color: #fcfaff !important; }}
+div[data-testid="stExpander"] details summary:active {{ background-color: #ffffff !important; }}
+div[data-testid="stExpander"] details summary:focus, 
+div[data-testid="stExpander"] details summary:focus-visible {{
+    background-color: #ffffff !important;
+    outline: none !important;
+    box-shadow: none !important;
 }}
-
-div.refresh-btn-container > div > button {{
-    height: 28px !important;
-    padding: 0 12px !important;
-    font-size: 12px !important;
-    border-radius: 20px !important;
-    border: 1.2px solid #633094 !important;
-    background-color: transparent !important;
+div[data-testid="stExpander"] details summary:hover p,
+div[data-testid="stExpander"] details summary:active p,
+div[data-testid="stExpander"] details summary:focus p {{
     color: #633094 !important;
-    font-weight: 700 !important;
-    transition: all 0.2s ease-in-out !important;
 }}
 
-div.refresh-btn-container > div > button:hover {{
-    background-color: #633094 !important;
-    color: white !important;
-    box-shadow: 0 2px 8px rgba(99, 48, 148, 0.3) !important;
+/* AGGRESSIVE VERTICAL GAP SQUASH BETWEEN ROWS */
+div[data-testid="stHorizontalBlock"]:has(.expander-hook) {{
+    margin-bottom: -1rem !important;
+    padding-bottom: 0px !important;
+}}
+div.element-container:has(> div[data-testid="stHorizontalBlock"]:has(.expander-hook)) {{
+    margin-bottom: -1rem !important;
 }}
 
-/* GLOBAL TABS STYLING */
-.stTabs [data-baseweb="tab-list"] {{ justify-content: center; gap: 8px; background: rgba(255,255,255,0.6); padding: 10px; border-radius: 15px; }}
 
-/* PERMANENT POD TAB OUTLINES & DARK TEXT */
-.stTabs [data-baseweb="tab"] {{
-    border-top: 1px solid #cbd5e1 !important;
-    border-left: 1px solid #cbd5e1 !important;
-    border-right: 1px solid #cbd5e1 !important;
-    margin: 0 4px !important;
-    transition: all 0.2s ease !important;
-    font-weight: 800 !important;
-    border-radius: 10px 10px 0 0 !important;
-    padding: 10px 20px !important;
+/* =========================================
+   3. NESTED TABS (STATUS PILLS FOR DISPATCH & AWAITING)
+   ========================================= */
+/* Force a physical gap between the segmented tabs so they don't stick together */
+div.element-container:has(.dispatch-tabs-hook) + div.element-container [data-baseweb="tab-list"],
+div.element-container:has(.awaiting-tabs-hook) + div.element-container [data-baseweb="tab-list"] {{
+    gap: 12px !important;
+    background-color: transparent !important;
+    padding: 10px 15px !important;
 }}
 
-/* GLOBAL TABS CONTAINER - Clean & Floating */
-.stTabs [data-baseweb="tab-list"] {{ 
+/* Break the Segmented Connection: Force Border-Radius on ALL 4 corners */
+div.element-container:has(.dispatch-tabs-hook) + div.element-container [data-baseweb="tab"],
+div.element-container:has(.awaiting-tabs-hook) + div.element-container [data-baseweb="tab"] {{
+    background-color: #ffffff !important;
+    border-radius: 30px !important; 
+    border-top-left-radius: 30px !important;
+    border-bottom-left-radius: 30px !important;
+    border-top-right-radius: 30px !important;
+    border-bottom-right-radius: 30px !important;
+    margin: 0 !important;
+    padding: 8px 18px !important;
+    border: 2px solid transparent !important;
+    font-size: 13px !important;
+}}
+
+/* Kill the default Streamlit grey slider box that connects them */
+div.element-container:has(.dispatch-tabs-hook) + div.element-container [data-baseweb="tab-highlight"],
+div.element-container:has(.awaiting-tabs-hook) + div.element-container [data-baseweb="tab-highlight"] {{
+    display: none !important;
+}}
+
+/* --- DISPATCH TABS (Left Side) --- */
+div.element-container:has(.dispatch-tabs-hook) + div.element-container [data-baseweb="tab"]:nth-of-type(1) {{
+    border-color: #22c55e !important; color: #064e3b !important; background-color: #f0fdf4 !important;
+}}
+div.element-container:has(.dispatch-tabs-hook) + div.element-container [data-baseweb="tab"]:nth-of-type(2) {{
+    border-color: #ef4444 !important; color: #7f1d1d !important; background-color: #fef2f2 !important;
+}}
+
+/* --- AWAITING TABS (Right Side) --- */
+div.element-container:has(.awaiting-tabs-hook) + div.element-container [data-baseweb="tab"]:nth-of-type(1) {{
+    border-color: #3b82f6 !important; color: #1e3a8a !important; background-color: #f0f7ff !important;
+}}
+div.element-container:has(.awaiting-tabs-hook) + div.element-container [data-baseweb="tab"]:nth-of-type(2) {{
+    border-color: #22c55e !important; color: #064e3b !important; background-color: #f0fdf4 !important;
+}}
+div.element-container:has(.awaiting-tabs-hook) + div.element-container [data-baseweb="tab"]:nth-of-type(3) {{
+    border-color: #ef4444 !important; color: #7f1d1d !important; background-color: #fef2f2 !important;
+}}
+
+/* --- ACTIVE NESTED TAB GLOW --- */
+div.element-container:has(.dispatch-tabs-hook) + div.element-container [aria-selected="true"],
+div.element-container:has(.awaiting-tabs-hook) + div.element-container [aria-selected="true"] {{
+    transform: translateY(-2px) !important;
+    box-shadow: 0 6px 12px rgba(0,0,0,0.08) !important;
+}}
+
+/* =========================================
+   GLOBAL TABS (MAIN POD SELECTORS)
+   ========================================= */
+/* Ensure the Global Tabs (Pod Selectors) keep their horizontal line and spacing */
+.stTabs > div:first-child > div[data-baseweb="tab-list"]:not(:has(+ div [data-baseweb="tab"])) {{ 
     justify-content: center; 
     gap: 12px; 
-    background: transparent !important; /* Removes the gray box background */
-    padding: 15px; 
+    background: transparent !important; 
+    padding: 15px 15px 20px 15px !important; 
+    border-bottom: 2px solid #cbd5e1 !important; 
+    margin-bottom: 15px !important; 
 }}
 
-/* KILL THE DEFAULT UNDERLINE (The "Cutoff" source) */
-.stTabs [data-baseweb="tab-highlight"] {{
-    background-color: transparent !important;
-}}
-
-/* PERMANENT FLOATING PILLS - No flat bottoms */
-.stTabs [data-baseweb="tab"] {{
-    border-radius: 30px !important; /* Full rounded pill */
+/* Main Pod Floating Pills */
+.stTabs > div:first-child > div[data-baseweb="tab-list"] [data-baseweb="tab"] {{
+    border-radius: 30px !important; 
     margin: 0 5px !important;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
     font-weight: 800 !important;
     padding: 8px 25px !important;
-    border: 2px solid transparent !important; /* Invisible border until set below */
+    border: 2px solid transparent !important; 
 }}
 
-/* Global Tab */
-.stTabs [data-baseweb="tab"]:nth-of-type(1) {{ border: 2px solid #633094 !important; color: #3b1d58 !important; background: white !important; }}
+.stTabs > div:first-child > div[data-baseweb="tab-list"] [data-baseweb="tab-highlight"] {{ background-color: transparent !important; }}
 
-/* Blue Pod */
-.stTabs [data-baseweb="tab"]:nth-of-type(2) {{ border: 2px solid #3b82f6 !important; background-color: #f0f7ff !important; color: #1e3a8a !important; }}
+/* Pod Colors */
+.stTabs > div:first-child > div[data-baseweb="tab-list"] [data-baseweb="tab"]:nth-of-type(1) {{ border-color: #633094 !important; color: #3b1d58 !important; background: white !important; }}
+.stTabs > div:first-child > div[data-baseweb="tab-list"] [data-baseweb="tab"]:nth-of-type(2) {{ border-color: #3b82f6 !important; background-color: #f0f7ff !important; color: #1e3a8a !important; }}
+.stTabs > div:first-child > div[data-baseweb="tab-list"] [data-baseweb="tab"]:nth-of-type(3) {{ border-color: #22c55e !important; background-color: #f0fdf4 !important; color: #064e3b !important; }}
+.stTabs > div:first-child > div[data-baseweb="tab-list"] [data-baseweb="tab"]:nth-of-type(4) {{ border-color: #f97316 !important; background-color: #fffaf5 !important; color: #7c2d12 !important; }}
+.stTabs > div:first-child > div[data-baseweb="tab-list"] [data-baseweb="tab"]:nth-of-type(5) {{ border-color: #a855f7 !important; background-color: #faf5ff !important; color: #4c1d95 !important; }}
+.stTabs > div:first-child > div[data-baseweb="tab-list"] [data-baseweb="tab"]:nth-of-type(6) {{ border-color: #ef4444 !important; background-color: #fef2f2 !important; color: #7f1d1d !important; }}
 
-/* Green Pod */
-.stTabs [data-baseweb="tab"]:nth-of-type(3) {{ border: 2px solid #22c55e !important; background-color: #f0fdf4 !important; color: #064e3b !important; }}
-
-/* Orange Pod */
-.stTabs [data-baseweb="tab"]:nth-of-type(4) {{ border: 2px solid #f97316 !important; background-color: #fffaf5 !important; color: #7c2d12 !important; }}
-
-/* Purple Pod */
-.stTabs [data-baseweb="tab"]:nth-of-type(5) {{ border: 2px solid #a855f7 !important; background-color: #faf5ff !important; color: #4c1d95 !important; }}
-
-/* Red Pod */
-.stTabs [data-baseweb="tab"]:nth-of-type(6) {{ border: 2px solid #ef4444 !important; background-color: #fef2f2 !important; color: #7f1d1d !important; }}
-
-/* ACTIVE STATE - The "Full Glow" (No flat bottom border) */
-.stTabs [aria-selected="true"] {{ 
+.stTabs > div:first-child > div[data-baseweb="tab-list"] [aria-selected="true"] {{ 
     background-color: #ffffff !important;
-    transform: translateY(-4px) !important; /* Removed the scale(1.05) so it matches cards perfectly */
+    transform: translateY(-4px) !important; 
     box-shadow: 0 10px 20px rgba(99, 48, 148, 0.25) !important; 
 }}
 
-/* PRIMARY & SECONDARY BUTTONS */
+/* =========================================
+   BUTTONS, ANIMATIONS & MAP
+   ========================================= */
 button[kind="primary"] {{
     background-color: #76bc21 !important;
     color: white !important;
@@ -208,7 +299,6 @@ button[kind="secondary"] {{
     background-color: #ffffff !important;
     color: {TB_PURPLE} !important;
     border: 2px solid {TB_PURPLE} !important;
-    height: 42px !important;
     font-size: 0.9rem !important;
     font-weight: 800 !important;
     border-radius: 8px !important;
@@ -216,192 +306,30 @@ button[kind="secondary"] {{
     transition: all 0.2s ease !important;
 }}
 
-/* =========================================
-   EXPANDER & LAYOUT TIGHTENING
-   ========================================= */
+/* Top Right Refresh Button */
+div.refresh-btn-container > div > button {{
+    height: 28px !important; padding: 0 12px !important; font-size: 12px !important; border-radius: 20px !important;
+    border: 1.2px solid #633094 !important; background-color: transparent !important; color: #633094 !important; font-weight: 700 !important;
+}}
+div.refresh-btn-container > div > button:hover {{ background-color: #633094 !important; color: white !important; box-shadow: 0 2px 8px rgba(99, 48, 148, 0.3) !important; }}
 
-/* FLUSH BUTTON MECHANICS (The Revoke/Re-Route Buttons) */
-/* Increased specificity to ensure it overrides the 42px generic secondary button height */
-div[data-testid="stColumn"]:has(.flush-hook) button[kind="secondary"],
-div[data-testid="stColumn"]:has(.flush-hook) button {{
-    margin-left: -1rem !important;
-    width: calc(100% + 1rem) !important;
-    border-top-left-radius: 0px !important;
-    border-bottom-left-radius: 0px !important;
-    height: 45px !important; /* Perfect height match for left column */
+/* Global Hover Effects */
+button[kind="primary"]:hover, button[kind="secondary"]:hover, div.refresh-btn-container > div > button:hover {{
+    transform: translateY(-4px) !important; box-shadow: 0 12px 28px rgba(99, 48, 148, 0.35) !important; z-index: 10;
+}}
+div[data-testid="stExpander"]:hover, .pod-card-pill:hover, .dashboard-supercard:hover {{
+    transform: translateY(-4px) !important; box-shadow: 0 12px 24px rgba(0, 0, 0, 0.08) !important; z-index: 10;
 }}
 
-/* FLUSH EXPANDER MECHANICS (Squaring the right side) */
-div[data-testid="stColumn"]:has(.expander-hook) div[data-testid="stExpander"] {{
-    border-top-right-radius: 0px !important;
-    border-bottom-right-radius: 0px !important;
-    border-right: none !important; /* Prevents double-thick border where they touch */
+/* Global Click Animations */
+button[kind="primary"]:active, button[kind="secondary"]:active, div.refresh-btn-container > div > button:active,
+div[data-testid="stExpander"] details summary:active, .pod-card-pill:active, .dashboard-supercard:active {{
+    transform: translateY(0px) scale(1) !important; box-shadow: 0 2px 4px rgba(0,0,0,0.05) !important;
 }}
 
-/* MAIN EXPANDER CONTAINER */
-div[data-testid="stExpander"] {{ 
-    border: 1px solid #cbd5e1 !important; 
-    border-radius: 10px !important; 
-    box-shadow: 0 2px 4px rgba(0,0,0,0.02) !important;
-    margin-bottom: 0px !important; /* Kills internal margin */
-    background-color: #ffffff !important;
-    overflow: hidden !important;
-}}
-
-/* 🌟 AGGRESSIVE VERTICAL GAP SQUASH */
-/* Kills the gap between horizontal blocks */
-div[data-testid="stHorizontalBlock"]:has(.expander-hook) {{
-    margin-bottom: -1rem !important;
-    padding-bottom: 0px !important;
-}}
-
-/* Kills the gap from the parent container */
-div.element-container:has(div[data-testid="stHorizontalBlock"]:has(.expander-hook)) {{
-    margin-bottom: -1rem !important;
-}}
-
-/* Header text color */
-div[data-testid="stExpander"] details summary p {{ 
-    color: #000000 !important; 
-    font-weight: 800 !important; 
-    font-size: 0.95rem !important;
-}}
-
-/* 🚀 FIX: STOP THE DARK HOVER & BLACK CLICK FILL */
-div[data-testid="stExpander"] details summary {{
-    background-color: #ffffff !important; /* Force base color */
-    transition: background-color 0.2s ease !important;
-}}
-
-div[data-testid="stExpander"] details summary:hover {{
-    background-color: #fcfaff !important; /* Very light purple on hover */
-}}
-
-/* This targets the exact moment you click it */
-div[data-testid="stExpander"] details summary:active {{
-    background-color: #ffffff !important; 
-}}
-
-/* This removes the "Black/Gray Box" focus state that stays after clicking */
-div[data-testid="stExpander"] details summary:focus, 
-div[data-testid="stExpander"] details summary:focus-visible {{
-    background-color: #ffffff !important;
-    outline: none !important;
-    box-shadow: none !important;
-}}
-
-/* Ensure the text stays visible during the click */
-div[data-testid="stExpander"] details summary:hover p,
-div[data-testid="stExpander"] details summary:active p,
-div[data-testid="stExpander"] details summary:focus p {{
-    color: #633094 !important;
-}}
-
-label, div[data-testid="stWidgetLabel"] p {{ color: #000000 !important; font-weight: 600 !important; }}
-
-/* MAP & FOLIUM */
-iframe[title="streamlit_folium.st_folium"] {{
-    border-radius: 15px !important;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.05) !important;
-}}
+/* Map Fix */
+iframe[title="streamlit_folium.st_folium"] {{ border-radius: 15px !important; box-shadow: 0 4px 6px rgba(0,0,0,0.05) !important; }}
 .stFolium {{ background: transparent !important; }}
-
-/* =========================================
-   UNIFIED HOVER & CLICK EFFECTS
-   ========================================= */
-
-/* 1. BUTTONS: Lift + Purple Glow */
-button[kind="primary"]:hover,
-button[kind="secondary"]:hover,
-div.refresh-btn-container > div > button:hover {{
-    transform: translateY(-4px) !important;
-    box-shadow: 0 12px 28px rgba(99, 48, 148, 0.35) !important;
-    border-color: #633094 !important;
-    z-index: 10;
-}}
-
-/* 2. CARDS, TABS & EXPANDERS: Lift + Neutral Drop Shadow (No Purple) */
-div[data-testid="stExpander"]:hover,
-.pod-card-pill:hover,
-.dashboard-supercard:hover,
-.stTabs [data-baseweb="tab"]:hover {{
-    transform: translateY(-4px) !important;
-    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.08) !important; 
-    z-index: 10;
-}}
-
-/* 3. STRICT CLICK ANIMATION (Kills the "Push In" effect) */
-/* Forces all elements to just drop back to baseline smoothly when clicked */
-button[kind="primary"]:active,
-button[kind="secondary"]:active,
-div.refresh-btn-container > div > button:active,
-div[data-testid="stExpander"] details summary:active,
-.pod-card-pill:active,
-.dashboard-supercard:active,
-.stTabs [data-baseweb="tab"]:active {{
-    transform: translateY(0px) scale(1) !important; 
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05) !important;
-}}
-
-/* Smooth transitions for everything */
-div[data-testid="stExpander"],
-div[data-testid="stExpander"] details summary,
-.pod-card-pill,
-.dashboard-supercard,
-button[kind="primary"],
-button[kind="secondary"],
-div.refresh-btn-container > div > button,
-.stTabs [data-baseweb="tab"] {{
-    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
-}}
-
-/* =========================================
-   NESTED TABS (STATUS PILLS FOR DISPATCH & AWAITING)
-   ========================================= */
-/* Target the specific stTabs containers using our invisible hooks to override the Main Pod colors */
-
-div.element-container:has(.dispatch-tabs-hook) + div.element-container [data-baseweb="tab"],
-div.element-container:has(.awaiting-tabs-hook) + div.element-container [data-baseweb="tab"] {{
-    background-color: #ffffff !important;
-    border-radius: 30px !important;
-    margin: 0 4px !important;
-    padding: 8px 18px !important;
-    border: 2px solid transparent !important;
-    font-size: 13px !important;
-}}
-
-/* --- DISPATCH TABS (Left Side) --- */
-/* 1. Ready (Green) */
-div.element-container:has(.dispatch-tabs-hook) + div.element-container [data-baseweb="tab"]:nth-of-type(1) {{
-    border-color: #22c55e !important; color: #064e3b !important; background-color: #f0fdf4 !important;
-}}
-/* 2. Flagged (Red) */
-div.element-container:has(.dispatch-tabs-hook) + div.element-container [data-baseweb="tab"]:nth-of-type(2) {{
-    border-color: #ef4444 !important; color: #7f1d1d !important; background-color: #fef2f2 !important;
-}}
-
-/* --- AWAITING TABS (Right Side) --- */
-/* 1. Sent (Blue) */
-div.element-container:has(.awaiting-tabs-hook) + div.element-container [data-baseweb="tab"]:nth-of-type(1) {{
-    border-color: #3b82f6 !important; color: #1e3a8a !important; background-color: #f0f7ff !important;
-}}
-/* 2. Accepted (Green) */
-div.element-container:has(.awaiting-tabs-hook) + div.element-container [data-baseweb="tab"]:nth-of-type(2) {{
-    border-color: #22c55e !important; color: #064e3b !important; background-color: #f0fdf4 !important;
-}}
-/* 3. Declined (Red) */
-div.element-container:has(.awaiting-tabs-hook) + div.element-container [data-baseweb="tab"]:nth-of-type(3) {{
-    border-color: #ef4444 !important; color: #7f1d1d !important; background-color: #fef2f2 !important;
-}}
-
-/* --- ACTIVE NESTED TAB GLOW --- */
-div.element-container:has(.dispatch-tabs-hook) + div.element-container [aria-selected="true"],
-div.element-container:has(.awaiting-tabs-hook) + div.element-container [aria-selected="true"] {{
-    background-color: #ffffff !important;
-    transform: translateY(-2px) !important;
-    box-shadow: 0 6px 12px rgba(0,0,0,0.08) !important;
-}}
-
 </style>
 """, unsafe_allow_html=True)
 
