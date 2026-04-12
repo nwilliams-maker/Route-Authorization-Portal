@@ -97,6 +97,27 @@ button[kind="primary"]:hover {{
     box-shadow: 0 6px 10px rgba(0,0,0,0.15) !important;
 }}
 
+/* TARGET SECONDARY BUTTONS (Revoke, Initialize, etc.) */
+button[kind="secondary"] {{
+    background-color: #ffffff !important;
+    color: {TB_PURPLE} !important;
+    border: 2px solid {TB_PURPLE} !important;
+    height: 54px !important;
+    font-size: 1rem !important;
+    font-weight: 800 !important;
+    border-radius: 12px !important;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05) !important;
+    transition: all 0.2s ease !important;
+}}
+
+button[kind="secondary"]:hover {{
+    background-color: #f3e8ff !important; /* Light purple hover fill */
+    color: {TB_PURPLE} !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 6px 10px rgba(0,0,0,0.15) !important;
+    border-color: {TB_PURPLE} !important;
+}}
+
 /* NESTED SUB-TABS OVERRIDE (Clean Uniform Layout) */
 div[data-testid="stTabs"] div[data-testid="stTabs"] [data-baseweb="tab"] {{
     background-color: #f8fafc !important; 
@@ -128,8 +149,6 @@ div[data-baseweb="select"] > div,
 
 label, div[data-testid="stWidgetLabel"] p {{ color: #000000 !important; font-weight: 600 !important; }}
 
-.stButton>button {{ background-color: {TB_PURPLE} !important; height: 54px !important; color: #ffffff !important; font-weight: 800 !important; border-radius: 12px !important; width: 100%; border: none !important; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: all 0.2s ease; }}
-.stButton>button:hover {{ filter: brightness(1.1); transform: translateY(-2px); box-shadow: 0 6px 10px rgba(0,0,0,0.15); color: #ffffff !important; }}
 
 div[data-testid="stMetricValue"] > div {{ color: #000000 !important; }}
 
