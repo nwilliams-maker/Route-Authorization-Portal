@@ -1,3 +1,4 @@
+
 import streamlit as st
 import requests
 import base64
@@ -216,12 +217,11 @@ button[kind="secondary"] {{
 }}
 
 /* EXPANDER & LAYOUT TIGHTENING */
-div[data-testid="stColumn"]:has(.flush-hook) button {{
+div[data-testid="stColumn"]:has(.flush-hook) button[kind="secondary"] {{
     margin-left: -1rem !important;
     width: calc(100% + 1rem) !important;
     border-top-left-radius: 0px !important;
     border-bottom-left-radius: 0px !important;
-    height: 45px !important; /* 🌟 Brings the button height up to perfectly align with expanders on the left */
 }}
 
 div[data-testid="stColumn"]:has(.expander-hook) div[data-testid="stExpander"] {{
@@ -234,14 +234,9 @@ div[data-testid="stExpander"] {{
     border: 1px solid #cbd5e1 !important; 
     border-radius: 10px !important; 
     box-shadow: 0 2px 4px rgba(0,0,0,0.02) !important;
-    margin-bottom: 0px !important;
+    margin-bottom: 8px !important;
     background-color: #ffffff !important;
     overflow: hidden !important;
-}}
-
-/* 🌟 KILL THE VERTICAL GAP BETWEEN ROWS */
-div.element-container:has(.expander-hook) {{
-    margin-bottom: -1rem !important; /* Pulls the cards up so the gap is practically gone */
 }}
 
 /* Header text color */
