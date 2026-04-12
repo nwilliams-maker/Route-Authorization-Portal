@@ -217,11 +217,12 @@ button[kind="secondary"] {{
 }}
 
 /* EXPANDER & LAYOUT TIGHTENING */
-div[data-testid="stColumn"]:has(.flush-hook) button[kind="secondary"] {{
+div[data-testid="stColumn"]:has(.flush-hook) button {{
     margin-left: -1rem !important;
     width: calc(100% + 1rem) !important;
     border-top-left-radius: 0px !important;
     border-bottom-left-radius: 0px !important;
+    height: 45px !important; /* Matches left column height */
 }}
 
 div[data-testid="stColumn"]:has(.expander-hook) div[data-testid="stExpander"] {{
@@ -234,9 +235,21 @@ div[data-testid="stExpander"] {{
     border: 1px solid #cbd5e1 !important; 
     border-radius: 10px !important; 
     box-shadow: 0 2px 4px rgba(0,0,0,0.02) !important;
-    margin-bottom: 8px !important;
+    margin-bottom: 0px !important;
     background-color: #ffffff !important;
     overflow: hidden !important;
+}}
+
+/* 🌟 AGGRESSIVE VERTICAL GAP SQUASH */
+/* Streamlit wraps columns in a horizontal block. We target that block and pull it up. */
+div[data-testid="stHorizontalBlock"]:has(.expander-hook) {{
+    margin-bottom: -1rem !important;
+    padding-bottom: 0px !important;
+}}
+
+/* Ensure the parent container doesn't force a gap either */
+div.element-container:has(> div[data-testid="stHorizontalBlock"]:has(.expander-hook)) {{
+    margin-bottom: -1rem !important;
 }}
 
 /* Header text color */
