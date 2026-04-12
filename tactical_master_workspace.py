@@ -209,28 +209,41 @@ div[data-testid="stExpander"] {{
     overflow: hidden !important;
 }}
 
-/* Header text color (White) */
+/* Header text color */
 div[data-testid="stExpander"] details summary p {{ 
-    color: #000000 !important; /* Set to Black for readability on white bg */
+    color: #000000 !important; 
     font-weight: 800 !important; 
     font-size: 0.95rem !important;
 }}
 
-/* 🚀 FIX: STOP THE DARK HOVER */
+/* 🚀 FIX: STOP THE DARK HOVER & BLACK CLICK FILL */
+div[data-testid="stExpander"] details summary {{
+    background-color: #ffffff !important; /* Force base color */
+    transition: background-color 0.2s ease !important;
+}}
+
 div[data-testid="stExpander"] details summary:hover {{
-    background-color: #fcfaff !important; /* Light purple tint instead of dark gray */
-    color: #633094 !important;
+    background-color: #fcfaff !important; /* Very light purple on hover */
 }}
 
-/* Keep text black/purple on hover so it doesn't disappear */
-div[data-testid="stExpander"] details summary:hover p {{
-    color: #633094 !important;
+/* This targets the exact moment you click it */
+div[data-testid="stExpander"] details summary:active {{
+    background-color: #ffffff !important; 
 }}
 
-/* Remove the default focus border which often looks like a dark box */
-div[data-testid="stExpander"] details summary:focus {{
+/* This removes the "Black/Gray Box" focus state that stays after clicking */
+div[data-testid="stExpander"] details summary:focus, 
+div[data-testid="stExpander"] details summary:focus-visible {{
+    background-color: #ffffff !important;
     outline: none !important;
     box-shadow: none !important;
+}}
+
+/* Ensure the text stays visible during the click */
+div[data-testid="stExpander"] details summary:hover p,
+div[data-testid="stExpander"] details summary:active p,
+div[data-testid="stExpander"] details summary:focus p {{
+    color: #633094 !important;
 }}
 
 label, div[data-testid="stWidgetLabel"] p {{ color: #000000 !important; font-weight: 600 !important; }}
