@@ -24,7 +24,7 @@ DECLINED_ROUTES_GID = "600909788"
 # Terraboost Media Brand Palette
 TB_PURPLE = "#633094"
 TB_GREEN = "#76bc21"
-TB_APP_BG = "#cbd5e1"
+TB_APP_BG = "#f8fafc"
 TB_HOVER_GRAY = "#e2e8f0"
 
 # Status Fills
