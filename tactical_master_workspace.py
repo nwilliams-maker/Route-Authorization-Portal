@@ -128,7 +128,7 @@ div[data-baseweb="select"] > div,
 
 label, div[data-testid="stWidgetLabel"] p {{ color: #000000 !important; font-weight: 600 !important; }}
 
-.stButton>button {{ background-color: {TB_PURPLE} !important; color: #ffffff !important; font-weight: 800 !important; border-radius: 12px !important; width: 100%; border: none !important; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: all 0.2s ease; }}
+.stButton>button {{ background-color: #633094 !important; height: 54px !important; color: #ffffff !important; font-weight: 800 !important; border-radius: 12px !important; width: 100%; border: none !important; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: all 0.2s ease; }
 .stButton>button:hover {{ filter: brightness(1.1); transform: translateY(-2px); box-shadow: 0 6px 10px rgba(0,0,0,0.15); color: #ffffff !important; }}
 
 div[data-testid="stMetricValue"] > div {{ color: #000000 !important; }}
@@ -830,18 +830,15 @@ def run_pod_tab(pod_name):
                 task_ids = [str(t['id']).strip() for t in c['data']]
                 cluster_hash = hashlib.md5("".join(sorted(task_ids)).encode()).hexdigest()
                 
-                # Split the layout: Gave the button slightly more breathing room
-                exp_col, btn_col = st.columns([4.5, 1.5])
+                # 1. Changed back to [5, 1] so the button isn't stretched out horizontally
+                exp_col, btn_col = st.columns([5, 1])
                 
                 with exp_col:
                     with st.expander(f"✉️ {ic_name}{ts_label} | {c['city']}, {c['state']}{esc_pill}"): 
                         render_dispatch(i+500, c, pod_name, is_sent=True)
                         
                 with btn_col:
-                    # Increased the top margin to shove the button down into alignment
-                    st.markdown("<div style='margin-top: 14px;'></div>", unsafe_allow_html=True)
-                    
-                    # Added use_container_width=True to make it fill the space evenly
+                    # 2. Removed the spacer so the button aligns completely flush with the top of the card
                     if st.button("↩️ Revoke", key=f"quick_rev_{cluster_hash}", help="Pull this route back to Dispatch", use_container_width=True):
                         # Log the previous contractor
                         hist = st.session_state.get(f"history_{cluster_hash}", [])
