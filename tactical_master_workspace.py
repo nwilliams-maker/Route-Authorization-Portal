@@ -1122,7 +1122,7 @@ def run_pod_tab(pod_name):
                 with btn_col:
                     st.markdown("<div class='flush-hook' style='display:none;'></div>", unsafe_allow_html=True)
                     # THIS IS THE NEW BUTTON:
-                    st.button(
+                    if st.button(
                         "↩️ Revoke", 
                         key=f"rev_btn_{cluster_hash}", 
                         on_click=instant_revoke_callback, 
