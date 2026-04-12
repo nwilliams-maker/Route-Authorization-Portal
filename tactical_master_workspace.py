@@ -864,7 +864,9 @@ def run_pod_tab(pod_name):
                         render_dispatch(i+500, c, pod_name, is_sent=True)
                         
                 with btn_col:
-                    # 2. Removed the spacer so the button aligns completely flush with the top of the card
+                    # The invisible hook that triggers the CSS above to pull the button left
+                    st.markdown("<span class='flush-hook'></span>", unsafe_allow_html=True)
+                    
                     if st.button("↩️ Revoke", key=f"quick_rev_{cluster_hash}", help="Pull this route back to Dispatch", use_container_width=True):
                         # Log the previous contractor
                         hist = st.session_state.get(f"history_{cluster_hash}", [])
@@ -877,7 +879,6 @@ def run_pod_tab(pod_name):
                         if sync_key in st.session_state:
                             del st.session_state[sync_key]
                         st.rerun()
-
         with t_acc:
             if not accepted: st.info("Waiting for portal acceptances...")
             for i, c in enumerate(accepted):
