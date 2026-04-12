@@ -186,9 +186,8 @@ div.refresh-btn-container > div > button:hover {{
 /* ACTIVE STATE - The "Full Glow" (No flat bottom border) */
 .stTabs [aria-selected="true"] {{ 
     background-color: #ffffff !important;
-    transform: translateY(-4px) scale(1.05) !important;
+    transform: translateY(-4px) !important; /* Removed the scale(1.05) so it matches cards perfectly */
     box-shadow: 0 10px 20px rgba(99, 48, 148, 0.25) !important; 
-    /* We removed the border-bottom here to keep the pill shape perfect */
 }}
 
 /* PRIMARY & SECONDARY BUTTONS */
@@ -285,7 +284,7 @@ iframe[title="streamlit_folium.st_folium"] {{
 .stFolium {{ background: transparent !important; }}
 
 /* =========================================
-   HOVER EFFECTS (Split by Element Type)
+   UNIFIED HOVER & CLICK EFFECTS
    ========================================= */
 
 /* 1. BUTTONS: Lift + Purple Glow */
@@ -304,12 +303,26 @@ div[data-testid="stExpander"]:hover,
 .dashboard-supercard:hover,
 .stTabs [data-baseweb="tab"]:hover {{
     transform: translateY(-4px) !important;
-    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.08) !important; /* Soft, natural shadow to sell the 3D lift */
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.08) !important; 
     z-index: 10;
 }}
 
-/* Smooth transitions for everything when mouse enters/leaves */
+/* 3. STRICT CLICK ANIMATION (Kills the "Push In" effect) */
+/* Forces all elements to just drop back to baseline smoothly when clicked */
+button[kind="primary"]:active,
+button[kind="secondary"]:active,
+div.refresh-btn-container > div > button:active,
+div[data-testid="stExpander"] details summary:active,
+.pod-card-pill:active,
+.dashboard-supercard:active,
+.stTabs [data-baseweb="tab"]:active {{
+    transform: translateY(0px) scale(1) !important; 
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05) !important;
+}}
+
+/* Smooth transitions for everything */
 div[data-testid="stExpander"],
+div[data-testid="stExpander"] details summary,
 .pod-card-pill,
 .dashboard-supercard,
 button[kind="primary"],
