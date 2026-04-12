@@ -65,14 +65,6 @@ st.markdown(f"""
 .stApp {{ background-color: {TB_APP_BG} !important; color: #000000 !important; font-family: 'Inter', sans-serif !important; }}
 .main .block-container {{ max-width: 1100px !important; padding-top: 2rem; }}
 
-/* HORIZONTAL LINES & DIVIDERS */
-hr {{
-    border: none !important;
-    border-top: 1.5px solid #4b5563 !important; /* Dark Gray */
-    margin: 1.5rem 0 !important;
-    opacity: 1 !important;
-}}
-
 /* CENTERED PURPLE HEADERS */
 h1, h2, h3, h4, h5, h6 {{ 
     font-weight: 800 !important; 
@@ -261,6 +253,31 @@ iframe[title="streamlit_folium.st_folium"] {{
     box-shadow: 0 4px 6px rgba(0,0,0,0.05) !important;
 }}
 .stFolium {{ background: transparent !important; }}
+
+/* =========================================
+   THE COOL PURPLE GLOW (Hover Effects)
+   Applies to Cards, Expanders, and Buttons
+   ========================================= */
+div[data-testid="stExpander"]:hover,
+.pod-card-pill:hover,
+button[kind="primary"]:hover,
+button[kind="secondary"]:hover,
+div.refresh-btn-container > div > button:hover {{
+    transform: translateY(-4px) !important;
+    box-shadow: 0 12px 28px rgba(99, 48, 148, 0.35) !important;
+    border-color: #633094 !important;
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+    z-index: 10;
+}}
+
+/* Ensure the transition is smooth when the mouse leaves */
+div[data-testid="stExpander"],
+.pod-card-pill,
+button[kind="primary"],
+button[kind="secondary"],
+div.refresh-btn-container > div > button {{
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+}}
 
 </style>
 """, unsafe_allow_html=True)
