@@ -9,6 +9,7 @@ import json
 from datetime import datetime, timedelta
 from streamlit_folium import st_folium
 import folium
+import threading
 
 # --- CONFIG & CREDENTIALS ---
 ONFLEET_KEY = st.secrets["ONFLEET_KEY"]
@@ -335,8 +336,19 @@ div.refresh-btn-container > div > button,
 </style>
 """, unsafe_allow_html=True)
 
+def background_sheet_move(cluster_hash, payload_json):
+    try:
+        # This runs safely in a separate invisible thread
+        requests.post(GAS_WEB_APP_URL, json={
+            "action": "revokeRoute", 
+            "cluster_hash": cluster_hash,
+            "payload": payload_json
+        })
+    except:
+        pass
+
 def instant_revoke_handler(cluster_hash, ic_name, payload_json):
-    # 1. Move the card locally (INSTANT)
+    # 1. Move the card locally in Streamlit (INSTANT)
     st.session_state[f"reverted_{cluster_hash}"] = True
     st.session_state[f"route_state_{cluster_hash}"] = "ready"
     
@@ -345,17 +357,11 @@ def instant_revoke_handler(cluster_hash, ic_name, payload_json):
     hist.append(f"{ic_name} ({datetime.now().strftime('%m/%d')} - Revoked)")
     st.session_state[f"history_{cluster_hash}"] = hist
     
-    # 3. Background Google Sheet Move (No waiting for response)
-    try:
-        # We send a 'revoke' action to your GAS App to move the row
-        requests.post(GAS_WEB_APP_URL, json={
-            "action": "revokeRoute", 
-            "cluster_hash": cluster_hash,
-            "payload": payload_json
-        }, timeout=0.1) # Ultra-short timeout so we don't wait for the sheet to finish
-    except:
-        pass
-
+    # 3. Visual Confirmation! (Pops up in the bottom right)
+    st.toast("✅ Route instantly pulled back to Dispatch!")
+    
+    # 4. Trigger the safe Background Thread (No more crashing!)
+    threading.Thread(target=background_sheet_move, args=(cluster_hash, payload_json)).start()
 # --- UTILITIES ---
 def haversine(lat1, lon1, lat2, lon2):
     R = 3958.8
