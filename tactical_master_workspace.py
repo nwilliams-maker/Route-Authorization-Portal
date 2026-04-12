@@ -57,6 +57,24 @@ headers = {"Authorization": f"Basic {base64.b64encode(f'{ONFLEET_KEY}:'.encode()
 
 st.set_page_config(page_title="Dispatch Command Center", layout="wide")
 
+
+def instant_revoke_callback(cluster_hash, ic_name):
+    # Move card in memory
+    st.session_state[f"reverted_{cluster_hash}"] = True
+    st.session_state[f"route_state_{cluster_hash}"] = "ready"
+    
+    # Update history
+    hist = st.session_state.get(f"history_{cluster_hash}", [])
+    hist.append(f"{ic_name} ({datetime.now().strftime('%m/%d')})")
+    st.session_state[f"history_{cluster_hash}"] = hist
+    
+    # Kill the link
+    if f"sync_{cluster_hash}" in st.session_state:
+        del st.session_state[f"sync_{cluster_hash}"]
+        
+    # THE SECRET SAUCE: Tell the script to skip the long fetch
+    st.session_state["bypass_api_fetch"] = True
+    
 # --- PINNED TOP-LEFT LOGO ---
 # Function to convert the local image into web-safe code
 def get_base64_image(image_path):
@@ -428,6 +446,24 @@ def fetch_sent_records_from_sheet():
         st.error(f"Failed to fetch portal records: {e}")
         return {}, {}
 
+def instant_revoke_callback(cluster_hash, ic_name, link_id):
+    # 1. Update the local state so the card moves immediately
+    st.session_state[f"reverted_{cluster_hash}"] = True
+    st.session_state[f"route_state_{cluster_hash}"] = "ready"
+    
+    # 2. Update history
+    hist = st.session_state.get(f"history_{cluster_hash}", [])
+    hist.append(f"{ic_name} ({datetime.now().strftime('%m/%d')})")
+    st.session_state[f"history_{cluster_hash}"] = hist
+    
+    # 3. Destroy the link key
+    if f"sync_{cluster_hash}" in st.session_state:
+        del st.session_state[f"sync_{cluster_hash}"]
+        
+    # 4. SET A BYPASS FLAG
+    st.session_state["bypass_api_fetch"] = True
+
+
 @st.cache_data(show_spinner=False)
 def get_gmaps(home, waypoints):
     url = f"https://maps.googleapis.com/maps/api/directions/json?origin={home}&destination={home}&waypoints=optimize:true|{'|'.join(waypoints)}&key={GOOGLE_MAPS_KEY}"
@@ -449,7 +485,9 @@ def load_ic_database(sheet_url):
 
 # --- CORE LOGIC ---
 def process_pod(pod_name, master_bar=None, pod_idx=0, total_pods=1):
+    if st.session_state.get("bypass_api_fetch"): return
     config = POD_CONFIGS[pod_name]
+
     
     # Logic to handle if we are doing a single pod or a global pull
     pod_weight = 1.0 / total_pods
@@ -1083,7 +1121,14 @@ def run_pod_tab(pod_name):
                         
                 with btn_col:
                     st.markdown("<div class='flush-hook' style='display:none;'></div>", unsafe_allow_html=True)
-                    if st.button("↩️ Revoke", key=f"quick_rev_{cluster_hash}", help="Instantly pull back to Dispatch", use_container_width=True):
+                    # THIS IS THE NEW BUTTON:
+                    st.button(
+                        "↩️ Revoke", 
+                        key=f"rev_btn_{cluster_hash}", 
+                        on_click=instant_revoke_callback, 
+                        args=(cluster_hash, ic_name),
+                        use_container_width=True
+                    )
                         # 1. Immediate State Updates (The "Instant" part)
                         st.session_state[f"reverted_{cluster_hash}"] = True
                         st.session_state[f"route_state_{cluster_hash}"] = "ready_to_dispatch" # Reset local state
@@ -1324,3 +1369,6 @@ with tabs[0]:
 # --- INDIVIDUAL POD TABS ---
 for i, pod in enumerate(["Blue", "Green", "Orange", "Purple", "Red"], 1):
     with tabs[i]: run_pod_tab(pod)
+
+# Reset the bypass flag at the end of the run
+st.session_state["bypass_api_fetch"] = False
