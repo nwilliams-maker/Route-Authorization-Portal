@@ -221,7 +221,7 @@ div[data-testid="stColumn"]:has(.flush-hook) button {{
     width: calc(100% + 1rem) !important;
     border-top-left-radius: 0px !important;
     border-bottom-left-radius: 0px !important;
-    height: 45px !important; /* 🌟 Brings the button height up to perfectly align with expanders on the left */
+    height: 46px !important; /* 🌟 Brings the button height up to perfectly align with expanders on the left */
 }}
 
 div[data-testid="stColumn"]:has(.expander-hook) div[data-testid="stExpander"] {{
