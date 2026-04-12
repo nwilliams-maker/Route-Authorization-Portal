@@ -665,6 +665,7 @@ def run_pod_tab(pod_name):
         
         # Check if the dispatcher manually revoked this route
         is_reverted = st.session_state.get(f"reverted_{cluster_hash}", False)
+        is_forced_accepted = st.session_state.get(f"force_accepted_{cluster_hash}", False)
         
         if sheet_match and not is_reverted:
             c['contractor_name'] = sheet_match.get('name', 'Unknown')
@@ -673,16 +674,25 @@ def run_pod_tab(pod_name):
             c['contractor_name'] = local_contractor
             c['route_ts'] = local_ts
         
-        # If reverted, it completely bypasses the Sent/Accepted/Declined checks
-        if route_state == "email_sent" and not is_reverted:
+       # --- CATEGORY SORTING (WITH FORCE ACCEPT OVERRIDE) ---
+        if is_forced_accepted:
+            # 1. Developer Force-Accept always wins
+            accepted.append(c)
+            
+        elif route_state == "email_sent" and not is_reverted:
+            # 2. Check for manual resends/sent status
             sent.append(c)
+            
         elif route_state == "link_generated" and not is_reverted:
+            # 3. Check for specific link states
             orig = st.session_state.get(f"orig_status_{cluster_hash}")
             if orig == "declined":
                 declined.append(c)
             else:
                 ready.append(c)
+                
         elif sheet_match and not is_reverted:
+            # 4. Check Google Sheet Portal sync
             raw_status = sheet_match.get('status')
             if raw_status == 'declined':
                 declined.append(c)
@@ -690,8 +700,9 @@ def run_pod_tab(pod_name):
                 accepted.append(c)
             else:
                 sent.append(c)
+                
         else:
-            # Falls back into standard Dispatching
+            # 5. Default: Back to standard Dispatch logic
             if c.get('status') == 'Ready': 
                 ready.append(c)
             else: 
@@ -946,6 +957,9 @@ def run_pod_tab(pod_name):
                         if sync_key in st.session_state:
                             del st.session_state[sync_key]
                         st.rerun()
+                        
+# --- DEVELOPER OVERRIDE ---
+dev_mode = st.sidebar.checkbox("🔓 Developer Mode", help="Enable manual overrides for testing.")
 # --- START ---
 if "ic_df" not in st.session_state:
     try:
