@@ -98,12 +98,11 @@ button[kind="primary"]:hover {{
 }}
 
 /* NESTED SUB-TABS OVERRIDE (Clean Horizontal Grouping) */
-div[data-testid="stTabs"] div[data-testid="stTabs"] [data-baseweb="tab"]:nth-of-type(1) { background-color: #dcfce7 !important; color: #000000 !important; } /* Ready: Green */
-div[data-testid="stTabs"] div[data-testid="stTabs"] [data-baseweb="tab"]:nth-of-type(2) { background-color: #ffcccc !important; color: #000000 !important; margin-right: 40px !important; } /* Flagged: Red + GAP */
-div[data-testid="stTabs"] div[data-testid="stTabs"] [data-baseweb="tab"]:nth-of-type(3) { background-color: #dbeafe !important; color: #000000 !important; } /* Sent: Blue */
-div[data-testid="stTabs"] div[data-testid="stTabs"] [data-baseweb="tab"]:nth-of-type(4) { background-color: #dcfce7 !important; color: #000000 !important; } /* Accepted: Green */
-div[data-testid="stTabs"] div[data-testid="stTabs"] [data-baseweb="tab"]:nth-of-type(5) { background-color: #ffcccc !important; color: #000000 !important; } /* Declined: Red */
-
+div[data-testid="stTabs"] div[data-testid="stTabs"] [data-baseweb="tab"]:nth-of-type(1) {{ background-color: #dcfce7 !important; color: #000000 !important; }} /* Ready: Green */
+div[data-testid="stTabs"] div[data-testid="stTabs"] [data-baseweb="tab"]:nth-of-type(2) {{ background-color: #ffcccc !important; color: #000000 !important; margin-right: 40px !important; }} /* Flagged: Red + GAP */
+div[data-testid="stTabs"] div[data-testid="stTabs"] [data-baseweb="tab"]:nth-of-type(3) {{ background-color: #dbeafe !important; color: #000000 !important; }} /* Sent: Blue */
+div[data-testid="stTabs"] div[data-testid="stTabs"] [data-baseweb="tab"]:nth-of-type(4) {{ background-color: #dcfce7 !important; color: #000000 !important; }} /* Accepted: Green */
+div[data-testid="stTabs"] div[data-testid="stTabs"] [data-baseweb="tab"]:nth-of-type(5) {{ background-color: #ffcccc !important; color: #000000 !important; }} /* Declined: Red */
 /* CARDS & INPUTS */
 div[data-testid="stExpander"],
 div[data-testid="stExpander"] > details,
