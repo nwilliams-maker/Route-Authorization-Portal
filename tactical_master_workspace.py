@@ -903,9 +903,37 @@ def run_pod_tab(pod_name):
             for i, c in enumerate(declined):
                 ic_name = c.get('contractor_name', 'Unknown')
                 ts_label = f" | {c.get('route_ts', '')}" if c.get('route_ts') else ""
-                with st.expander(f"❌ {ic_name}{ts_label} | {c['city']}, {c['state']}"):
-                    st.error("Route declined. Select a new contractor below to generate a fresh link.")
-                    render_dispatch(i+3000, c, pod_name, is_declined=True)
+                esc_pill = f"  [ ⭐ {c.get('esc_count', 0)} ]" if c.get('esc_count', 0) > 0 else ""
+                
+                # Re-calculate hash for the quick-action button
+                task_ids = [str(t['id']).strip() for t in c['data']]
+                cluster_hash = hashlib.md5("".join(sorted(task_ids)).encode()).hexdigest()
+                
+                # Use the exact same [5, 1] layout as the Sent tab
+                exp_col, btn_col = st.columns([5, 1])
+                
+                with exp_col:
+                    # Hidden hook to square off the right side of the expander
+                    st.markdown("<div class='expander-hook' style='display:none;'></div>", unsafe_allow_html=True)
+                    with st.expander(f"❌ {ic_name}{ts_label} | {c['city']}, {c['state']}{esc_pill}"):
+                        st.error("Route declined. Select a new contractor below to generate a fresh link.")
+                        render_dispatch(i+3000, c, pod_name, is_declined=True)
+                        
+                with btn_col:
+                    # Hidden hook to pull the button left and square off its left side
+                    st.markdown("<div class='flush-hook' style='display:none;'></div>", unsafe_allow_html=True)
+                    if st.button("↩️ Re-Route", key=f"quick_reroute_{cluster_hash}", help="Pull this declined route back to Dispatch", use_container_width=True):
+                        # Log the previous contractor who declined it
+                        hist = st.session_state.get(f"history_{cluster_hash}", [])
+                        hist.append(f"{ic_name} ({datetime.now().strftime('%m/%d')} - Declined)")
+                        st.session_state[f"history_{cluster_hash}"] = hist
+                        
+                        # Flag as reverted and destroy the old link
+                        st.session_state[f"reverted_{cluster_hash}"] = True
+                        sync_key = f"sync_{cluster_hash}"
+                        if sync_key in st.session_state:
+                            del st.session_state[sync_key]
+                        st.rerun()
 # --- START ---
 if "ic_df" not in st.session_state:
     try:
