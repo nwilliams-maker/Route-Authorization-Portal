@@ -241,7 +241,7 @@ div[data-testid="stExpander"] {{
 
 /* 🌟 KILL THE VERTICAL GAP BETWEEN ROWS */
 div.element-container:has(.expander-hook) {{
-    margin-bottom: -5rem !important; /* Pulls the cards up so the gap is practically gone */
+    margin-bottom: -1rem !important; /* Pulls the cards up so the gap is practically gone */
 }}
 
 /* Header text color */
