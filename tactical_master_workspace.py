@@ -743,7 +743,11 @@ def render_dispatch(i, cluster, pod_name, is_sent=False, is_declined=False):
 
             # Build final signature with final_route_id
             final_sig = sig_preview.replace("LINK_PENDING", final_route_id)
-            gmail_url = f"https://mail.google.com/mail/?view=cm&fs=1&to={ic['Email']}&su=Route Request: {ic['Name']}&body={requests.utils.quote(final_sig)}"
+            
+            # Upgraded Subject Line using your format
+            subject_line = f"Route Request | {wo_val}"
+            
+            gmail_url = f"https://mail.google.com/mail/?view=cm&fs=1&to={ic['Email']}&su={requests.utils.quote(subject_line)}&body={requests.utils.quote(final_sig)}"
             
             st.components.v1.html(f"<script>window.open('{gmail_url}', '_blank');</script>", height=0)
             
