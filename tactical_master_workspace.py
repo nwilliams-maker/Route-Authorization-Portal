@@ -119,9 +119,10 @@ button[kind="secondary"]:hover {{
 }}
 
 /* FORCE REVOKE BUTTON TO SIT FLUSH AGAINST EXPANDER */
-.flush-hook + div[data-testid="stButton"] button {{
-    margin-left: -16px !important;
-    border-top-left-radius: 0px !important; /* Squares off the left side so it connects seamlessly */
+div[data-testid="element-container"]:has(.flush-hook) + div[data-testid="element-container"] button {{
+    margin-left: -1rem !important; /* Pulls the button left over the Streamlit gap */
+    width: calc(100% + 1rem) !important; /* Stretches it to fill the gap perfectly */
+    border-top-left-radius: 0px !important; /* Squares off the left side */
     border-bottom-left-radius: 0px !important;
 }}
 
@@ -864,8 +865,8 @@ def run_pod_tab(pod_name):
                         render_dispatch(i+500, c, pod_name, is_sent=True)
                         
                 with btn_col:
-                    # The invisible hook that triggers the CSS above to pull the button left
-                    st.markdown("<span class='flush-hook'></span>", unsafe_allow_html=True)
+                    # Combined invisible hook and spacer to prevent double padding
+                    st.markdown("<div class='flush-hook' style='margin-top: 2px;'></div>", unsafe_allow_html=True)
                     
                     if st.button("↩️ Revoke", key=f"quick_rev_{cluster_hash}", help="Pull this route back to Dispatch", use_container_width=True):
                         # Log the previous contractor
