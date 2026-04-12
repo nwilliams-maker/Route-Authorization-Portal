@@ -64,7 +64,7 @@ st.markdown(f"""
 .stApp {{ background-color: {TB_APP_BG} !important; color: #000000 !important; font-family: 'Inter', sans-serif !important; }}
 .main .block-container {{ max-width: 1100px !important; padding-top: 2rem; }}
 
-h1, h2, h3, h4, h5, h6 {{ color: #000000 !important; font-weight: 800 !important; }}
+h1, h2, h3, h4, h5, h6 {{ color: #633094 !important; font-weight: 800 !important; }}
 
 /* GLOBAL TABS STYLING */
 .stTabs [data-baseweb="tab-list"] {{ justify-content: center; gap: 8px; background: rgba(255,255,255,0.6); padding: 10px; border-radius: 15px; }}
