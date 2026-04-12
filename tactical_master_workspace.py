@@ -1,4 +1,3 @@
-
 import streamlit as st
 import requests
 import base64
@@ -797,11 +796,12 @@ def run_pod_tab(pod_name):
     # We swap the widths so the wider 'Routes' card fits on the left
     c1, c2, c3 = st.columns([1.5, 1, 1.5])
 
+    # Dashboard Supercards (Now with Hover Glow!)
+    c1, c2, c3 = st.columns([1.5, 1, 1.5])
+
     with c1:
-        # --- NOW IN C1: TOTAL ROUTES (Ready / Sent / Flagged) ---
         st.markdown(f"""
             <div class='dashboard-supercard' style='background:#ffffff; border:1px solid #cbd5e1; border-radius:12px; padding:10px; box-shadow:0 2px 4px rgba(0,0,0,0.05); margin-bottom:20px; height: 110px;'>
-            <div style='background:#ffffff; border:1px solid #cbd5e1; border-radius:12px; padding:10px; box-shadow:0 2px 4px rgba(0,0,0,0.05); margin-bottom:20px; height: 110px;'>
                 <p style='margin:0 0 5px 0; font-size:11px; font-weight:800; color:#000000; text-transform:uppercase; text-align:center;'>Total Routes: {total_routes}</p>
                 <div style='display:flex; justify-content:space-between; gap:8px;'>
                     <div style='background:{TB_GREEN_FILL}; flex:1; padding:8px; border-radius:8px; text-align:center;'>
@@ -821,10 +821,8 @@ def run_pod_tab(pod_name):
         """, unsafe_allow_html=True)
 
     with c2:
-        # --- NOW IN C2: TOTAL TASKS & STOPS ---
         st.markdown(f"""
-            <div class='dashboard-supercard' style='background:#ffffff; border:1px solid #cbd5e1; border-radius:12px; padding:10px; box-shadow:0 2px 4px rgba(0,0,0,0.05); margin-bottom:20px; height: 110px;'>
-            <div style='background:#f8fafc; border:1px solid #cbd5e1; border-radius:12px; padding:15px; box-shadow:0 2px 4px rgba(0,0,0,0.05); margin-bottom:20px; height: 110px;'>
+            <div class='dashboard-supercard' style='background:#f8fafc; border:1px solid #cbd5e1; border-radius:12px; padding:15px; box-shadow:0 2px 4px rgba(0,0,0,0.05); margin-bottom:20px; height: 110px;'>
                 <div style='display:flex; justify-content:space-around; text-align:center; height:100%; align-items:center;'>
                     <div>
                         <p style='margin:0; font-size:11px; font-weight:800; color:#000000; text-transform:uppercase;'>Total Tasks</p>
@@ -840,10 +838,8 @@ def run_pod_tab(pod_name):
         """, unsafe_allow_html=True)
 
     with c3:
-        # --- C3 STAYS THE SAME: DISPATCH TRACKING ---
         st.markdown(f"""
-            <div class='dashboard-supercard' style='background:#ffffff; border:1px solid #cbd5e1; border-radius:12px; padding:10px; box-shadow:0 2px 4px rgba(0,0,0,0.05); margin-bottom:20px; height: 110px;'>
-            <div style='background:#ffffff; border:1px solid #cbd5e1; border-radius:12px; padding:10px; box-shadow:0 2px 4px rgba(0,0,0,0.05); height: 110px;'>
+            <div class='dashboard-supercard' style='background:#ffffff; border:1px solid #cbd5e1; border-radius:12px; padding:10px; box-shadow:0 2px 4px rgba(0,0,0,0.05); height: 110px;'>
                 <p style='margin:0 0 5px 0; font-size:11px; font-weight:800; color:#000000; text-transform:uppercase; text-align:center;'>Dispatched Tracking: {total_dispatched}</p>
                 <div style='display:flex; justify-content:space-between; gap:8px;'>
                     <div style='background:{TB_GREEN_FILL}; flex:1; padding:8px; border-radius:8px; text-align:center;'>
@@ -1135,11 +1131,11 @@ with tabs[0]:
             # --- RENDER THE PILL (Entire string Flushed Left) ---
             st.markdown(f"""
 <div class="pod-card-pill" style="border: 2px solid {colors['border']}; border-radius: 30px; padding: 20px 10px; background-color: {colors['bg']}; text-align: center; height: 190px; box-shadow: 0 4px 10px rgba(0,0,0,0.03); display: flex; flex-direction: column; justify-content: center;">
-<h3 style="margin: 0; color: {colors['text']}; font-weight: 800; font-size: 1.2rem;">{pod} Pod</h3>
+<div style="margin: 0; color: {colors['text']}; font-weight: 800; font-size: 1.2rem;">{pod} Pod</div>
 {card_content}
 </div>
 """, unsafe_allow_html=True)
-
+            
     # --- 3. THE LOADING ZONE (Progress Bar BELOW cards) ---
     if st.session_state.get("trigger_pull"):
         st.session_state.sent_db = fetch_sent_records_from_sheet()
