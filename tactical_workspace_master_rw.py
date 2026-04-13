@@ -1168,7 +1168,8 @@ def run_pod_tab(pod_name):
                 cluster_hash = hashlib.md5("".join(sorted(task_ids)).encode()).hexdigest()
                 
                 # 1. Back to [5, 1] for perfect proportions
-                exp_col, btn_col = st.columns([5, 1])
+                # Gives the button enough room to stay on one line, and vertically centers them
+exp_col, btn_col = st.columns([8.2, 1.8], vertical_alignment="center")
                 
                 with exp_col:
                     # Hidden hook to square off the right side of the expander
@@ -1203,7 +1204,8 @@ def run_pod_tab(pod_name):
                 task_ids = [str(t['id']).strip() for t in c['data']]
                 cluster_hash = hashlib.md5("".join(sorted(task_ids)).encode()).hexdigest()
                 
-                exp_col, btn_col = st.columns([5, 1])
+                # Gives the button enough room to stay on one line, and vertically centers them
+exp_col, btn_col = st.columns([8.2, 1.8], vertical_alignment="center")
                 with exp_col:
                     st.markdown("<div class='expander-hook' style='display:none;'></div>", unsafe_allow_html=True)
                     with st.expander(f"✅ {ic_name}{ts_label} | {c['city']}, {c['state']}"):
@@ -1248,7 +1250,8 @@ def run_pod_tab(pod_name):
                 cluster_hash = hashlib.md5("".join(sorted(task_ids)).encode()).hexdigest()
                 
                 # Use the exact same [5, 1] layout as the Sent tab
-                exp_col, btn_col = st.columns([5, 1])
+                # Gives the button enough room to stay on one line, and vertically centers them
+exp_col, btn_col = st.columns([8.2, 1.8], vertical_alignment="center")
                 
                 with exp_col:
                     # Hidden hook to square off the right side of the expander
