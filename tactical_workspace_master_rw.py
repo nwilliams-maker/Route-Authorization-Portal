@@ -352,24 +352,48 @@ div.refresh-btn-container > div > button,
 }}
 
 /* =========================================
-   SUB-TAB PILL STYLING (Leaves Global Tabs Alone!)
+   SUB-TAB PILL STYLING (Column-Targeting Method)
    ========================================= */
 
-/* READY (1st tab in Dispatch) & ACCEPTED (2nd tab in Awaiting) -> GREEN */
-div[data-testid="stTabs"]:has(div[data-baseweb="tab"]:nth-child(2):last-child) div[data-baseweb="tab"]:nth-child(1),
-div[data-testid="stTabs"]:has(div[data-baseweb="tab"]:nth-child(3):last-child) div[data-baseweb="tab"]:nth-child(2) {{
+/* --- LEFT COLUMN: Dispatch Tabs --- */
+/* 1. Ready (Green) */
+div[data-testid="stColumn"]:nth-child(1) div[data-testid="stTabs"] [data-baseweb="tab"]:nth-of-type(1) {{
     background-color: #dcfce7 !important;
     border: 2px solid #166534 !important;
-    color: #166534 !important;
+}}
+div[data-testid="stColumn"]:nth-child(1) div[data-testid="stTabs"] [data-baseweb="tab"]:nth-of-type(1) p {{
+    color: #166534 !important; 
 }}
 
-/* FLAGGED (2nd tab in Dispatch) & DECLINED (3rd tab in Awaiting) -> RED */
-div[data-testid="stTabs"]:has(div[data-baseweb="tab"]:nth-child(2):last-child) div[data-baseweb="tab"]:nth-child(2),
-div[data-testid="stTabs"]:has(div[data-baseweb="tab"]:nth-child(3):last-child) div[data-baseweb="tab"]:nth-child(3) {{
+/* 2. Flagged (Red) */
+div[data-testid="stColumn"]:nth-child(1) div[data-testid="stTabs"] [data-baseweb="tab"]:nth-of-type(2) {{
     background-color: #fee2e2 !important;
     border: 2px solid #991b1b !important;
-    color: #991b1b !important;
 }}
+div[data-testid="stColumn"]:nth-child(1) div[data-testid="stTabs"] [data-baseweb="tab"]:nth-of-type(2) p {{
+    color: #991b1b !important; 
+}}
+
+
+/* --- RIGHT COLUMN: Awaiting Tabs --- */
+/* 2. Accepted (Green) - Note: Sent is tab 1, we leave it alone */
+div[data-testid="stColumn"]:nth-child(2) div[data-testid="stTabs"] [data-baseweb="tab"]:nth-of-type(2) {{
+    background-color: #dcfce7 !important;
+    border: 2px solid #166534 !important;
+}}
+div[data-testid="stColumn"]:nth-child(2) div[data-testid="stTabs"] [data-baseweb="tab"]:nth-of-type(2) p {{
+    color: #166534 !important; 
+}}
+
+/* 3. Declined (Red) */
+div[data-testid="stColumn"]:nth-child(2) div[data-testid="stTabs"] [data-baseweb="tab"]:nth-of-type(3) {{
+    background-color: #fee2e2 !important;
+    border: 2px solid #991b1b !important;
+}}
+div[data-testid="stColumn"]:nth-child(2) div[data-testid="stTabs"] [data-baseweb="tab"]:nth-of-type(3) p {{
+    color: #991b1b !important; 
+}}
+
 
 /* TIGHTEN GAPS & ALIGN COLUMNS */
 div[data-testid="stExpander"] {{ margin-bottom: 2px !important; }}
