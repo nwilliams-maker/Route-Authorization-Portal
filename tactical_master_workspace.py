@@ -101,18 +101,71 @@ div.element-container:has(.flush-hook) {{
     padding: 0px !important;
 }}
 
-/* 3. HEIGHT LOCK: 46px FOR EXPANDERS & REVOKE BUTTONS */
-div[data-testid="stExpander"] {{ border: 1px solid #cbd5e1 !important; border-radius: 10px !important; margin-bottom: 0px !important; background-color: #ffffff !important; overflow: hidden !important; }}
-div[data-testid="stExpander"] details summary {{ height: 46px !important; min-height: 46px !important; padding: 0 12px !important; display: flex !important; align-items: center !important; }}
-div[data-testid="stExpander"] details summary p {{ margin: 0 !important; line-height: 46px !important; font-weight: 800 !important; color: #000000 !important; font-size: 0.95rem !important; }}
-
-/* FLUSH REVOKE BUTTON MECHANICS */
-div[data-testid="stColumn"]:has(.flush-hook) button {{ 
-    width: calc(100% + 1rem) !important; margin-left: -1rem !important; 
-    border-top-left-radius: 0px !important; border-bottom-left-radius: 0px !important; 
-    border-left: none !important; height: 46px !important; 
+/* 3. HEIGHT LOCK & LIGHT HOVER: Expanders */
+div[data-testid="stExpander"] {{ 
+    border: 1px solid #cbd5e1 !important; 
+    border-radius: 10px !important; 
+    background-color: #ffffff !important; 
 }}
-div[data-testid="stColumn"]:has(.expander-hook) div[data-testid="stExpander"] {{ border-top-right-radius: 0px !important; border-bottom-right-radius: 0px !important; border-right: none !important; }}
+
+/* Target the header: Force white background even when hovered */
+div[data-testid="stExpander"] details summary {{ 
+    height: 46px !important; 
+    min-height: 46px !important; 
+    padding: 0 12px !important; 
+    display: flex !important; 
+    align-items: center !important;
+    background-color: #ffffff !important; /* Base color */
+    transition: background-color 0.2s ease !important;
+}}
+
+div[data-testid="stExpander"] details summary:hover {{ 
+    background-color: #fcfaff !important; /* Very light subtle purple, NO DARK GRAY */
+}}
+
+div[data-testid="stExpander"] details summary p {{ 
+    margin: 0 !important; 
+    line-height: 46px !important; 
+    font-weight: 800 !important; 
+    color: #000000 !important; 
+}}
+
+/* Ensure the text doesn't vanish on click/hover */
+div[data-testid="stExpander"] details summary:hover p {{
+    color: {TB_PURPLE} !important;
+}}
+
+/* 6. REVOKE BUTTON & INTERACTION HOVER */
+/* Specifically target the Revoke button via the flush-hook */
+div[data-testid="stColumn"]:has(.flush-hook) button {{ 
+    width: calc(100% + 1rem) !important; 
+    margin-left: -1rem !important; 
+    border-top-left-radius: 0px !important; 
+    border-bottom-left-radius: 0px !important; 
+    border-left: none !important; 
+    height: 46px !important;
+    background-color: #ffffff !important;
+    color: #ef4444 !important; /* Red text for Revoke */
+    border: 1px solid #cbd5e1 !important;
+}}
+
+div[data-testid="stColumn"]:has(.flush-hook) button:hover {{ 
+    background-color: #fef2f2 !important; /* Very light red fill */
+    border-color: #ef4444 !important;     /* Red border */
+    color: #b91c1c !important;            /* Darker red text */
+    transform: none !important;            /* Stop the jumping/lifting */
+    box-shadow: none !important;           /* Remove the dark shadow */
+}}
+
+/* Global Hover Logic for other elements */
+.stTabs [data-baseweb="tab"]:hover, div[data-testid="stExpander"]:hover {{ 
+    transform: translateY(-2px) !important; 
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05) !important; /* Very soft neutral shadow */
+}}
+
+button:active {{ 
+    transform: scale(0.98) !important; 
+}}
 
 /* SQUASH VERTICAL ROW GAPS */
 div.element-container:has(div[data-testid="stExpander"]), 
@@ -909,7 +962,8 @@ def run_pod_tab(pod_name):
                         render_dispatch(i+500, c, pod_name, is_sent=True)
                         
                 with btn_col:
-                    st.markdown("<div class='flush-hook' style='display:none;'></div>", unsafe_allow_html=True)
+    st.markdown("<div class='flush-hook'></div>", unsafe_allow_html=True)
+    st.button("↩️ Revoke", ...)
                     
                     # Prepare the data for the background move
                     # This recreates the payload used when the route was originally sent
