@@ -361,15 +361,17 @@ def scrub_and_revoke_cluster(cluster_hash, ic_name, pod_name, action_label="Revo
         if old_hash == cluster_hash:
             valid_tasks = []
             
-            # --- LIVE ONFLEET SCRUB ---
+            # --- LIVE ONFLEET SCRUB (NEW: ONLY REMOVE COMPLETED) ---
             for t in c['data']:
                 try:
                     res = requests.get(f"https://onfleet.com/api/v2/tasks/{t['id']}", headers=headers, timeout=5).json()
-                    # Keep if unassigned or Team-assigned (Worker is None)
-                    if res.get('worker') is None:  
+                    
+                    # Onfleet Task States: 0=Unassigned, 1=Assigned, 2=Active, 3=Completed
+                    # We keep everything UNLESS it is state 3 (Completed)
+                    if res.get('state') != 3:  
                         valid_tasks.append(t)
                 except:
-                    valid_tasks.append(t)
+                    valid_tasks.append(t) # Failsafe
             
             if not valid_tasks:
                 clusters.remove(c)
