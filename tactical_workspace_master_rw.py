@@ -351,6 +351,41 @@ div.refresh-btn-container > div > button,
     transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
 }}
 
+/* =========================================
+   SUB-TAB PILL STYLING (Leaves Global Tabs Alone!)
+   ========================================= */
+
+/* READY (1st tab in Dispatch) & ACCEPTED (2nd tab in Awaiting) -> GREEN */
+div[data-testid="stTabs"]:has(div[data-baseweb="tab"]:nth-child(2):last-child) div[data-baseweb="tab"]:nth-child(1),
+div[data-testid="stTabs"]:has(div[data-baseweb="tab"]:nth-child(3):last-child) div[data-baseweb="tab"]:nth-child(2) {{
+    background-color: #dcfce7 !important;
+    border: 2px solid #166534 !important;
+    color: #166534 !important;
+}}
+
+/* FLAGGED (2nd tab in Dispatch) & DECLINED (3rd tab in Awaiting) -> RED */
+div[data-testid="stTabs"]:has(div[data-baseweb="tab"]:nth-child(2):last-child) div[data-baseweb="tab"]:nth-child(2),
+div[data-testid="stTabs"]:has(div[data-baseweb="tab"]:nth-child(3):last-child) div[data-baseweb="tab"]:nth-child(3) {{
+    background-color: #fee2e2 !important;
+    border: 2px solid #991b1b !important;
+    color: #991b1b !important;
+}}
+
+/* TIGHTEN GAPS & ALIGN COLUMNS */
+div[data-testid="stExpander"] {{ margin-bottom: 2px !important; }}
+div[data-testid="stHorizontalBlock"] {{ align-items: flex-start !important; }}
+
+/* SMALL RIGHT-ALIGNED REVOKE BUTTON */
+div.mini-btn button[kind="secondary"] {{
+    height: 26px !important;
+    min-height: 26px !important;
+    padding: 0 10px !important;
+    font-size: 11px !important;
+    float: right !important;
+    margin-top: 10px !important;
+    width: auto !important;
+}}
+
 </style>
 """, unsafe_allow_html=True)
 
