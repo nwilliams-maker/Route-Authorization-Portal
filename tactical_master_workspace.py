@@ -216,16 +216,19 @@ button[kind="secondary"] {{
 }}
 
 /* EXPANDER & LAYOUT TIGHTENING */
-div[data-testid="stColumn"]:has(.flush-hook) button[kind="secondary"] {{
+div[data-testid="stColumn"]:has(.flush-hook) button {{
     margin-left: -1rem !important;
     width: calc(100% + 1rem) !important;
     border-top-left-radius: 0px !important;
     border-bottom-left-radius: 0px !important;
+    height: 46px !important; /* Locks Revoke Button Height */
+    min-height: 46px !important;
 }}
 
 div[data-testid="stColumn"]:has(.expander-hook) div[data-testid="stExpander"] {{
     border-top-right-radius: 0px !important;
     border-bottom-right-radius: 0px !important;
+    border-right: 0px !important; /* Removes double border where they touch */
 }}
 
 /* Main Expander Container */
@@ -233,9 +236,26 @@ div[data-testid="stExpander"] {{
     border: 1px solid #cbd5e1 !important; 
     border-radius: 10px !important; 
     box-shadow: 0 2px 4px rgba(0,0,0,0.02) !important;
-    margin-bottom: 8px !important;
+    margin-bottom: 0px !important;
     background-color: #ffffff !important;
     overflow: hidden !important;
+}}
+
+/* Lock Expander Header to exactly match the button */
+div[data-testid="stExpander"] details summary {{
+    height: 46px !important;
+    min-height: 46px !important;
+    padding-top: 0px !important;
+    padding-bottom: 0px !important;
+}}
+div[data-testid="stExpander"] details summary p {{
+    margin: 0 !important; /* Centers text vertically */
+}}
+
+/* 🌟 AGGRESSIVE VERTICAL GAP SQUASH */
+div.element-container:has(div[data-testid="stExpander"]),
+div[data-testid="stHorizontalBlock"]:has(.expander-hook) {{
+    margin-bottom: -14px !important;
 }}
 
 /* Header text color */
@@ -331,6 +351,66 @@ button[kind="secondary"],
 div.refresh-btn-container > div > button,
 .stTabs [data-baseweb="tab"] {{
     transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+}}
+
+/* =========================================
+   FIX VERTICAL OFFSET (Hide the Invisible Hooks)
+   ========================================= */
+div.element-container:has(.dispatch-tabs-hook),
+div.element-container:has(.awaiting-tabs-hook),
+div.element-container:has(.expander-hook),
+div.element-container:has(.flush-hook) {{
+    position: absolute !important;
+    visibility: hidden !important;
+    height: 0px !important;
+    margin: 0px !important;
+}}
+
+/* =========================================
+   NESTED TABS (STATUS PILLS FOR DISPATCH & AWAITING)
+   ========================================= */
+/* Space the pills out */
+div.element-container:has(.dispatch-tabs-hook) + div.element-container [data-baseweb="tab-list"],
+div.element-container:has(.awaiting-tabs-hook) + div.element-container [data-baseweb="tab-list"] {{
+    gap: 12px !important;
+    background: transparent !important;
+}}
+
+/* Shape into Pills (Breaks the segmented look) */
+div.element-container:has(.dispatch-tabs-hook) + div.element-container [data-baseweb="tab"],
+div.element-container:has(.awaiting-tabs-hook) + div.element-container [data-baseweb="tab"] {{
+    background-color: #ffffff !important;
+    border-radius: 30px !important;
+    border-top-left-radius: 30px !important;
+    border-bottom-left-radius: 30px !important;
+    border-top-right-radius: 30px !important;
+    border-bottom-right-radius: 30px !important;
+    margin: 0 !important;
+    padding: 8px 18px !important;
+    border: 2px solid transparent !important;
+    font-size: 13px !important;
+}}
+
+/* Hide the grey slider */
+div.element-container:has(.dispatch-tabs-hook) + div.element-container [data-baseweb="tab-highlight"],
+div.element-container:has(.awaiting-tabs-hook) + div.element-container [data-baseweb="tab-highlight"] {{
+    display: none !important;
+}}
+
+/* Colors - Left Side (Ready / Flagged) */
+div.element-container:has(.dispatch-tabs-hook) + div.element-container [data-baseweb="tab"]:nth-of-type(1) { border-color: #22c55e !important; color: #064e3b !important; background-color: #f0fdf4 !important; }
+div.element-container:has(.dispatch-tabs-hook) + div.element-container [data-baseweb="tab"]:nth-of-type(2) { border-color: #ef4444 !important; color: #7f1d1d !important; background-color: #fef2f2 !important; }
+
+/* Colors - Right Side (Sent / Accepted / Declined) */
+div.element-container:has(.awaiting-tabs-hook) + div.element-container [data-baseweb="tab"]:nth-of-type(1) { border-color: #3b82f6 !important; color: #1e3a8a !important; background-color: #f0f7ff !important; }
+div.element-container:has(.awaiting-tabs-hook) + div.element-container [data-baseweb="tab"]:nth-of-type(2) { border-color: #22c55e !important; color: #064e3b !important; background-color: #f0fdf4 !important; }
+div.element-container:has(.awaiting-tabs-hook) + div.element-container [data-baseweb="tab"]:nth-of-type(3) { border-color: #ef4444 !important; color: #7f1d1d !important; background-color: #fef2f2 !important; }
+
+/* Active Glow */
+div.element-container:has(.dispatch-tabs-hook) + div.element-container [aria-selected="true"],
+div.element-container:has(.awaiting-tabs-hook) + div.element-container [aria-selected="true"] {{
+    transform: translateY(-2px) !important;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.08) !important;
 }}
 
 </style>
