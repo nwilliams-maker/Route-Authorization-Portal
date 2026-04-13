@@ -96,6 +96,12 @@ st.markdown(f"""
     margin-bottom: 15px !important; /* Pushes the dashboard content down slightly for breathing room */
 }}
 
+/* LIMIT DROPDOWN HEIGHT TO ~5 LINES WITH SCROLLBAR */
+    ul[role="listbox"] {{
+        max-height: 220px !important;
+        overflow-y: auto !important;
+    }}
+
 /* CENTERED PURPLE HEADERS */
 h1, h2, h3, h4, h5, h6 {{ 
     font-weight: 800 !important; 
@@ -577,9 +583,10 @@ def process_pod(pod_name, master_bar=None, pod_idx=0, total_pods=1):
             has_ic = False; closest_ic_loc = f"{anc['lat']},{anc['lon']}" 
             if not v_ics_base.empty:
                 dists = v_ics_base.apply(lambda x: haversine(anc['lat'], anc['lon'], x['Lat'], x['Lng']), axis=1)
-                valid_ics = v_ics_base[dists <= 60].copy()
+                valid_ics = v_ics_base[dists <= 100].copy() # Changed to 100
                 if not valid_ics.empty:
-                    has_ic = True; valid_ics['d'] = dists[dists <= 60]
+                    has_ic = True
+                    valid_ics['d'] = dists[dists <= 100] # Changed to 100
                     best_ic = valid_ics.sort_values('d').iloc[0]
                     closest_ic_loc = best_ic['Location']
 
@@ -678,10 +685,11 @@ def render_dispatch(i, cluster, pod_name, is_sent=False, is_declined=False):
     v_ics = ic_df[~ic_df.astype(str).apply(lambda x: x.str.contains('Field Agent', case=False, na=False).any(), axis=1)].dropna(subset=['Lat', 'Lng']).copy()
     if not v_ics.empty:
         v_ics['d'] = v_ics.apply(lambda x: haversine(cluster['center'][0], cluster['center'][1], x['Lat'], x['Lng']), axis=1)
-        v_ics = v_ics[v_ics['d'] <= 100].sort_values('d').head(5)
+        # Removed .head(5) and changed to 100 miles
+        v_ics = v_ics[v_ics['d'] <= 100].sort_values('d') 
 
     if v_ics.empty:
-        st.error("⚠️ No contractors found within 100 miles.")
+        st.error("⚠️ No contractors found within 100 miles. Manual recruiting or assignment required.")
         return
 
     ic_opts = {f"{r['Name']} ({round(r['d'],1)} mi)": r for _, r in v_ics.iterrows()}
