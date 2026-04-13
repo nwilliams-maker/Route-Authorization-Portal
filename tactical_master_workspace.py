@@ -469,9 +469,15 @@ def get_gmaps(home, waypoints):
         if res['status'] == 'OK':
             mi = sum(l['distance']['value'] for l in res['routes'][0]['legs']) * 0.000621371
             hrs = sum(l['duration']['value'] for l in res['routes'][0]['legs']) / 3600
-            return round(mi, 1), hrs, f"{int(hrs)}h {int((hrs * 60) % 60)}m"
+            
+            # Clean Time Formatting
+            h = int(hrs)
+            m = int((hrs * 60) % 60)
+            t_str = f"{h}h {m}m" if h > 0 else f"{m}m"
+            
+            return round(mi, 1), hrs, t_str
     except: pass
-    return 0, 0, "0h 0m"
+    return 0, 0, "0m"
 
 @st.cache_data(ttl=600)
 def load_ic_database(sheet_url):
