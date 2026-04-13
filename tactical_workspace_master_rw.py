@@ -395,32 +395,23 @@ div[data-testid="stColumn"]:nth-child(2) div[data-testid="stTabs"] [data-baseweb
 }}
 
 
-/* =========================================
-   ALIGNMENT & GAPS
-   ========================================= */
-/* Aggressively kill the white space between rows */
-div[data-testid="stVerticalBlock"] {{ gap: 0rem !important; }}
+/* ALIGN COLUMNS AT THE TOP (Fixes the giant gap on the left) */
+div[data-testid="stHorizontalBlock"] {{ align-items: flex-start !important; }}
+
+/* TIGHTEN GAPS BETWEEN CARDS */
+div[data-testid="stVerticalBlock"] {{ gap: 0.2rem !important; }}
 div[data-testid="stExpander"] {{ margin-top: 0px !important; margin-bottom: 2px !important; }}
 
-/* Stop the columns on the right from adding extra padding */
-[data-testid="stHorizontalBlock"] {{ 
-    align-items: center !important; 
-    padding-bottom: 0px !important;
-}}
-
-/* =========================================
-   MINI REVOKE BUTTON
-   ========================================= */
-/* Targets the button to make it thin and single-line */
-div.mini-btn-container button, div.mini-btn button {{
-    height: 38px !important; 
-    min-height: 38px !important;
-    padding: 0px 8px !important;
-    font-size: 12px !important;
-    white-space: nowrap !important; /* CRITICAL: Stops "Revoke" from wrapping to a second line */
-    margin-top: 0px !important;
-    border-radius: 6px !important;
-    width: 100% !important;
+/* MINI REVOKE BUTTON (Single Line, Right Aligned) */
+div.mini-btn button {{
+    height: 30px !important;
+    min-height: 30px !important;
+    padding: 0 8px !important;
+    font-size: 11px !important;
+    white-space: nowrap !important; /* CRITICAL: Stops "Revoke" from dropping to a second line */
+    float: right !important;
+    margin-top: 4px !important;
+    border-radius: 4px !important;
 }}
 
 </style>
@@ -1124,7 +1115,8 @@ def run_pod_tab(pod_name):
     st.markdown("---")
 
     # Create two equal-width columns for side-by-side layout
-    col_left, col_right = st.columns(2)
+    # [4, 5.5] ratio makes the left card narrower and the right side wider
+    col_left, col_right = st.columns([4, 5.5])
 
     with col_left:
         # ==========================================
