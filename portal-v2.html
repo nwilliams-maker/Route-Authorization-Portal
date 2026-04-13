@@ -178,18 +178,35 @@
                 
                 const result = await response.json();
 
-                await fetch(formspreeUrl, {
+               await fetch(formspreeUrl, {
                     method: 'POST',
                     headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        _subject: `${decision}: WO #${window.payloadData.wo} (${window.payloadData.icn})`,
-                        Decision: decision,
-                        Contractor: window.payloadData.icn,
-                        "Work Order": window.payloadData.wo,
-                        Signature: sig,
-                        "Onfleet Assignment": result.onfleetSuccess ? "Success" : "Failed or Skipped"
-                    })
-                });
+                    // Subject line for your inbox
+                    _subject: `${decision}: WO #${window.payloadData.wo} (${window.payloadData.icn})`,
+        
+                    // Response Data
+                    "Decision": decision,
+                    "Contractor": window.payloadData.icn,
+                    "Work Order #": window.payloadData.wo,
+                    "Electronic Signature": sig,
+                    "Counter Offer": counter || "None",
+                    "Notes/Reason": notes || "None",
+                    
+                    // Route Intelligence (The data you wanted to include)
+                    "Total Compensation": `$${window.payloadData.comp}`,
+                    "Total Tasks": window.payloadData.tCnt,
+                    "Unique Locations": window.payloadData.lCnt,
+                    "Kiosk Installs": window.payloadData.kCnt || 0,
+                    "Mileage": `${window.payloadData.mi} Miles`,
+                    "Est. Drive Time": window.payloadData.time,
+                    "Due Date": window.payloadData.due || "N/A",
+                    
+                    // System Status
+                    "Onfleet Auto-Assign": result.onfleetSuccess ? "SUCCESS" : "FAILED/SKIPPED",
+                    "Onfleet Msg": result.onfleetMsg || "N/A"
+                })
+            });
 
                 // Hide the form UI
                 document.getElementById('icMode').classList.add('hidden');
