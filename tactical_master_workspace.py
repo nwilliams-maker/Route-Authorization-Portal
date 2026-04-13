@@ -1010,6 +1010,14 @@ def run_pod_tab(pod_name):
             </div>
         """, unsafe_allow_html=True)
 
+    # --- ACTION BUTTON ---
+    st.markdown("<br>", unsafe_allow_html=True)
+    
+    if st.button("⚙️ Re-Optimize Routes", use_container_width=True, key=f"reopt_{pod_name}"):
+        st.session_state.pop(f"clusters_{pod_name}", None) # Wipes current clusters
+        process_pod(pod_name) # Re-runs Onfleet pull and clustering
+        st.rerun()
+
     # --- MAP RENDERING (STAYS RIGHT BELOW) ---
     st.markdown("<br>", unsafe_allow_html=True)
     
