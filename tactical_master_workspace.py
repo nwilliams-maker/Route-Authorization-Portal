@@ -90,7 +90,7 @@ st.markdown(f"""
 h1, h2, h3, h4, h5, h6 {{ font-weight: 800 !important; text-align: center !important; width: 100%; }}
 label, div[data-testid="stWidgetLabel"] p {{ color: #000000 !important; font-weight: 600 !important; }}
 
-/* 2. ALIGNMENT FIX: STOP THE RIGHT COLUMN DROP */
+/* 2. ALIGNMENT: STOP THE RIGHT COLUMN DROP & HIDE HOOKS */
 div.element-container:has(.dispatch-tabs-hook),
 div.element-container:has(.awaiting-tabs-hook),
 div.element-container:has(.expander-hook),
@@ -98,46 +98,55 @@ div.element-container:has(.flush-hook) {{
     display: none !important;
     height: 0px !important;
     margin: 0px !important;
+    padding: 0px !important;
 }}
 
-/* 3. HEIGHT LOCK: MATCH CARDS AND BUTTONS (46px) */
+/* 3. HEIGHT LOCK: 46px FOR EXPANDERS & REVOKE BUTTONS */
 div[data-testid="stExpander"] {{ border: 1px solid #cbd5e1 !important; border-radius: 10px !important; margin-bottom: 0px !important; background-color: #ffffff !important; overflow: hidden !important; }}
-div[data-testid="stExpander"] details summary {{ height: 46px !important; min-height: 46px !important; padding: 0 10px !important; display: flex !important; align-items: center !important; }}
+div[data-testid="stExpander"] details summary {{ height: 46px !important; min-height: 46px !important; padding: 0 12px !important; display: flex !important; align-items: center !important; }}
 div[data-testid="stExpander"] details summary p {{ margin: 0 !important; line-height: 46px !important; font-weight: 800 !important; color: #000000 !important; font-size: 0.95rem !important; }}
 
 /* FLUSH REVOKE BUTTON MECHANICS */
-div[data-testid="stColumn"]:has(.flush-hook) button {{ width: calc(100% + 1rem) !important; margin-left: -1rem !important; border-top-left-radius: 0px !important; border-bottom-left-radius: 0px !important; border-left: none !important; height: 46px !important; }}
+div[data-testid="stColumn"]:has(.flush-hook) button {{ 
+    width: calc(100% + 1rem) !important; margin-left: -1rem !important; 
+    border-top-left-radius: 0px !important; border-bottom-left-radius: 0px !important; 
+    border-left: none !important; height: 46px !important; 
+}}
 div[data-testid="stColumn"]:has(.expander-hook) div[data-testid="stExpander"] {{ border-top-right-radius: 0px !important; border-bottom-right-radius: 0px !important; border-right: none !important; }}
 
 /* SQUASH VERTICAL ROW GAPS */
-div.element-container:has(div[data-testid="stExpander"]), div.element-container:has(div[data-testid="stHorizontalBlock"]:has(.expander-hook)) {{ margin-bottom: -15px !important; }}
+div.element-container:has(div[data-testid="stExpander"]), 
+div.element-container:has(div[data-testid="stHorizontalBlock"]:has(.expander-hook)) {{ 
+    margin-bottom: -15px !important; 
+}}
 
 /* 4. PILL STYLING: BREAK THE "GLUED" BAR LOOK */
 div.element-container:has(.dispatch-tabs-hook) + div.element-container [data-baseweb="tab-list"],
 div.element-container:has(.awaiting-tabs-hook) + div.element-container [data-baseweb="tab-list"] {{ gap: 12px !important; background: transparent !important; }}
 
 div.element-container:has(.dispatch-tabs-hook) + div.element-container [data-baseweb="tab"],
-div.element-container:has(.awaiting-tabs-hook) + div.element-container [data-baseweb="tab"] {{ border-radius: 30px !important; border: 2px solid transparent !important; padding: 8px 18px !important; height: auto !important; min-height: 0 !important; }}
+div.element-container:has(.awaiting-tabs-hook) + div.element-container [data-baseweb="tab"] {{ 
+    border-radius: 30px !important; border: 2px solid transparent !important; 
+    padding: 8px 18px !important; height: auto !important; min-height: 0 !important; 
+}}
 div.element-container:has(.dispatch-tabs-hook) + div.element-container [data-baseweb="tab-highlight"],
 div.element-container:has(.awaiting-tabs-hook) + div.element-container [data-baseweb="tab-highlight"] {{ display: none !important; }}
 
-/* 5. SPECIFIC PILL COLOR FILLS */
-/* LEFT COLUMN: Ready (Green) / Flagged (Light Red) */
-div.element-container:has(.dispatch-tabs-hook) + div.element-container [data-baseweb="tab"]:nth-of-type(1) {{ border-color: #22c55e !important; color: #064e3b !important; background-color: #f0fdf4 !important; }}
-div.element-container:has(.dispatch-tabs-hook) + div.element-container [data-baseweb="tab"]:nth-of-type(2) {{ border-color: #ef4444 !important; color: #7f1d1d !important; background-color: #fef2f2 !important; }}
+/* 5. PILL COLOR FILLS (DISPATCH & AWAITING) */
+/* Ready (Left 1) - Green Fill */
+div.element-container:has(.dispatch-tabs-hook) + div.element-container [data-baseweb="tab"]:nth-of-type(1) {{ border-color: #22c55e !important; color: #064e3b !important; background-color: #dcfce7 !important; }}
+/* Flagged (Left 2) - Red Fill */
+div.element-container:has(.dispatch-tabs-hook) + div.element-container [data-baseweb="tab"]:nth-of-type(2) {{ border-color: #ef4444 !important; color: #7f1d1d !important; background-color: #ffcccc !important; }}
 
-/* RIGHT COLUMN: Sent (Blue) / Accepted (Light Green) / Declined (Light Red) */
-div.element-container:has(.awaiting-tabs-hook) + div.element-container [data-baseweb="tab"]:nth-of-type(1) {{ border-color: #3b82f6 !important; color: #1e3a8a !important; background-color: #f0f7ff !important; }}
-div.element-container:has(.awaiting-tabs-hook) + div.element-container [data-baseweb="tab"]:nth-of-type(2) {{ border-color: #22c55e !important; color: #064e3b !important; background-color: #f0fdf4 !important; }}
-div.element-container:has(.awaiting-tabs-hook) + div.element-container [data-baseweb="tab"]:nth-of-type(3) {{ border-color: #ef4444 !important; color: #7f1d1d !important; background-color: #fef2f2 !important; }}
+/* Sent (Right 1) - Blue Fill */
+div.element-container:has(.awaiting-tabs-hook) + div.element-container [data-baseweb="tab"]:nth-of-type(1) {{ border-color: #3b82f6 !important; color: #1e3a8a !important; background-color: #dbeafe !important; }}
+/* Accepted (Right 2) - Green Fill */
+div.element-container:has(.awaiting-tabs-hook) + div.element-container [data-baseweb="tab"]:nth-of-type(2) {{ border-color: #22c55e !important; color: #064e3b !important; background-color: #dcfce7 !important; }}
+/* Declined (Right 3) - Red Fill */
+div.element-container:has(.awaiting-tabs-hook) + div.element-container [data-baseweb="tab"]:nth-of-type(3) {{ border-color: #ef4444 !important; color: #7f1d1d !important; background-color: #ffcccc !important; }}
 
-/* 6. GLOBAL TABS (POD NAVIGATION) */
-.stTabs [data-baseweb="tab-list"] {{ border-bottom: 2px solid #cbd5e1 !important; margin-bottom: 15px !important; }}
-.stTabs [data-baseweb="tab"] {{ border-radius: 30px !important; margin: 0 5px !important; font-weight: 800 !important; }}
-.stTabs [aria-selected="true"] {{ background-color: #ffffff !important; transform: translateY(-4px) !important; box-shadow: 0 10px 20px rgba(99, 48, 148, 0.25) !important; }}
-
-/* 7. HOVER EFFECTS */
-button:hover, .stTabs [data-baseweb="tab"]:hover, div[data-testid="stExpander"]:hover {{ transform: translateY(-4px) !important; box-shadow: 0 12px 24px rgba(0, 0, 0, 0.08) !important; }}
+/* 6. INTERACTION & HOVER */
+button:hover, .stTabs [data-baseweb="tab"]:hover, div[data-testid="stExpander"]:hover {{ transform: translateY(-4px) !important; box-shadow: 0 12px 24px rgba(0, 0, 0, 0.08) !important; transition: all 0.3s ease !important; }}
 button:active {{ transform: translateY(0px) scale(1) !important; }}
 </style>
 """, unsafe_allow_html=True)
@@ -843,10 +852,7 @@ def run_pod_tab(pod_name):
     col_left, col_right = st.columns(2)
 
     with col_left:
-        st.markdown(f"<div style='font-size: 1.5rem; font-weight: 800; color: {TB_PURPLE}; margin-bottom: 5px; text-align: center;'>🚀 Dispatch</div>", unsafe_allow_html=True)
-        # --- CRITICAL HOOK START ---
-        st.markdown("<div class='dispatch-tabs-hook'></div>", unsafe_allow_html=True)
-        # --- CRITICAL HOOK END ---
+        st.markdown("<div class='dispatch-tabs-hook'></div>", unsafe_allow_html=True) # <-- HOOK HERE
         t_ready, t_flagged = st.tabs(["📥 Ready", "⚠️ Flagged"])
 
         with t_ready:
@@ -879,11 +885,8 @@ def run_pod_tab(pod_name):
                     render_dispatch(i+1000, c, pod_name)
 
     with col_right:
-        st.markdown(f"<div style='font-size: 1.5rem; font-weight: 800; color: {TB_GREEN}; margin-bottom: 5px; text-align: center;'>⏳ Awaiting Confirmation</div>", unsafe_allow_html=True)
-        # --- CRITICAL HOOK START ---
-        st.markdown("<div class='awaiting-tabs-hook'></div>", unsafe_allow_html=True)
-        # --- CRITICAL HOOK END ---
-        t_sent, t_acc, t_dec = st.tabs(["✉️ Sent (Pending)", "✅ Accepted", "❌ Declined"])
+    st.markdown("<div class='awaiting-tabs-hook'></div>", unsafe_allow_html=True) # <-- HOOK HERE
+    t_sent, t_acc, t_dec = st.tabs(["✉️ Sent", "✅ Accepted", "❌ Declined"])
 
         with t_sent:
             if not sent: st.info("No pending routes sent.")
