@@ -85,6 +85,7 @@ st.markdown(f"""
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
 .stApp {{ background-color: {TB_APP_BG} !important; color: #000000 !important; font-family: 'Inter', sans-serif !important; }}
 .main .block-container {{ max-width: 1100px !important; padding-top: 2rem; }}
+)
 
 /* GLOBAL TABS CONTAINER - Clean & Floating with Bottom Line */
 .stTabs [data-baseweb="tab-list"] {{ 
