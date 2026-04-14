@@ -129,17 +129,30 @@ div.refresh-btn-container {{
 }}
 
 div.refresh-btn-container > div > button {{
-    height: 28px !important;
-    padding: 0 12px !important;
-    font-size: 12px !important;
+    height: 32px !important; /* Slightly taller for breathing room */
+    padding: 0 16px !important;
+    font-size: 13px !important;
     border-radius: 20px !important;
     border: 1.2px solid #633094 !important;
     background-color: transparent !important;
     color: #633094 !important;
     font-weight: 700 !important;
     transition: all 0.2s ease-in-out !important;
+    
+    /* THE FIX: Forces icon and text onto one line perfectly centered */
+    white-space: nowrap !important; 
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
 }}
 
+/* Ensures Streamlit's internal text wrapper doesn't force a line break */
+div.refresh-btn-container > div > button div,
+div.refresh-btn-container > div > button p {{
+    white-space: nowrap !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}}
 div.refresh-btn-container > div > button:hover {{
     background-color: #633094 !important;
     color: white !important;
@@ -715,7 +728,7 @@ def render_dispatch(i, cluster, pod_name, is_sent=False, is_declined=False):
     sel_key = f"sel_{cluster_hash}"
     last_sel_key = f"last_sel_{cluster_hash}" # Tracks the "previous" selection
 
-    st.write("### 🟢 Route Stops")
+    st.write("### Route Stops")
 
     # --- NEW: HISTORY LOG ---
     hist = st.session_state.get(f"history_{cluster_hash}", [])
@@ -1288,7 +1301,8 @@ if "ic_df" not in st.session_state:
     except: st.error("Database connection failed.")
 
 # --- HEADER ROW (Title & Refresh Button) ---
-col_left_space, col_main_title, col_ref = st.columns([1, 10, 1])
+# [1, 8, 2] ratio gives the refresh button enough room to stay flat
+col_left_space, col_main_title, col_ref = st.columns([1, 8, 2])
 
 with col_main_title:
     st.markdown("<h1 style='color: #633094;'>Terraboost Media: Dispatch Command Center</h1>", unsafe_allow_html=True)
