@@ -702,7 +702,9 @@
             if (homeAddress) url += `&homeAddress=${encodeURIComponent(homeAddress)}`;
 
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 25000);
+            
+            // TIMEOUT FIX: 90000 milliseconds (90 seconds)
+            const timeoutId = setTimeout(() => controller.abort(), 90000); 
 
             try {
                 const response = await fetch(url, { signal: controller.signal });
@@ -844,7 +846,7 @@
             }
             finally { loader.classList.add('hidden'); }
         }
-
+        
         function processPolygonSelection(polygon) {
             const selectedAddresses = {};
             allOnfleetMarkers.forEach(marker => {
